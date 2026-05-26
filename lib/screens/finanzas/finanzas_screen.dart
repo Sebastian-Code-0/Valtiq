@@ -1,7 +1,12 @@
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
+import '../../utils/date_format.dart';
+import '../../utils/format.dart';
+import 'gasto_fijo_form.dart';
+import 'ingreso_form.dart';
 
 class FinanzasScreen extends StatefulWidget {
   const FinanzasScreen({super.key, required this.db});
@@ -15,6 +20,91 @@ class FinanzasScreen extends StatefulWidget {
 class _FinanzasScreenState extends State<FinanzasScreen> {
   String _modo = 'ingresos';
 
+  String _capitalizar(String s) =>
+      s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+
+  Stream<List<Ingreso>> _streamIngresos() {
+    return (widget.db.select(widget.db.ingresos)
+          ..orderBy([(i) => OrderingTerm.desc(i.fecha)]))
+        .watch();
+  }
+
+  Stream<List<GastosFijo>> _streamGastos() {
+    return (widget.db.select(widget.db.gastosFijos)
+          ..orderBy([(g) => OrderingTerm.asc(g.concepto)]))
+        .watch();
+  }
+
+  Future<void> _abrirIngresoForm({Ingreso? ingreso}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => IngresoForm(db: widget.db, ingreso: ingreso),
+      ),
+    );
+  }
+
+  Future<void> _abrirGastoForm({GastosFijo? gasto}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GastoFijoForm(db: widget.db, gasto: gasto),
+      ),
+    );
+  }
+
+  Future<void> _confirmarEliminarIngreso(Ingreso ingreso) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar ingreso'),
+        content: Text('¿Eliminar el ingreso "${ingreso.concepto}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: AppColors.alerta),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await widget.db.ingresosDao.deleteIngreso(ingreso.id);
+    }
+  }
+
+  Future<void> _confirmarEliminarGasto(GastosFijo gasto) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar gasto fijo'),
+        content: Text('¿Eliminar el gasto "${gasto.concepto}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: AppColors.alerta),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await widget.db.gastosFijosDao.deleteGastoFijo(gasto.id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -22,8 +112,20 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
     final colorSec = isDark
         ? AppColors.textoSecundarioOscuro
         : AppColors.textoSecundarioClaro;
+    final esIngresos = _modo == 'ingresos';
 
     return Scaffold(
+      floatingActionButton: esIngresos
+          ? FloatingActionButton(
+              heroTag: 'fab_ingresos',
+              onPressed: () => _abrirIngresoForm(),
+              child: const Icon(Icons.add),
+            )
+          : FloatingActionButton(
+              heroTag: 'fab_gastos',
+              onPressed: () => _abrirGastoForm(),
+              child: const Icon(Icons.add),
+            ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -70,19 +172,11 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
               Expanded(
-                child: _modo == 'ingresos'
-                    ? _PanelVacio(
-                        mensaje: 'No tienes ingresos registrados',
-                        heroTag: 'fab_ingresos',
-                        colorSecundario: colorSec,
-                      )
-                    : _PanelVacio(
-                        mensaje: 'No tienes gastos fijos registrados',
-                        heroTag: 'fab_gastos',
-                        colorSecundario: colorSec,
-                      ),
+                child: esIngresos
+                    ? _listaIngresos(theme, colorSec)
+                    : _listaGastos(theme, colorSec),
               ),
             ],
           ),
@@ -90,43 +184,312 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
       ),
     );
   }
-}
 
-class _PanelVacio extends StatelessWidget {
-  const _PanelVacio({
-    required this.mensaje,
-    required this.heroTag,
-    required this.colorSecundario,
-  });
-
-  final String mensaje;
-  final String heroTag;
-  final Color colorSecundario;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
+  Widget _totalRow({
+    required ThemeData theme,
+    required double total,
+    required Color color,
+  }) {
+    return Row(
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: FloatingActionButton.small(
-            heroTag: heroTag,
-            onPressed: () {},
-            child: const Icon(Icons.add),
+        Text(
+          'Total:',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
         ),
-        Expanded(
-          child: Center(
-            child: Text(
-              mensaje,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorSecundario,
-              ),
-            ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          formatCOP(total),
+          style: monoStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
           ),
         ),
       ],
     );
+  }
+
+  Widget _listaIngresos(ThemeData theme, Color colorSec) {
+    return StreamBuilder<List<Ingreso>>(
+      stream: _streamIngresos(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final ingresos = snapshot.data!;
+        final total = ingresos
+            .where((i) => i.activo)
+            .fold<double>(0, (sum, i) => sum + i.monto);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _totalRow(
+              theme: theme,
+              total: total,
+              color: AppColors.positivo,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Expanded(
+              child: ingresos.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No tienes ingresos registrados',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: colorSec,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: ingresos.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (_, i) {
+                        final ing = ingresos[i];
+                        return _IngresoCard(
+                          ingreso: ing,
+                          colorSec: colorSec,
+                          frecuenciaLabel: _capitalizar(ing.frecuencia),
+                          onTap: () => _abrirIngresoForm(ingreso: ing),
+                          onLongPress: () => _confirmarEliminarIngreso(ing),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _listaGastos(ThemeData theme, Color colorSec) {
+    return StreamBuilder<List<GastosFijo>>(
+      stream: _streamGastos(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final gastos = snapshot.data!;
+        final total = gastos
+            .where((g) => g.activo)
+            .fold<double>(0, (sum, g) => sum + g.monto);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _totalRow(
+              theme: theme,
+              total: total,
+              color: AppColors.alerta,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Expanded(
+              child: gastos.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No tienes gastos fijos registrados',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: colorSec,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: gastos.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (_, i) {
+                        final g = gastos[i];
+                        return _GastoFijoCard(
+                          gasto: g,
+                          colorSec: colorSec,
+                          frecuenciaLabel: _capitalizar(g.frecuencia),
+                          onTap: () => _abrirGastoForm(gasto: g),
+                          onLongPress: () => _confirmarEliminarGasto(g),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _FrecuenciaChip extends StatelessWidget {
+  const _FrecuenciaChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.acento.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: AppColors.acento,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _IngresoCard extends StatelessWidget {
+  const _IngresoCard({
+    required this.ingreso,
+    required this.colorSec,
+    required this.frecuenciaLabel,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  final Ingreso ingreso;
+  final Color colorSec;
+  final String frecuenciaLabel;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final card = Card(
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      ingreso.concepto,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    formatCOP(ingreso.monto),
+                    style: monoStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.positivo,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  _FrecuenciaChip(label: frecuenciaLabel),
+                  const SizedBox(width: AppSpacing.sm),
+                  Icon(Icons.calendar_today, size: 14, color: colorSec),
+                  const SizedBox(width: 4),
+                  Text(
+                    formatFecha(ingreso.fecha),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorSec,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return ingreso.activo ? card : Opacity(opacity: 0.6, child: card);
+  }
+}
+
+class _GastoFijoCard extends StatelessWidget {
+  const _GastoFijoCard({
+    required this.gasto,
+    required this.colorSec,
+    required this.frecuenciaLabel,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  final GastosFijo gasto;
+  final Color colorSec;
+  final String frecuenciaLabel;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final card = Card(
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      gasto.concepto,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    formatCOP(gasto.monto),
+                    style: monoStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.alerta,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  _FrecuenciaChip(label: frecuenciaLabel),
+                  if (gasto.diaCobro != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Icon(Icons.event_repeat, size: 14, color: colorSec),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Se cobra el día ${gasto.diaCobro}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorSec,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return gasto.activo ? card : Opacity(opacity: 0.6, child: card);
   }
 }
