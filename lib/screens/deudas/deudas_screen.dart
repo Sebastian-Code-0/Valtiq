@@ -62,6 +62,56 @@ class _DeudasScreenState extends State<DeudasScreen> {
     }
   }
 
+  Future<void> _confirmarMarcarPagada(Deuda deuda) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Marcar como pagada'),
+        content: Text(
+          '¿Confirmas que ya pagaste la deuda con ${deuda.acreedorNombre}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await widget.db.deudasDao.marcarComoPagada(deuda.id, DateTime.now());
+    }
+  }
+
+  Future<void> _confirmarMarcarActiva(Deuda deuda) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reactivar deuda'),
+        content: Text(
+          '¿Volver a marcar como activa la deuda con ${deuda.acreedorNombre}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await widget.db.deudasDao.marcarComoActiva(deuda.id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -150,6 +200,13 @@ class _DeudasScreenState extends State<DeudasScreen> {
                         colorSec: colorSec,
                         onTap: () => _abrirForm(deuda: d),
                         onLongPress: () => _confirmarEliminar(d),
+                        onMarcarPagada: _mostrarPagadas
+                            ? null
+                            : () => _confirmarMarcarPagada(d),
+                        onMarcarActiva: _mostrarPagadas
+                            ? () => _confirmarMarcarActiva(d)
+                            : null,
+                        onEliminar: () => _confirmarEliminar(d),
                       );
                     },
                   );
@@ -170,6 +227,9 @@ class _DeudaCard extends StatelessWidget {
     required this.colorSec,
     required this.onTap,
     required this.onLongPress,
+    required this.onEliminar,
+    this.onMarcarPagada,
+    this.onMarcarActiva,
   });
 
   final Deuda deuda;
@@ -177,6 +237,9 @@ class _DeudaCard extends StatelessWidget {
   final Color colorSec;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback onEliminar;
+  final VoidCallback? onMarcarPagada;
+  final VoidCallback? onMarcarActiva;
 
   String _formatTasa(double t) {
     if (t == t.truncateToDouble()) return t.toStringAsFixed(0);
@@ -186,7 +249,8 @@ class _DeudaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final vencida = deuda.fechaLimite != null &&
+    final vencida =
+        deuda.fechaLimite != null &&
         deuda.fechaLimite!.isBefore(DateTime.now());
 
     final card = Card(
@@ -195,7 +259,12 @@ class _DeudaCard extends StatelessWidget {
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -218,49 +287,122 @@ class _DeudaCard extends StatelessWidget {
                       color: AppColors.alerta,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 14, color: colorSec),
-                  const SizedBox(width: 4),
-                  Text(
-                    formatFecha(deuda.fechaPrestamo),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorSec,
-                    ),
-                  ),
-                  if (deuda.tasaInteres > 0) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.acento.withValues(alpha: 0.15),
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.radiusSm),
-                      ),
-                      child: Text(
-                        '${_formatTasa(deuda.tasaInteres)}% ${deuda.tipoInteres}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.acento,
-                          fontWeight: FontWeight.w600,
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: colorSec, size: 20),
+                    tooltip: 'Acciones',
+                    onSelected: (v) {
+                      switch (v) {
+                        case 'pagada':
+                          onMarcarPagada?.call();
+                          break;
+                        case 'activa':
+                          onMarcarActiva?.call();
+                          break;
+                        case 'eliminar':
+                          onEliminar();
+                          break;
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      if (onMarcarPagada != null)
+                        const PopupMenuItem(
+                          value: 'pagada',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline,
+                                size: 18,
+                                color: AppColors.positivo,
+                              ),
+                              SizedBox(width: AppSpacing.sm),
+                              Text('Marcar como pagada'),
+                            ],
+                          ),
+                        ),
+                      if (onMarcarActiva != null)
+                        const PopupMenuItem(
+                          value: 'activa',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.undo,
+                                size: 18,
+                                color: AppColors.acento,
+                              ),
+                              SizedBox(width: AppSpacing.sm),
+                              Text('Reactivar deuda'),
+                            ],
+                          ),
+                        ),
+                      const PopupMenuItem(
+                        value: 'eliminar',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: AppColors.alerta,
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Text(
+                              'Eliminar',
+                              style: TextStyle(color: AppColors.alerta),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 14, color: colorSec),
+                    const SizedBox(width: 4),
+                    Text(
+                      formatFecha(deuda.fechaPrestamo),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorSec,
+                      ),
+                    ),
+                    if (deuda.tasaInteres > 0) ...[
+                      const SizedBox(width: AppSpacing.sm),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.acento.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusSm,
+                          ),
+                        ),
+                        child: Text(
+                          '${_formatTasa(deuda.tasaInteres)}% ${deuda.tipoInteres}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.acento,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
               if (deuda.fechaLimite != null) ...[
                 const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Vence: ${formatFecha(deuda.fechaLimite!)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: vencida ? AppColors.alerta : colorSec,
-                    fontWeight: vencida ? FontWeight.bold : null,
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.sm),
+                  child: Text(
+                    'Vence: ${formatFecha(deuda.fechaLimite!)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: vencida ? AppColors.alerta : colorSec,
+                      fontWeight: vencida ? FontWeight.bold : null,
+                    ),
                   ),
                 ),
               ],

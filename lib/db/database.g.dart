@@ -3667,6 +3667,606 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
   }
 }
 
+class $ConfigSmtpsTable extends ConfigSmtps
+    with TableInfo<$ConfigSmtpsTable, ConfigSmtp> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ConfigSmtpsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _servidorMeta = const VerificationMeta(
+    'servidor',
+  );
+  @override
+  late final GeneratedColumn<String> servidor = GeneratedColumn<String>(
+    'servidor',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _puertoMeta = const VerificationMeta('puerto');
+  @override
+  late final GeneratedColumn<int> puerto = GeneratedColumn<int>(
+    'puerto',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(587),
+  );
+  static const VerificationMeta _usuarioMeta = const VerificationMeta(
+    'usuario',
+  );
+  @override
+  late final GeneratedColumn<String> usuario = GeneratedColumn<String>(
+    'usuario',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _contrasenaMeta = const VerificationMeta(
+    'contrasena',
+  );
+  @override
+  late final GeneratedColumn<String> contrasena = GeneratedColumn<String>(
+    'contrasena',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _correoDestinoMeta = const VerificationMeta(
+    'correoDestino',
+  );
+  @override
+  late final GeneratedColumn<String> correoDestino = GeneratedColumn<String>(
+    'correo_destino',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _nombreRemitenteMeta = const VerificationMeta(
+    'nombreRemitente',
+  );
+  @override
+  late final GeneratedColumn<String> nombreRemitente = GeneratedColumn<String>(
+    'nombre_remitente',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Valtiq'),
+  );
+  static const VerificationMeta _sslMeta = const VerificationMeta('ssl');
+  @override
+  late final GeneratedColumn<bool> ssl = GeneratedColumn<bool>(
+    'ssl',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("ssl" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _habilitadoMeta = const VerificationMeta(
+    'habilitado',
+  );
+  @override
+  late final GeneratedColumn<bool> habilitado = GeneratedColumn<bool>(
+    'habilitado',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("habilitado" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _actualizadoEnMeta = const VerificationMeta(
+    'actualizadoEn',
+  );
+  @override
+  late final GeneratedColumn<DateTime> actualizadoEn =
+      GeneratedColumn<DateTime>(
+        'actualizado_en',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+        defaultValue: currentDateAndTime,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    servidor,
+    puerto,
+    usuario,
+    contrasena,
+    correoDestino,
+    nombreRemitente,
+    ssl,
+    habilitado,
+    actualizadoEn,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'config_smtps';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ConfigSmtp> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('servidor')) {
+      context.handle(
+        _servidorMeta,
+        servidor.isAcceptableOrUnknown(data['servidor']!, _servidorMeta),
+      );
+    }
+    if (data.containsKey('puerto')) {
+      context.handle(
+        _puertoMeta,
+        puerto.isAcceptableOrUnknown(data['puerto']!, _puertoMeta),
+      );
+    }
+    if (data.containsKey('usuario')) {
+      context.handle(
+        _usuarioMeta,
+        usuario.isAcceptableOrUnknown(data['usuario']!, _usuarioMeta),
+      );
+    }
+    if (data.containsKey('contrasena')) {
+      context.handle(
+        _contrasenaMeta,
+        contrasena.isAcceptableOrUnknown(data['contrasena']!, _contrasenaMeta),
+      );
+    }
+    if (data.containsKey('correo_destino')) {
+      context.handle(
+        _correoDestinoMeta,
+        correoDestino.isAcceptableOrUnknown(
+          data['correo_destino']!,
+          _correoDestinoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('nombre_remitente')) {
+      context.handle(
+        _nombreRemitenteMeta,
+        nombreRemitente.isAcceptableOrUnknown(
+          data['nombre_remitente']!,
+          _nombreRemitenteMeta,
+        ),
+      );
+    }
+    if (data.containsKey('ssl')) {
+      context.handle(
+        _sslMeta,
+        ssl.isAcceptableOrUnknown(data['ssl']!, _sslMeta),
+      );
+    }
+    if (data.containsKey('habilitado')) {
+      context.handle(
+        _habilitadoMeta,
+        habilitado.isAcceptableOrUnknown(data['habilitado']!, _habilitadoMeta),
+      );
+    }
+    if (data.containsKey('actualizado_en')) {
+      context.handle(
+        _actualizadoEnMeta,
+        actualizadoEn.isAcceptableOrUnknown(
+          data['actualizado_en']!,
+          _actualizadoEnMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ConfigSmtp map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ConfigSmtp(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      servidor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}servidor'],
+      )!,
+      puerto: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}puerto'],
+      )!,
+      usuario: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}usuario'],
+      )!,
+      contrasena: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contrasena'],
+      )!,
+      correoDestino: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}correo_destino'],
+      )!,
+      nombreRemitente: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nombre_remitente'],
+      )!,
+      ssl: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}ssl'],
+      )!,
+      habilitado: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}habilitado'],
+      )!,
+      actualizadoEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}actualizado_en'],
+      )!,
+    );
+  }
+
+  @override
+  $ConfigSmtpsTable createAlias(String alias) {
+    return $ConfigSmtpsTable(attachedDatabase, alias);
+  }
+}
+
+class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
+  final int id;
+  final String servidor;
+  final int puerto;
+  final String usuario;
+  final String contrasena;
+  final String correoDestino;
+  final String nombreRemitente;
+  final bool ssl;
+  final bool habilitado;
+  final DateTime actualizadoEn;
+  const ConfigSmtp({
+    required this.id,
+    required this.servidor,
+    required this.puerto,
+    required this.usuario,
+    required this.contrasena,
+    required this.correoDestino,
+    required this.nombreRemitente,
+    required this.ssl,
+    required this.habilitado,
+    required this.actualizadoEn,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['servidor'] = Variable<String>(servidor);
+    map['puerto'] = Variable<int>(puerto);
+    map['usuario'] = Variable<String>(usuario);
+    map['contrasena'] = Variable<String>(contrasena);
+    map['correo_destino'] = Variable<String>(correoDestino);
+    map['nombre_remitente'] = Variable<String>(nombreRemitente);
+    map['ssl'] = Variable<bool>(ssl);
+    map['habilitado'] = Variable<bool>(habilitado);
+    map['actualizado_en'] = Variable<DateTime>(actualizadoEn);
+    return map;
+  }
+
+  ConfigSmtpsCompanion toCompanion(bool nullToAbsent) {
+    return ConfigSmtpsCompanion(
+      id: Value(id),
+      servidor: Value(servidor),
+      puerto: Value(puerto),
+      usuario: Value(usuario),
+      contrasena: Value(contrasena),
+      correoDestino: Value(correoDestino),
+      nombreRemitente: Value(nombreRemitente),
+      ssl: Value(ssl),
+      habilitado: Value(habilitado),
+      actualizadoEn: Value(actualizadoEn),
+    );
+  }
+
+  factory ConfigSmtp.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ConfigSmtp(
+      id: serializer.fromJson<int>(json['id']),
+      servidor: serializer.fromJson<String>(json['servidor']),
+      puerto: serializer.fromJson<int>(json['puerto']),
+      usuario: serializer.fromJson<String>(json['usuario']),
+      contrasena: serializer.fromJson<String>(json['contrasena']),
+      correoDestino: serializer.fromJson<String>(json['correoDestino']),
+      nombreRemitente: serializer.fromJson<String>(json['nombreRemitente']),
+      ssl: serializer.fromJson<bool>(json['ssl']),
+      habilitado: serializer.fromJson<bool>(json['habilitado']),
+      actualizadoEn: serializer.fromJson<DateTime>(json['actualizadoEn']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'servidor': serializer.toJson<String>(servidor),
+      'puerto': serializer.toJson<int>(puerto),
+      'usuario': serializer.toJson<String>(usuario),
+      'contrasena': serializer.toJson<String>(contrasena),
+      'correoDestino': serializer.toJson<String>(correoDestino),
+      'nombreRemitente': serializer.toJson<String>(nombreRemitente),
+      'ssl': serializer.toJson<bool>(ssl),
+      'habilitado': serializer.toJson<bool>(habilitado),
+      'actualizadoEn': serializer.toJson<DateTime>(actualizadoEn),
+    };
+  }
+
+  ConfigSmtp copyWith({
+    int? id,
+    String? servidor,
+    int? puerto,
+    String? usuario,
+    String? contrasena,
+    String? correoDestino,
+    String? nombreRemitente,
+    bool? ssl,
+    bool? habilitado,
+    DateTime? actualizadoEn,
+  }) => ConfigSmtp(
+    id: id ?? this.id,
+    servidor: servidor ?? this.servidor,
+    puerto: puerto ?? this.puerto,
+    usuario: usuario ?? this.usuario,
+    contrasena: contrasena ?? this.contrasena,
+    correoDestino: correoDestino ?? this.correoDestino,
+    nombreRemitente: nombreRemitente ?? this.nombreRemitente,
+    ssl: ssl ?? this.ssl,
+    habilitado: habilitado ?? this.habilitado,
+    actualizadoEn: actualizadoEn ?? this.actualizadoEn,
+  );
+  ConfigSmtp copyWithCompanion(ConfigSmtpsCompanion data) {
+    return ConfigSmtp(
+      id: data.id.present ? data.id.value : this.id,
+      servidor: data.servidor.present ? data.servidor.value : this.servidor,
+      puerto: data.puerto.present ? data.puerto.value : this.puerto,
+      usuario: data.usuario.present ? data.usuario.value : this.usuario,
+      contrasena: data.contrasena.present
+          ? data.contrasena.value
+          : this.contrasena,
+      correoDestino: data.correoDestino.present
+          ? data.correoDestino.value
+          : this.correoDestino,
+      nombreRemitente: data.nombreRemitente.present
+          ? data.nombreRemitente.value
+          : this.nombreRemitente,
+      ssl: data.ssl.present ? data.ssl.value : this.ssl,
+      habilitado: data.habilitado.present
+          ? data.habilitado.value
+          : this.habilitado,
+      actualizadoEn: data.actualizadoEn.present
+          ? data.actualizadoEn.value
+          : this.actualizadoEn,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConfigSmtp(')
+          ..write('id: $id, ')
+          ..write('servidor: $servidor, ')
+          ..write('puerto: $puerto, ')
+          ..write('usuario: $usuario, ')
+          ..write('contrasena: $contrasena, ')
+          ..write('correoDestino: $correoDestino, ')
+          ..write('nombreRemitente: $nombreRemitente, ')
+          ..write('ssl: $ssl, ')
+          ..write('habilitado: $habilitado, ')
+          ..write('actualizadoEn: $actualizadoEn')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    servidor,
+    puerto,
+    usuario,
+    contrasena,
+    correoDestino,
+    nombreRemitente,
+    ssl,
+    habilitado,
+    actualizadoEn,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ConfigSmtp &&
+          other.id == this.id &&
+          other.servidor == this.servidor &&
+          other.puerto == this.puerto &&
+          other.usuario == this.usuario &&
+          other.contrasena == this.contrasena &&
+          other.correoDestino == this.correoDestino &&
+          other.nombreRemitente == this.nombreRemitente &&
+          other.ssl == this.ssl &&
+          other.habilitado == this.habilitado &&
+          other.actualizadoEn == this.actualizadoEn);
+}
+
+class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
+  final Value<int> id;
+  final Value<String> servidor;
+  final Value<int> puerto;
+  final Value<String> usuario;
+  final Value<String> contrasena;
+  final Value<String> correoDestino;
+  final Value<String> nombreRemitente;
+  final Value<bool> ssl;
+  final Value<bool> habilitado;
+  final Value<DateTime> actualizadoEn;
+  const ConfigSmtpsCompanion({
+    this.id = const Value.absent(),
+    this.servidor = const Value.absent(),
+    this.puerto = const Value.absent(),
+    this.usuario = const Value.absent(),
+    this.contrasena = const Value.absent(),
+    this.correoDestino = const Value.absent(),
+    this.nombreRemitente = const Value.absent(),
+    this.ssl = const Value.absent(),
+    this.habilitado = const Value.absent(),
+    this.actualizadoEn = const Value.absent(),
+  });
+  ConfigSmtpsCompanion.insert({
+    this.id = const Value.absent(),
+    this.servidor = const Value.absent(),
+    this.puerto = const Value.absent(),
+    this.usuario = const Value.absent(),
+    this.contrasena = const Value.absent(),
+    this.correoDestino = const Value.absent(),
+    this.nombreRemitente = const Value.absent(),
+    this.ssl = const Value.absent(),
+    this.habilitado = const Value.absent(),
+    this.actualizadoEn = const Value.absent(),
+  });
+  static Insertable<ConfigSmtp> custom({
+    Expression<int>? id,
+    Expression<String>? servidor,
+    Expression<int>? puerto,
+    Expression<String>? usuario,
+    Expression<String>? contrasena,
+    Expression<String>? correoDestino,
+    Expression<String>? nombreRemitente,
+    Expression<bool>? ssl,
+    Expression<bool>? habilitado,
+    Expression<DateTime>? actualizadoEn,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (servidor != null) 'servidor': servidor,
+      if (puerto != null) 'puerto': puerto,
+      if (usuario != null) 'usuario': usuario,
+      if (contrasena != null) 'contrasena': contrasena,
+      if (correoDestino != null) 'correo_destino': correoDestino,
+      if (nombreRemitente != null) 'nombre_remitente': nombreRemitente,
+      if (ssl != null) 'ssl': ssl,
+      if (habilitado != null) 'habilitado': habilitado,
+      if (actualizadoEn != null) 'actualizado_en': actualizadoEn,
+    });
+  }
+
+  ConfigSmtpsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? servidor,
+    Value<int>? puerto,
+    Value<String>? usuario,
+    Value<String>? contrasena,
+    Value<String>? correoDestino,
+    Value<String>? nombreRemitente,
+    Value<bool>? ssl,
+    Value<bool>? habilitado,
+    Value<DateTime>? actualizadoEn,
+  }) {
+    return ConfigSmtpsCompanion(
+      id: id ?? this.id,
+      servidor: servidor ?? this.servidor,
+      puerto: puerto ?? this.puerto,
+      usuario: usuario ?? this.usuario,
+      contrasena: contrasena ?? this.contrasena,
+      correoDestino: correoDestino ?? this.correoDestino,
+      nombreRemitente: nombreRemitente ?? this.nombreRemitente,
+      ssl: ssl ?? this.ssl,
+      habilitado: habilitado ?? this.habilitado,
+      actualizadoEn: actualizadoEn ?? this.actualizadoEn,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (servidor.present) {
+      map['servidor'] = Variable<String>(servidor.value);
+    }
+    if (puerto.present) {
+      map['puerto'] = Variable<int>(puerto.value);
+    }
+    if (usuario.present) {
+      map['usuario'] = Variable<String>(usuario.value);
+    }
+    if (contrasena.present) {
+      map['contrasena'] = Variable<String>(contrasena.value);
+    }
+    if (correoDestino.present) {
+      map['correo_destino'] = Variable<String>(correoDestino.value);
+    }
+    if (nombreRemitente.present) {
+      map['nombre_remitente'] = Variable<String>(nombreRemitente.value);
+    }
+    if (ssl.present) {
+      map['ssl'] = Variable<bool>(ssl.value);
+    }
+    if (habilitado.present) {
+      map['habilitado'] = Variable<bool>(habilitado.value);
+    }
+    if (actualizadoEn.present) {
+      map['actualizado_en'] = Variable<DateTime>(actualizadoEn.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ConfigSmtpsCompanion(')
+          ..write('id: $id, ')
+          ..write('servidor: $servidor, ')
+          ..write('puerto: $puerto, ')
+          ..write('usuario: $usuario, ')
+          ..write('contrasena: $contrasena, ')
+          ..write('correoDestino: $correoDestino, ')
+          ..write('nombreRemitente: $nombreRemitente, ')
+          ..write('ssl: $ssl, ')
+          ..write('habilitado: $habilitado, ')
+          ..write('actualizadoEn: $actualizadoEn')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3676,6 +4276,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $IngresosTable ingresos = $IngresosTable(this);
   late final $GastosFijosTable gastosFijos = $GastosFijosTable(this);
   late final $RecordatoriosTable recordatorios = $RecordatoriosTable(this);
+  late final $ConfigSmtpsTable configSmtps = $ConfigSmtpsTable(this);
   late final DeudasDao deudasDao = DeudasDao(this as AppDatabase);
   late final PrestamosDao prestamosDao = PrestamosDao(this as AppDatabase);
   late final IngresosDao ingresosDao = IngresosDao(this as AppDatabase);
@@ -3685,6 +4286,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final RecordatoriosDao recordatoriosDao = RecordatoriosDao(
     this as AppDatabase,
   );
+  late final ConfigSmtpDao configSmtpDao = ConfigSmtpDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3696,6 +4298,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     ingresos,
     gastosFijos,
     recordatorios,
+    configSmtps,
   ];
 }
 
@@ -5709,6 +6312,305 @@ typedef $$RecordatoriosTableProcessedTableManager =
       Recordatorio,
       PrefetchHooks Function()
     >;
+typedef $$ConfigSmtpsTableCreateCompanionBuilder =
+    ConfigSmtpsCompanion Function({
+      Value<int> id,
+      Value<String> servidor,
+      Value<int> puerto,
+      Value<String> usuario,
+      Value<String> contrasena,
+      Value<String> correoDestino,
+      Value<String> nombreRemitente,
+      Value<bool> ssl,
+      Value<bool> habilitado,
+      Value<DateTime> actualizadoEn,
+    });
+typedef $$ConfigSmtpsTableUpdateCompanionBuilder =
+    ConfigSmtpsCompanion Function({
+      Value<int> id,
+      Value<String> servidor,
+      Value<int> puerto,
+      Value<String> usuario,
+      Value<String> contrasena,
+      Value<String> correoDestino,
+      Value<String> nombreRemitente,
+      Value<bool> ssl,
+      Value<bool> habilitado,
+      Value<DateTime> actualizadoEn,
+    });
+
+class $$ConfigSmtpsTableFilterComposer
+    extends Composer<_$AppDatabase, $ConfigSmtpsTable> {
+  $$ConfigSmtpsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get servidor => $composableBuilder(
+    column: $table.servidor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get puerto => $composableBuilder(
+    column: $table.puerto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get usuario => $composableBuilder(
+    column: $table.usuario,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contrasena => $composableBuilder(
+    column: $table.contrasena,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get correoDestino => $composableBuilder(
+    column: $table.correoDestino,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nombreRemitente => $composableBuilder(
+    column: $table.nombreRemitente,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get ssl => $composableBuilder(
+    column: $table.ssl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get habilitado => $composableBuilder(
+    column: $table.habilitado,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get actualizadoEn => $composableBuilder(
+    column: $table.actualizadoEn,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ConfigSmtpsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ConfigSmtpsTable> {
+  $$ConfigSmtpsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get servidor => $composableBuilder(
+    column: $table.servidor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get puerto => $composableBuilder(
+    column: $table.puerto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get usuario => $composableBuilder(
+    column: $table.usuario,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contrasena => $composableBuilder(
+    column: $table.contrasena,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get correoDestino => $composableBuilder(
+    column: $table.correoDestino,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nombreRemitente => $composableBuilder(
+    column: $table.nombreRemitente,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get ssl => $composableBuilder(
+    column: $table.ssl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get habilitado => $composableBuilder(
+    column: $table.habilitado,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get actualizadoEn => $composableBuilder(
+    column: $table.actualizadoEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ConfigSmtpsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ConfigSmtpsTable> {
+  $$ConfigSmtpsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get servidor =>
+      $composableBuilder(column: $table.servidor, builder: (column) => column);
+
+  GeneratedColumn<int> get puerto =>
+      $composableBuilder(column: $table.puerto, builder: (column) => column);
+
+  GeneratedColumn<String> get usuario =>
+      $composableBuilder(column: $table.usuario, builder: (column) => column);
+
+  GeneratedColumn<String> get contrasena => $composableBuilder(
+    column: $table.contrasena,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get correoDestino => $composableBuilder(
+    column: $table.correoDestino,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get nombreRemitente => $composableBuilder(
+    column: $table.nombreRemitente,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get ssl =>
+      $composableBuilder(column: $table.ssl, builder: (column) => column);
+
+  GeneratedColumn<bool> get habilitado => $composableBuilder(
+    column: $table.habilitado,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get actualizadoEn => $composableBuilder(
+    column: $table.actualizadoEn,
+    builder: (column) => column,
+  );
+}
+
+class $$ConfigSmtpsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ConfigSmtpsTable,
+          ConfigSmtp,
+          $$ConfigSmtpsTableFilterComposer,
+          $$ConfigSmtpsTableOrderingComposer,
+          $$ConfigSmtpsTableAnnotationComposer,
+          $$ConfigSmtpsTableCreateCompanionBuilder,
+          $$ConfigSmtpsTableUpdateCompanionBuilder,
+          (
+            ConfigSmtp,
+            BaseReferences<_$AppDatabase, $ConfigSmtpsTable, ConfigSmtp>,
+          ),
+          ConfigSmtp,
+          PrefetchHooks Function()
+        > {
+  $$ConfigSmtpsTableTableManager(_$AppDatabase db, $ConfigSmtpsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ConfigSmtpsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ConfigSmtpsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ConfigSmtpsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> servidor = const Value.absent(),
+                Value<int> puerto = const Value.absent(),
+                Value<String> usuario = const Value.absent(),
+                Value<String> contrasena = const Value.absent(),
+                Value<String> correoDestino = const Value.absent(),
+                Value<String> nombreRemitente = const Value.absent(),
+                Value<bool> ssl = const Value.absent(),
+                Value<bool> habilitado = const Value.absent(),
+                Value<DateTime> actualizadoEn = const Value.absent(),
+              }) => ConfigSmtpsCompanion(
+                id: id,
+                servidor: servidor,
+                puerto: puerto,
+                usuario: usuario,
+                contrasena: contrasena,
+                correoDestino: correoDestino,
+                nombreRemitente: nombreRemitente,
+                ssl: ssl,
+                habilitado: habilitado,
+                actualizadoEn: actualizadoEn,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> servidor = const Value.absent(),
+                Value<int> puerto = const Value.absent(),
+                Value<String> usuario = const Value.absent(),
+                Value<String> contrasena = const Value.absent(),
+                Value<String> correoDestino = const Value.absent(),
+                Value<String> nombreRemitente = const Value.absent(),
+                Value<bool> ssl = const Value.absent(),
+                Value<bool> habilitado = const Value.absent(),
+                Value<DateTime> actualizadoEn = const Value.absent(),
+              }) => ConfigSmtpsCompanion.insert(
+                id: id,
+                servidor: servidor,
+                puerto: puerto,
+                usuario: usuario,
+                contrasena: contrasena,
+                correoDestino: correoDestino,
+                nombreRemitente: nombreRemitente,
+                ssl: ssl,
+                habilitado: habilitado,
+                actualizadoEn: actualizadoEn,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ConfigSmtpsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ConfigSmtpsTable,
+      ConfigSmtp,
+      $$ConfigSmtpsTableFilterComposer,
+      $$ConfigSmtpsTableOrderingComposer,
+      $$ConfigSmtpsTableAnnotationComposer,
+      $$ConfigSmtpsTableCreateCompanionBuilder,
+      $$ConfigSmtpsTableUpdateCompanionBuilder,
+      (
+        ConfigSmtp,
+        BaseReferences<_$AppDatabase, $ConfigSmtpsTable, ConfigSmtp>,
+      ),
+      ConfigSmtp,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5725,4 +6627,6 @@ class $AppDatabaseManager {
       $$GastosFijosTableTableManager(_db, _db.gastosFijos);
   $$RecordatoriosTableTableManager get recordatorios =>
       $$RecordatoriosTableTableManager(_db, _db.recordatorios);
+  $$ConfigSmtpsTableTableManager get configSmtps =>
+      $$ConfigSmtpsTableTableManager(_db, _db.configSmtps);
 }

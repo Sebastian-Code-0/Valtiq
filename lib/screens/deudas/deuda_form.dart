@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
-import '../../utils/date_format.dart';
+import '../../utils/form_widgets.dart';
 
 class DeudaForm extends StatefulWidget {
   const DeudaForm({super.key, required this.db, this.deuda});
@@ -96,8 +96,7 @@ class _DeudaFormState extends State<DeudaForm> {
     setState(() => _guardando = true);
 
     final monto = parseCOP(_montoCtrl.text)!;
-    final tasa =
-        double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
+    final tasa = double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
     final tipo = tasa > 0 ? _tipoInteres : 'ninguno';
     final cuotaText = _cuotaCtrl.text.trim();
     final cuota = cuotaText.isEmpty ? null : parseCOP(cuotaText);
@@ -149,111 +148,139 @@ class _DeudaFormState extends State<DeudaForm> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            TextFormField(
-              controller: _acreedorCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Acreedor (a quién le debes)',
-              ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _montoCtrl,
-              decoration: const InputDecoration(labelText: 'Monto original'),
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                CopInputFormatter(),
-              ],
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Requerido';
-                final n = parseCOP(v);
-                if (n == null || n <= 0) return 'Debe ser mayor a 0';
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _tasaCtrl,
-              decoration:
-                  const InputDecoration(labelText: 'Tasa de interés (%)'),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              onChanged: (_) => setState(() {
-                if (!_tieneInteres) _tipoInteres = 'ninguno';
-              }),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            DropdownButtonFormField<String>(
-              value: _tipoInteres,
-              decoration:
-                  const InputDecoration(labelText: 'Tipo de interés'),
-              items: const [
-                DropdownMenuItem(value: 'ninguno', child: Text('Ninguno')),
-                DropdownMenuItem(value: 'mensual', child: Text('Mensual')),
-                DropdownMenuItem(value: 'anual', child: Text('Anual')),
-              ],
-              onChanged: tieneInteres
-                  ? (v) => setState(() => _tipoInteres = v ?? 'ninguno')
-                  : null,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            InkWell(
-              onTap: _seleccionarFechaPrestamo,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Fecha del préstamo',
-                  suffixIcon: Icon(Icons.calendar_today),
+            FormSection(
+              title: 'Datos básicos',
+              icon: Icons.info_outline,
+              children: [
+                TextFormField(
+                  controller: _acreedorCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Acreedor',
+                    hintText: '¿A quién le debes?',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                 ),
-                child: Text(formatFecha(_fechaPrestamo)),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            InkWell(
-              onTap: _seleccionarFechaLimite,
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  labelText: 'Fecha límite de pago (opcional)',
-                  suffixIcon: _fechaLimite != null
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () =>
-                              setState(() => _fechaLimite = null),
-                        )
-                      : const Icon(Icons.calendar_today),
+                const SizedBox(height: AppSpacing.md),
+                TextFormField(
+                  controller: _montoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Monto original',
+                    prefixIcon: Icon(Icons.attach_money),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    CopInputFormatter(),
+                  ],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Requerido';
+                    final n = parseCOP(v);
+                    if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                    return null;
+                  },
                 ),
-                child: Text(
-                  _fechaLimite != null
-                      ? formatFecha(_fechaLimite!)
-                      : 'Sin fecha límite',
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _cuotaCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Cuota mensual pactada (opcional)',
-              ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                CopInputFormatter(),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _notasCtrl,
-              decoration:
-                  const InputDecoration(labelText: 'Notas (opcional)'),
-              maxLines: 3,
+            FormSection(
+              title: 'Intereses',
+              icon: Icons.percent,
+              children: [
+                TextFormField(
+                  controller: _tasaCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Tasa de interés (%)',
+                    prefixIcon: Icon(Icons.percent),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (_) => setState(() {
+                    if (!_tieneInteres) _tipoInteres = 'ninguno';
+                  }),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                DropdownButtonFormField<String>(
+                  value: _tipoInteres,
+                  decoration: const InputDecoration(
+                    labelText: 'Tipo de interés',
+                    prefixIcon: Icon(Icons.swap_horiz),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'ninguno',
+                      child: Text('Ninguno'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'mensual',
+                      child: Text('Mensual'),
+                    ),
+                    DropdownMenuItem(value: 'anual', child: Text('Anual')),
+                  ],
+                  onChanged: tieneInteres
+                      ? (v) => setState(() => _tipoInteres = v ?? 'ninguno')
+                      : null,
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FormSection(
+              title: 'Fechas',
+              icon: Icons.event,
+              children: [
+                DatePickerField(
+                  label: 'Fecha del préstamo',
+                  icon: Icons.calendar_today,
+                  value: _fechaPrestamo,
+                  onTap: _seleccionarFechaPrestamo,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                DatePickerField(
+                  label: 'Fecha límite de pago',
+                  icon: Icons.event_busy,
+                  value: _fechaLimite,
+                  onTap: _seleccionarFechaLimite,
+                  onClear: () => setState(() => _fechaLimite = null),
+                  placeholder: 'Sin fecha límite',
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FormSection(
+              title: 'Pagos y notas',
+              icon: Icons.payments_outlined,
+              children: [
+                TextFormField(
+                  controller: _cuotaCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Cuota mensual pactada',
+                    hintText: 'Opcional',
+                    prefixIcon: Icon(Icons.payment),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    CopInputFormatter(),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextFormField(
+                  controller: _notasCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Notas',
+                    hintText: 'Opcional',
+                    prefixIcon: Icon(Icons.notes),
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 3,
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            ElevatedButton(
-              onPressed: _guardando ? null : _guardar,
-              child: Text(_guardando ? 'Guardando...' : 'Guardar'),
-            ),
+            FormSaveButton(onPressed: _guardar, loading: _guardando),
+            const SizedBox(height: AppSpacing.md),
           ],
         ),
       ),

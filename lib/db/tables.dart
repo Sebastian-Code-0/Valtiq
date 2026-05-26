@@ -77,3 +77,21 @@ class Recordatorios extends Table {
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
 }
+
+class ConfigSmtps extends Table {
+  IntColumn get id => integer().withDefault(const Constant(1))();
+  TextColumn get servidor => text().withDefault(const Constant(''))();
+  IntColumn get puerto => integer().withDefault(const Constant(587))();
+  TextColumn get usuario => text().withDefault(const Constant(''))();
+  TextColumn get contrasena => text().withDefault(const Constant(''))();
+  TextColumn get correoDestino => text().withDefault(const Constant(''))();
+  TextColumn get nombreRemitente =>
+      text().withDefault(const Constant('Valtiq'))();
+  BoolColumn get ssl => boolean().withDefault(const Constant(false))();
+  BoolColumn get habilitado => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get actualizadoEn =>
+      dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

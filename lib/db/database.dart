@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import 'connection.dart' as conn;
+import 'daos/config_smtp_dao.dart';
 import 'daos/deudas_dao.dart';
 import 'daos/gastos_fijos_dao.dart';
 import 'daos/ingresos_dao.dart';
@@ -18,6 +19,7 @@ part 'database.g.dart';
     Ingresos,
     GastosFijos,
     Recordatorios,
+    ConfigSmtps,
   ],
   daos: [
     DeudasDao,
@@ -25,6 +27,7 @@ part 'database.g.dart';
     IngresosDao,
     GastosFijosDao,
     RecordatoriosDao,
+    ConfigSmtpDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -33,5 +36,25 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor openConnection() => conn.openValtiqConnection();
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async {
+      await m.createAll();
+      await into(configSmtps).insert(
+        const ConfigSmtpsCompanion(id: Value(1)),
+        mode: InsertMode.insertOrIgnore,
+      );
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(configSmtps);
+        await into(configSmtps).insert(
+          const ConfigSmtpsCompanion(id: Value(1)),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
+    },
+  );
 }

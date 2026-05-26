@@ -5,6 +5,29 @@ String formatFecha(DateTime fecha) {
   return '$d/$m/$y';
 }
 
+const _mesesCortos = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
+];
+
+const _diasCortos = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+
+String formatFechaLegible(DateTime fecha) {
+  final dia = _diasCortos[fecha.weekday - 1];
+  final mes = _mesesCortos[fecha.month - 1];
+  return '$dia ${fecha.day} $mes ${fecha.year}';
+}
+
 String fechaRelativa(DateTime fecha) {
   final ahora = DateTime.now();
   final hoy = DateTime(ahora.year, ahora.month, ahora.day);

@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
-import '../../utils/date_format.dart';
+import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 
 class RecordatorioForm extends StatefulWidget {
@@ -159,7 +159,10 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
         }
         return DropdownButtonFormField<int>(
           value: _referenciaId,
-          decoration: const InputDecoration(labelText: 'Deuda'),
+          decoration: const InputDecoration(
+            labelText: 'Deuda',
+            prefixIcon: Icon(Icons.credit_card),
+          ),
           isExpanded: true,
           items: _deudas
               .map(
@@ -180,7 +183,10 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
         }
         return DropdownButtonFormField<int>(
           value: _referenciaId,
-          decoration: const InputDecoration(labelText: 'Préstamo'),
+          decoration: const InputDecoration(
+            labelText: 'Préstamo',
+            prefixIcon: Icon(Icons.handshake_outlined),
+          ),
           isExpanded: true,
           items: _prestamos
               .map(
@@ -201,7 +207,10 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
         }
         return DropdownButtonFormField<int>(
           value: _referenciaId,
-          decoration: const InputDecoration(labelText: 'Gasto fijo'),
+          decoration: const InputDecoration(
+            labelText: 'Gasto fijo',
+            prefixIcon: Icon(Icons.receipt_long),
+          ),
           isExpanded: true,
           items: _gastosFijos
               .map(
@@ -234,91 +243,116 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            TextFormField(
-              controller: _tituloCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Título',
-                hintText: 'Pago de Netflix, Cobrar a Juan...',
-              ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            InkWell(
-              onTap: _seleccionarFecha,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Fecha de alerta',
-                  suffixIcon: Icon(Icons.calendar_today),
+            FormSection(
+              title: 'Detalles',
+              icon: Icons.notifications_outlined,
+              children: [
+                TextFormField(
+                  controller: _tituloCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Título',
+                    hintText: 'Pago de Netflix, cobrar a Juan...',
+                    prefixIcon: Icon(Icons.title),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                 ),
-                child: Text(formatFecha(_fechaAlerta)),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _diasCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Días de anticipación',
-                hintText: '¿Cuántos días antes quieres el aviso?',
-              ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(3),
-              ],
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Requerido';
-                final n = int.tryParse(v.trim());
-                if (n == null || n < 0) return 'Inválido';
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
-            DropdownButtonFormField<String>(
-              value: _tipoNotificacion,
-              decoration:
-                  const InputDecoration(labelText: 'Tipo de notificación'),
-              items: const [
-                DropdownMenuItem(value: 'sistema', child: Text('Sistema')),
-                DropdownMenuItem(value: 'correo', child: Text('Correo')),
-                DropdownMenuItem(value: 'ambos', child: Text('Ambos')),
-              ],
-              onChanged: (v) =>
-                  setState(() => _tipoNotificacion = v ?? 'sistema'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('¿Se repite cada mes?'),
-              value: _repetir,
-              onChanged: (v) => setState(() => _repetir = v),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            DropdownButtonFormField<String>(
-              value: _tipoReferencia,
-              decoration: const InputDecoration(
-                labelText: 'Referencia (opcional)',
-              ),
-              items: const [
-                DropdownMenuItem(
-                  value: 'ninguna',
-                  child: Text('Sin referencia'),
+                const SizedBox(height: AppSpacing.md),
+                DatePickerField(
+                  label: 'Fecha de alerta',
+                  icon: Icons.calendar_today,
+                  value: _fechaAlerta,
+                  onTap: _seleccionarFecha,
                 ),
-                DropdownMenuItem(value: 'deuda', child: Text('Deuda')),
-                DropdownMenuItem(value: 'prestamo', child: Text('Préstamo')),
-                DropdownMenuItem(value: 'gasto', child: Text('Gasto fijo')),
+                const SizedBox(height: AppSpacing.md),
+                TextFormField(
+                  controller: _diasCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Días de anticipación',
+                    hintText: '¿Cuántos días antes quieres el aviso?',
+                    prefixIcon: Icon(Icons.alarm),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(3),
+                  ],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Requerido';
+                    final n = int.tryParse(v.trim());
+                    if (n == null || n < 0) return 'Inválido';
+                    return null;
+                  },
+                ),
               ],
-              onChanged: _onTipoReferenciaChanged,
             ),
-            if (refSelector != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              refSelector,
-            ],
+            const SizedBox(height: AppSpacing.md),
+            FormSection(
+              title: 'Notificación',
+              icon: Icons.notifications_active_outlined,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _tipoNotificacion,
+                  decoration: const InputDecoration(
+                    labelText: 'Tipo de notificación',
+                    prefixIcon: Icon(Icons.send_outlined),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'sistema',
+                      child: Text('Sistema'),
+                    ),
+                    DropdownMenuItem(value: 'correo', child: Text('Correo')),
+                    DropdownMenuItem(value: 'ambos', child: Text('Ambos')),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _tipoNotificacion = v ?? 'sistema'),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SwitchTile(
+                  icon: Icons.repeat,
+                  title: '¿Se repite cada mes?',
+                  subtitle:
+                      'Si está activo, se reprogramará automáticamente',
+                  value: _repetir,
+                  onChanged: (v) => setState(() => _repetir = v),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FormSection(
+              title: 'Referencia',
+              icon: Icons.link,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _tipoReferencia,
+                  decoration: const InputDecoration(
+                    labelText: 'Vincular con',
+                    prefixIcon: Icon(Icons.link),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'ninguna',
+                      child: Text('Sin referencia'),
+                    ),
+                    DropdownMenuItem(value: 'deuda', child: Text('Deuda')),
+                    DropdownMenuItem(
+                      value: 'prestamo',
+                      child: Text('Préstamo'),
+                    ),
+                    DropdownMenuItem(value: 'gasto', child: Text('Gasto fijo')),
+                  ],
+                  onChanged: _onTipoReferenciaChanged,
+                ),
+                if (refSelector != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  refSelector,
+                ],
+              ],
+            ),
             const SizedBox(height: AppSpacing.lg),
-            ElevatedButton(
-              onPressed: _guardando ? null : _guardar,
-              child: Text(_guardando ? 'Guardando...' : 'Guardar'),
-            ),
+            FormSaveButton(onPressed: _guardar, loading: _guardando),
+            const SizedBox(height: AppSpacing.md),
           ],
         ),
       ),

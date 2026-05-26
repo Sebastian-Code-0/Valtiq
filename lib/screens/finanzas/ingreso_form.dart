@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
-import '../../utils/date_format.dart';
+import '../../utils/form_widgets.dart';
 
 class IngresoForm extends StatefulWidget {
   const IngresoForm({super.key, required this.db, this.ingreso});
@@ -107,63 +107,99 @@ class _IngresoFormState extends State<IngresoForm> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            TextFormField(
-              controller: _conceptoCtrl,
-              decoration: const InputDecoration(labelText: 'Concepto'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _montoCtrl,
-              decoration: const InputDecoration(labelText: 'Monto'),
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                CopInputFormatter(),
-              ],
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Requerido';
-                final n = parseCOP(v);
-                if (n == null || n <= 0) return 'Debe ser mayor a 0';
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
-            DropdownButtonFormField<String>(
-              value: _frecuencia,
-              decoration: const InputDecoration(labelText: 'Frecuencia'),
-              items: const [
-                DropdownMenuItem(value: 'mensual', child: Text('Mensual')),
-                DropdownMenuItem(value: 'quincenal', child: Text('Quincenal')),
-                DropdownMenuItem(value: 'semanal', child: Text('Semanal')),
-                DropdownMenuItem(value: 'unico', child: Text('Único')),
-              ],
-              onChanged: (v) => setState(() => _frecuencia = v ?? 'mensual'),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            InkWell(
-              onTap: _seleccionarFecha,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Fecha',
-                  suffixIcon: Icon(Icons.calendar_today),
+            FormSection(
+              title: 'Datos del ingreso',
+              icon: Icons.trending_up,
+              children: [
+                TextFormField(
+                  controller: _conceptoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Concepto',
+                    hintText: 'Sueldo, freelance, venta...',
+                    prefixIcon: Icon(Icons.label_outline),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                 ),
-                child: Text(formatFecha(_fecha)),
-              ),
+                const SizedBox(height: AppSpacing.md),
+                TextFormField(
+                  controller: _montoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Monto',
+                    prefixIcon: Icon(Icons.attach_money),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    CopInputFormatter(),
+                  ],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Requerido';
+                    final n = parseCOP(v);
+                    if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                    return null;
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _notasCtrl,
-              decoration:
-                  const InputDecoration(labelText: 'Notas (opcional)'),
-              maxLines: 3,
+            FormSection(
+              title: 'Frecuencia y fecha',
+              icon: Icons.event_repeat,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: _frecuencia,
+                  decoration: const InputDecoration(
+                    labelText: 'Frecuencia',
+                    prefixIcon: Icon(Icons.repeat),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'mensual',
+                      child: Text('Mensual'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'quincenal',
+                      child: Text('Quincenal'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'semanal',
+                      child: Text('Semanal'),
+                    ),
+                    DropdownMenuItem(value: 'unico', child: Text('Único')),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _frecuencia = v ?? 'mensual'),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                DatePickerField(
+                  label: 'Fecha',
+                  icon: Icons.calendar_today,
+                  value: _fecha,
+                  onTap: _seleccionarFecha,
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FormSection(
+              title: 'Notas',
+              icon: Icons.notes,
+              children: [
+                TextFormField(
+                  controller: _notasCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Notas',
+                    hintText: 'Opcional',
+                    prefixIcon: Icon(Icons.notes),
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 3,
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            ElevatedButton(
-              onPressed: _guardando ? null : _guardar,
-              child: Text(_guardando ? 'Guardando...' : 'Guardar'),
-            ),
+            FormSaveButton(onPressed: _guardar, loading: _guardando),
+            const SizedBox(height: AppSpacing.md),
           ],
         ),
       ),

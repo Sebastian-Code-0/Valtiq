@@ -46,6 +46,17 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
     return count > 0;
   }
 
+  Future<bool> marcarComoActiva(int id) async {
+    final count = await (update(deudas)..where((t) => t.id.equals(id))).write(
+      DeudasCompanion(
+        estado: const Value('activa'),
+        fechaPagoReal: const Value(null),
+        actualizadoEn: Value(DateTime.now()),
+      ),
+    );
+    return count > 0;
+  }
+
   Future<int> deleteDeuda(int id) {
     return (delete(deudas)..where((t) => t.id.equals(id))).go();
   }
