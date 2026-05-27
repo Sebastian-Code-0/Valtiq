@@ -1,17 +1,19 @@
 abstract class EmailTemplate {
+  static String _escapeHtml(String text) => text
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+
   static String build(String asunto, String contenido) {
-    final htmlContenido = contenido
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('\n', '<br>');
+    final htmlAsunto = _escapeHtml(asunto);
+    final htmlContenido = _escapeHtml(contenido).replaceAll('\n', '<br>');
 
     return '''<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>$asunto</title>
+  <title>$htmlAsunto</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F0F4F8;font-family:Arial,Helvetica,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">

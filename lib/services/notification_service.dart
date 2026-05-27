@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../db/database.dart';
+import '../utils/date_format.dart';
+import '../utils/format.dart';
 import 'smtp_service.dart';
 
 class NotificationService {
@@ -60,22 +62,126 @@ class NotificationService {
           diasFaltantes <= r.diasAnticipacion && diasFaltantes >= -7;
       if (!dentroDeVentana) continue;
 
-      final body = _bodyParaRecordatorio(diasFaltantes);
+      final contenido = await _buildContenido(r, db, diasFaltantes);
       final tipo = r.tipoNotificacion;
 
       if (tipo == 'sistema' || tipo == 'ambos') {
-        await showNotification(id: r.id, title: r.titulo, body: body);
+        await showNotification(
+          id: r.id,
+          title: r.titulo,
+          body: contenido.sistema,
+        );
         notificados++;
       }
       if (tipo == 'correo' || tipo == 'ambos') {
         await SmtpService.enviarCorreo(
           db: db,
           asunto: 'Recordatorio: ${r.titulo}',
-          cuerpo: '${r.titulo}\n\n$body',
+          cuerpo: contenido.email,
         );
       }
     }
     return notificados;
+  }
+
+  // Returns both the short OS notification body and the rich email body.
+  // A single DB lookup serves both to avoid double queries.
+  static Future<({String sistema, String email})> _buildContenido(
+    Recordatorio r,
+    AppDatabase db,
+    int diasFaltantes,
+  ) async {
+    final estado = _bodyParaRecordatorio(diasFaltantes);
+
+    if (r.referenciaTabla == null || r.referenciaId == null) {
+      return (
+        sistema: estado,
+        email: '📋 Recordatorio: ${r.titulo}\n\n⏰ $estado',
+      );
+    }
+
+    try {
+      return await _buildCuerpoEnriquecido(r, db, diasFaltantes, estado);
+    } catch (_) {
+      return (
+        sistema: estado,
+        email: '📋 Recordatorio: ${r.titulo}\n\n⏰ $estado',
+      );
+    }
+  }
+
+  static Future<({String sistema, String email})> _buildCuerpoEnriquecido(
+    Recordatorio r,
+    AppDatabase db,
+    int diasFaltantes,
+    String estado,
+  ) async {
+    final id = r.referenciaId!;
+
+    switch (r.referenciaTabla) {
+      case 'deuda':
+        final deuda = await db.deudasDao.getDeudaById(id);
+        final monto = '${formatCOP(deuda.montoOriginal)} COP';
+        final sistema =
+            'Pago a ${deuda.acreedorNombre} — $monto — $estado';
+
+        final buf = StringBuffer()
+          ..writeln('📋 Recordatorio: ${r.titulo}')
+          ..writeln()
+          ..writeln('💰 Monto original: $monto');
+        if (deuda.fechaLimite != null) {
+          buf.writeln('📅 Fecha límite: ${formatFechaLegible(deuda.fechaLimite!)}');
+        }
+        buf.writeln('⏰ Estado: $estado');
+        if (deuda.cuotaMensual != null) {
+          buf.write('💳 Cuota mensual: ${formatCOP(deuda.cuotaMensual!)} COP');
+        }
+
+        return (sistema: sistema, email: buf.toString().trimRight());
+
+      case 'prestamo':
+        final prestamo = await db.prestamosDao.getPrestamoById(id);
+        final monto = '${formatCOP(prestamo.montoPrestado)} COP';
+        final sistema =
+            'Cobro a ${prestamo.deudorNombre} — $monto — $estado';
+
+        final buf = StringBuffer()
+          ..writeln('📋 Recordatorio: ${r.titulo}')
+          ..writeln()
+          ..writeln('💰 Monto prestado: $monto');
+        if (prestamo.fechaPactadaPago != null) {
+          buf.writeln(
+            '📅 Fecha pactada: ${formatFechaLegible(prestamo.fechaPactadaPago!)}',
+          );
+        }
+        buf.writeln('⏰ Estado: $estado');
+        if (prestamo.deudorContacto.isNotEmpty) {
+          buf.write('📞 Contacto: ${prestamo.deudorContacto}');
+        }
+
+        return (sistema: sistema, email: buf.toString().trimRight());
+
+      case 'gasto':
+        final gasto = await db.gastosFijosDao.getGastoFijoById(id);
+        final monto = '${formatCOP(gasto.monto)} COP';
+        final sistema = '${gasto.concepto} — $monto — $estado';
+
+        final buf = StringBuffer()
+          ..writeln('📋 Recordatorio: ${r.titulo}')
+          ..writeln()
+          ..writeln('💰 Monto: $monto')
+          ..writeln('🔄 Frecuencia: ${gasto.frecuencia}')
+          ..write('⏰ Estado: $estado');
+
+        return (sistema: sistema, email: buf.toString());
+
+      default:
+        final estado0 = _bodyParaRecordatorio(diasFaltantes);
+        return (
+          sistema: estado0,
+          email: '📋 Recordatorio: ${r.titulo}\n\n⏰ $estado0',
+        );
+    }
   }
 
   static String _bodyParaRecordatorio(int diasFaltantes) {
@@ -85,7 +191,7 @@ class NotificationService {
       return 'Vencido hace $n ${n == 1 ? 'día' : 'días'}';
     }
     if (diasFaltantes == 1) return 'Mañana';
-    return 'En $diasFaltantes días';
+    return 'Vence en $diasFaltantes días';
   }
 
   static Future<void> cancelar(int id) async {
