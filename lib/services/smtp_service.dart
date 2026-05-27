@@ -11,12 +11,12 @@ class SmtpResult {
 }
 
 class SmtpService {
-  static SmtpServer _build(ConfigSmtp config) {
+  static SmtpServer _build(ConfigSmtp config, String password) {
     return SmtpServer(
       config.servidor,
       port: config.puerto,
       username: config.usuario,
-      password: config.contrasena,
+      password: password,
       ssl: config.ssl,
       allowInsecure: false,
     );
@@ -42,11 +42,18 @@ class SmtpService {
         mensaje: 'Configuración SMTP incompleta',
       );
     }
-    return _enviarCon(config: config, asunto: asunto, cuerpo: cuerpo);
+    final password = await db.configSmtpDao.getPassword() ?? '';
+    return _enviarCon(
+      config: config,
+      password: password,
+      asunto: asunto,
+      cuerpo: cuerpo,
+    );
   }
 
   static Future<SmtpResult> probarConfiguracion({
     required ConfigSmtp config,
+    required String password,
   }) async {
     if (config.servidor.isEmpty ||
         config.usuario.isEmpty ||
@@ -58,6 +65,7 @@ class SmtpService {
     }
     return _enviarCon(
       config: config,
+      password: password,
       asunto: 'Prueba de configuración Valtiq',
       cuerpo:
           'Si recibes este correo, la configuración SMTP de Valtiq funciona correctamente.',
@@ -66,14 +74,14 @@ class SmtpService {
 
   static Future<SmtpResult> _enviarCon({
     required ConfigSmtp config,
+    required String password,
     required String asunto,
     required String cuerpo,
   }) async {
     try {
-      final server = _build(config);
-      final remitente = config.nombreRemitente.isEmpty
-          ? 'Valtiq'
-          : config.nombreRemitente;
+      final server = _build(config, password);
+      final remitente =
+          config.nombreRemitente.isEmpty ? 'Valtiq' : config.nombreRemitente;
       final mensaje = Message()
         ..from = Address(config.usuario, remitente)
         ..recipients.add(config.correoDestino)

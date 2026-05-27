@@ -34,6 +34,15 @@ class GastosFijosDao extends DatabaseAccessor<AppDatabase>
     return (delete(gastosFijos)..where((t) => t.id.equals(id))).go();
   }
 
+  Future<void> setActivo(int id, {required bool activo}) async {
+    await (update(gastosFijos)..where((t) => t.id.equals(id))).write(
+      GastosFijosCompanion(
+        activo: Value(activo),
+        actualizadoEn: Value(DateTime.now()),
+      ),
+    );
+  }
+
   Future<double> getTotalGastosFijosActivos() async {
     final sum = gastosFijos.monto.sum();
     final query = selectOnly(gastosFijos)

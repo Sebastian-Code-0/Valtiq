@@ -68,4 +68,12 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
     );
     return count > 0;
   }
+
+  Future<bool> activarRecordatorio(int id) async {
+    final count =
+        await (update(recordatorios)..where((t) => t.id.equals(id))).write(
+      const RecordatoriosCompanion(activo: Value(true)),
+    );
+    return count > 0;
+  }
 }

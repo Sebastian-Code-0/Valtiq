@@ -15,6 +15,24 @@ class ConfigSmtpScreen extends StatefulWidget {
   State<ConfigSmtpScreen> createState() => _ConfigSmtpScreenState();
 }
 
+typedef _Preset = ({String nombre, String servidor, int puerto, bool ssl});
+
+const _presets = <_Preset>[
+  (nombre: 'Gmail', servidor: 'smtp.gmail.com', puerto: 587, ssl: false),
+  (
+    nombre: 'Outlook',
+    servidor: 'smtp.office365.com',
+    puerto: 587,
+    ssl: false,
+  ),
+  (
+    nombre: 'Yahoo',
+    servidor: 'smtp.mail.yahoo.com',
+    puerto: 587,
+    ssl: false,
+  ),
+];
+
 class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
   final _formKey = GlobalKey<FormState>();
 
@@ -32,6 +50,14 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
   bool _probando = false;
   bool _cargando = true;
 
+  void _aplicarPreset(_Preset preset) {
+    setState(() {
+      _servidorCtrl.text = preset.servidor;
+      _puertoCtrl.text = preset.puerto.toString();
+      _ssl = preset.ssl;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -40,12 +66,13 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
 
   Future<void> _cargarConfig() async {
     final config = await widget.db.configSmtpDao.getConfig();
+    final password = await widget.db.configSmtpDao.getPassword();
     if (!mounted) return;
     setState(() {
       _servidorCtrl.text = config.servidor;
       _puertoCtrl.text = config.puerto.toString();
       _usuarioCtrl.text = config.usuario;
-      _passCtrl.text = config.contrasena;
+      _passCtrl.text = password ?? '';
       _destinoCtrl.text = config.correoDestino;
       _remitenteCtrl.text = config.nombreRemitente;
       _ssl = config.ssl;
@@ -96,7 +123,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
       servidor: _servidorCtrl.text.trim(),
       puerto: int.tryParse(_puertoCtrl.text.trim()) ?? 587,
       usuario: _usuarioCtrl.text.trim(),
-      contrasena: _passCtrl.text,
+      tieneContrasena: _passCtrl.text.isNotEmpty,
       correoDestino: _destinoCtrl.text.trim(),
       nombreRemitente: _remitenteCtrl.text.trim().isEmpty
           ? 'Valtiq'
@@ -106,7 +133,10 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
       actualizadoEn: DateTime.now(),
     );
 
-    final result = await SmtpService.probarConfiguracion(config: config);
+    final result = await SmtpService.probarConfiguracion(
+      config: config,
+      password: _passCtrl.text,
+    );
     if (!mounted) return;
     setState(() => _probando = false);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -133,6 +163,38 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.bolt, size: 18),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          'Presets rápidos',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      children: [
+                        for (final p in _presets)
+                          OutlinedButton(
+                            onPressed: () => _aplicarPreset(p),
+                            child: Text(p.nombre),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             FormSection(
               title: 'Servidor',
               icon: Icons.dns_outlined,

@@ -781,6 +781,408 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
   }
 }
 
+class $PagosDeudaTable extends PagosDeuda
+    with TableInfo<$PagosDeudaTable, PagosDeudaData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PagosDeudaTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _deudaIdMeta = const VerificationMeta(
+    'deudaId',
+  );
+  @override
+  late final GeneratedColumn<int> deudaId = GeneratedColumn<int>(
+    'deuda_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES deudas (id)',
+    ),
+  );
+  static const VerificationMeta _montoAbonadoMeta = const VerificationMeta(
+    'montoAbonado',
+  );
+  @override
+  late final GeneratedColumn<double> montoAbonado = GeneratedColumn<double>(
+    'monto_abonado',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fechaPagoMeta = const VerificationMeta(
+    'fechaPago',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fechaPago = GeneratedColumn<DateTime>(
+    'fecha_pago',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notasMeta = const VerificationMeta('notas');
+  @override
+  late final GeneratedColumn<String> notas = GeneratedColumn<String>(
+    'notas',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _creadoEnMeta = const VerificationMeta(
+    'creadoEn',
+  );
+  @override
+  late final GeneratedColumn<DateTime> creadoEn = GeneratedColumn<DateTime>(
+    'creado_en',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    deudaId,
+    montoAbonado,
+    fechaPago,
+    notas,
+    creadoEn,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pagos_deuda';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PagosDeudaData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('deuda_id')) {
+      context.handle(
+        _deudaIdMeta,
+        deudaId.isAcceptableOrUnknown(data['deuda_id']!, _deudaIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deudaIdMeta);
+    }
+    if (data.containsKey('monto_abonado')) {
+      context.handle(
+        _montoAbonadoMeta,
+        montoAbonado.isAcceptableOrUnknown(
+          data['monto_abonado']!,
+          _montoAbonadoMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_montoAbonadoMeta);
+    }
+    if (data.containsKey('fecha_pago')) {
+      context.handle(
+        _fechaPagoMeta,
+        fechaPago.isAcceptableOrUnknown(data['fecha_pago']!, _fechaPagoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fechaPagoMeta);
+    }
+    if (data.containsKey('notas')) {
+      context.handle(
+        _notasMeta,
+        notas.isAcceptableOrUnknown(data['notas']!, _notasMeta),
+      );
+    }
+    if (data.containsKey('creado_en')) {
+      context.handle(
+        _creadoEnMeta,
+        creadoEn.isAcceptableOrUnknown(data['creado_en']!, _creadoEnMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PagosDeudaData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PagosDeudaData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      deudaId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deuda_id'],
+      )!,
+      montoAbonado: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monto_abonado'],
+      )!,
+      fechaPago: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha_pago'],
+      )!,
+      notas: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notas'],
+      )!,
+      creadoEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}creado_en'],
+      )!,
+    );
+  }
+
+  @override
+  $PagosDeudaTable createAlias(String alias) {
+    return $PagosDeudaTable(attachedDatabase, alias);
+  }
+}
+
+class PagosDeudaData extends DataClass implements Insertable<PagosDeudaData> {
+  final int id;
+  final int deudaId;
+  final double montoAbonado;
+  final DateTime fechaPago;
+  final String notas;
+  final DateTime creadoEn;
+  const PagosDeudaData({
+    required this.id,
+    required this.deudaId,
+    required this.montoAbonado,
+    required this.fechaPago,
+    required this.notas,
+    required this.creadoEn,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['deuda_id'] = Variable<int>(deudaId);
+    map['monto_abonado'] = Variable<double>(montoAbonado);
+    map['fecha_pago'] = Variable<DateTime>(fechaPago);
+    map['notas'] = Variable<String>(notas);
+    map['creado_en'] = Variable<DateTime>(creadoEn);
+    return map;
+  }
+
+  PagosDeudaCompanion toCompanion(bool nullToAbsent) {
+    return PagosDeudaCompanion(
+      id: Value(id),
+      deudaId: Value(deudaId),
+      montoAbonado: Value(montoAbonado),
+      fechaPago: Value(fechaPago),
+      notas: Value(notas),
+      creadoEn: Value(creadoEn),
+    );
+  }
+
+  factory PagosDeudaData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PagosDeudaData(
+      id: serializer.fromJson<int>(json['id']),
+      deudaId: serializer.fromJson<int>(json['deudaId']),
+      montoAbonado: serializer.fromJson<double>(json['montoAbonado']),
+      fechaPago: serializer.fromJson<DateTime>(json['fechaPago']),
+      notas: serializer.fromJson<String>(json['notas']),
+      creadoEn: serializer.fromJson<DateTime>(json['creadoEn']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'deudaId': serializer.toJson<int>(deudaId),
+      'montoAbonado': serializer.toJson<double>(montoAbonado),
+      'fechaPago': serializer.toJson<DateTime>(fechaPago),
+      'notas': serializer.toJson<String>(notas),
+      'creadoEn': serializer.toJson<DateTime>(creadoEn),
+    };
+  }
+
+  PagosDeudaData copyWith({
+    int? id,
+    int? deudaId,
+    double? montoAbonado,
+    DateTime? fechaPago,
+    String? notas,
+    DateTime? creadoEn,
+  }) => PagosDeudaData(
+    id: id ?? this.id,
+    deudaId: deudaId ?? this.deudaId,
+    montoAbonado: montoAbonado ?? this.montoAbonado,
+    fechaPago: fechaPago ?? this.fechaPago,
+    notas: notas ?? this.notas,
+    creadoEn: creadoEn ?? this.creadoEn,
+  );
+  PagosDeudaData copyWithCompanion(PagosDeudaCompanion data) {
+    return PagosDeudaData(
+      id: data.id.present ? data.id.value : this.id,
+      deudaId: data.deudaId.present ? data.deudaId.value : this.deudaId,
+      montoAbonado: data.montoAbonado.present
+          ? data.montoAbonado.value
+          : this.montoAbonado,
+      fechaPago: data.fechaPago.present ? data.fechaPago.value : this.fechaPago,
+      notas: data.notas.present ? data.notas.value : this.notas,
+      creadoEn: data.creadoEn.present ? data.creadoEn.value : this.creadoEn,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PagosDeudaData(')
+          ..write('id: $id, ')
+          ..write('deudaId: $deudaId, ')
+          ..write('montoAbonado: $montoAbonado, ')
+          ..write('fechaPago: $fechaPago, ')
+          ..write('notas: $notas, ')
+          ..write('creadoEn: $creadoEn')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, deudaId, montoAbonado, fechaPago, notas, creadoEn);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PagosDeudaData &&
+          other.id == this.id &&
+          other.deudaId == this.deudaId &&
+          other.montoAbonado == this.montoAbonado &&
+          other.fechaPago == this.fechaPago &&
+          other.notas == this.notas &&
+          other.creadoEn == this.creadoEn);
+}
+
+class PagosDeudaCompanion extends UpdateCompanion<PagosDeudaData> {
+  final Value<int> id;
+  final Value<int> deudaId;
+  final Value<double> montoAbonado;
+  final Value<DateTime> fechaPago;
+  final Value<String> notas;
+  final Value<DateTime> creadoEn;
+  const PagosDeudaCompanion({
+    this.id = const Value.absent(),
+    this.deudaId = const Value.absent(),
+    this.montoAbonado = const Value.absent(),
+    this.fechaPago = const Value.absent(),
+    this.notas = const Value.absent(),
+    this.creadoEn = const Value.absent(),
+  });
+  PagosDeudaCompanion.insert({
+    this.id = const Value.absent(),
+    required int deudaId,
+    required double montoAbonado,
+    required DateTime fechaPago,
+    this.notas = const Value.absent(),
+    this.creadoEn = const Value.absent(),
+  }) : deudaId = Value(deudaId),
+       montoAbonado = Value(montoAbonado),
+       fechaPago = Value(fechaPago);
+  static Insertable<PagosDeudaData> custom({
+    Expression<int>? id,
+    Expression<int>? deudaId,
+    Expression<double>? montoAbonado,
+    Expression<DateTime>? fechaPago,
+    Expression<String>? notas,
+    Expression<DateTime>? creadoEn,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (deudaId != null) 'deuda_id': deudaId,
+      if (montoAbonado != null) 'monto_abonado': montoAbonado,
+      if (fechaPago != null) 'fecha_pago': fechaPago,
+      if (notas != null) 'notas': notas,
+      if (creadoEn != null) 'creado_en': creadoEn,
+    });
+  }
+
+  PagosDeudaCompanion copyWith({
+    Value<int>? id,
+    Value<int>? deudaId,
+    Value<double>? montoAbonado,
+    Value<DateTime>? fechaPago,
+    Value<String>? notas,
+    Value<DateTime>? creadoEn,
+  }) {
+    return PagosDeudaCompanion(
+      id: id ?? this.id,
+      deudaId: deudaId ?? this.deudaId,
+      montoAbonado: montoAbonado ?? this.montoAbonado,
+      fechaPago: fechaPago ?? this.fechaPago,
+      notas: notas ?? this.notas,
+      creadoEn: creadoEn ?? this.creadoEn,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (deudaId.present) {
+      map['deuda_id'] = Variable<int>(deudaId.value);
+    }
+    if (montoAbonado.present) {
+      map['monto_abonado'] = Variable<double>(montoAbonado.value);
+    }
+    if (fechaPago.present) {
+      map['fecha_pago'] = Variable<DateTime>(fechaPago.value);
+    }
+    if (notas.present) {
+      map['notas'] = Variable<String>(notas.value);
+    }
+    if (creadoEn.present) {
+      map['creado_en'] = Variable<DateTime>(creadoEn.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PagosDeudaCompanion(')
+          ..write('id: $id, ')
+          ..write('deudaId: $deudaId, ')
+          ..write('montoAbonado: $montoAbonado, ')
+          ..write('fechaPago: $fechaPago, ')
+          ..write('notas: $notas, ')
+          ..write('creadoEn: $creadoEn')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PrestamosTable extends Prestamos
     with TableInfo<$PrestamosTable, Prestamo> {
   @override
@@ -3717,17 +4119,20 @@ class $ConfigSmtpsTable extends ConfigSmtps
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
-  static const VerificationMeta _contrasenaMeta = const VerificationMeta(
-    'contrasena',
+  static const VerificationMeta _tieneContrasenaMeta = const VerificationMeta(
+    'tieneContrasena',
   );
   @override
-  late final GeneratedColumn<String> contrasena = GeneratedColumn<String>(
-    'contrasena',
+  late final GeneratedColumn<bool> tieneContrasena = GeneratedColumn<bool>(
+    'tiene_contrasena',
     aliasedName,
     false,
-    type: DriftSqlType.string,
+    type: DriftSqlType.bool,
     requiredDuringInsert: false,
-    defaultValue: const Constant(''),
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("tiene_contrasena" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
   );
   static const VerificationMeta _correoDestinoMeta = const VerificationMeta(
     'correoDestino',
@@ -3800,7 +4205,7 @@ class $ConfigSmtpsTable extends ConfigSmtps
     servidor,
     puerto,
     usuario,
-    contrasena,
+    tieneContrasena,
     correoDestino,
     nombreRemitente,
     ssl,
@@ -3840,10 +4245,13 @@ class $ConfigSmtpsTable extends ConfigSmtps
         usuario.isAcceptableOrUnknown(data['usuario']!, _usuarioMeta),
       );
     }
-    if (data.containsKey('contrasena')) {
+    if (data.containsKey('tiene_contrasena')) {
       context.handle(
-        _contrasenaMeta,
-        contrasena.isAcceptableOrUnknown(data['contrasena']!, _contrasenaMeta),
+        _tieneContrasenaMeta,
+        tieneContrasena.isAcceptableOrUnknown(
+          data['tiene_contrasena']!,
+          _tieneContrasenaMeta,
+        ),
       );
     }
     if (data.containsKey('correo_destino')) {
@@ -3910,9 +4318,9 @@ class $ConfigSmtpsTable extends ConfigSmtps
         DriftSqlType.string,
         data['${effectivePrefix}usuario'],
       )!,
-      contrasena: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}contrasena'],
+      tieneContrasena: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}tiene_contrasena'],
       )!,
       correoDestino: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -3948,7 +4356,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
   final String servidor;
   final int puerto;
   final String usuario;
-  final String contrasena;
+  final bool tieneContrasena;
   final String correoDestino;
   final String nombreRemitente;
   final bool ssl;
@@ -3959,7 +4367,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
     required this.servidor,
     required this.puerto,
     required this.usuario,
-    required this.contrasena,
+    required this.tieneContrasena,
     required this.correoDestino,
     required this.nombreRemitente,
     required this.ssl,
@@ -3973,7 +4381,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
     map['servidor'] = Variable<String>(servidor);
     map['puerto'] = Variable<int>(puerto);
     map['usuario'] = Variable<String>(usuario);
-    map['contrasena'] = Variable<String>(contrasena);
+    map['tiene_contrasena'] = Variable<bool>(tieneContrasena);
     map['correo_destino'] = Variable<String>(correoDestino);
     map['nombre_remitente'] = Variable<String>(nombreRemitente);
     map['ssl'] = Variable<bool>(ssl);
@@ -3988,7 +4396,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
       servidor: Value(servidor),
       puerto: Value(puerto),
       usuario: Value(usuario),
-      contrasena: Value(contrasena),
+      tieneContrasena: Value(tieneContrasena),
       correoDestino: Value(correoDestino),
       nombreRemitente: Value(nombreRemitente),
       ssl: Value(ssl),
@@ -4007,7 +4415,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
       servidor: serializer.fromJson<String>(json['servidor']),
       puerto: serializer.fromJson<int>(json['puerto']),
       usuario: serializer.fromJson<String>(json['usuario']),
-      contrasena: serializer.fromJson<String>(json['contrasena']),
+      tieneContrasena: serializer.fromJson<bool>(json['tieneContrasena']),
       correoDestino: serializer.fromJson<String>(json['correoDestino']),
       nombreRemitente: serializer.fromJson<String>(json['nombreRemitente']),
       ssl: serializer.fromJson<bool>(json['ssl']),
@@ -4023,7 +4431,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
       'servidor': serializer.toJson<String>(servidor),
       'puerto': serializer.toJson<int>(puerto),
       'usuario': serializer.toJson<String>(usuario),
-      'contrasena': serializer.toJson<String>(contrasena),
+      'tieneContrasena': serializer.toJson<bool>(tieneContrasena),
       'correoDestino': serializer.toJson<String>(correoDestino),
       'nombreRemitente': serializer.toJson<String>(nombreRemitente),
       'ssl': serializer.toJson<bool>(ssl),
@@ -4037,7 +4445,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
     String? servidor,
     int? puerto,
     String? usuario,
-    String? contrasena,
+    bool? tieneContrasena,
     String? correoDestino,
     String? nombreRemitente,
     bool? ssl,
@@ -4048,7 +4456,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
     servidor: servidor ?? this.servidor,
     puerto: puerto ?? this.puerto,
     usuario: usuario ?? this.usuario,
-    contrasena: contrasena ?? this.contrasena,
+    tieneContrasena: tieneContrasena ?? this.tieneContrasena,
     correoDestino: correoDestino ?? this.correoDestino,
     nombreRemitente: nombreRemitente ?? this.nombreRemitente,
     ssl: ssl ?? this.ssl,
@@ -4061,9 +4469,9 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
       servidor: data.servidor.present ? data.servidor.value : this.servidor,
       puerto: data.puerto.present ? data.puerto.value : this.puerto,
       usuario: data.usuario.present ? data.usuario.value : this.usuario,
-      contrasena: data.contrasena.present
-          ? data.contrasena.value
-          : this.contrasena,
+      tieneContrasena: data.tieneContrasena.present
+          ? data.tieneContrasena.value
+          : this.tieneContrasena,
       correoDestino: data.correoDestino.present
           ? data.correoDestino.value
           : this.correoDestino,
@@ -4087,7 +4495,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
           ..write('servidor: $servidor, ')
           ..write('puerto: $puerto, ')
           ..write('usuario: $usuario, ')
-          ..write('contrasena: $contrasena, ')
+          ..write('tieneContrasena: $tieneContrasena, ')
           ..write('correoDestino: $correoDestino, ')
           ..write('nombreRemitente: $nombreRemitente, ')
           ..write('ssl: $ssl, ')
@@ -4103,7 +4511,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
     servidor,
     puerto,
     usuario,
-    contrasena,
+    tieneContrasena,
     correoDestino,
     nombreRemitente,
     ssl,
@@ -4118,7 +4526,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
           other.servidor == this.servidor &&
           other.puerto == this.puerto &&
           other.usuario == this.usuario &&
-          other.contrasena == this.contrasena &&
+          other.tieneContrasena == this.tieneContrasena &&
           other.correoDestino == this.correoDestino &&
           other.nombreRemitente == this.nombreRemitente &&
           other.ssl == this.ssl &&
@@ -4131,7 +4539,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
   final Value<String> servidor;
   final Value<int> puerto;
   final Value<String> usuario;
-  final Value<String> contrasena;
+  final Value<bool> tieneContrasena;
   final Value<String> correoDestino;
   final Value<String> nombreRemitente;
   final Value<bool> ssl;
@@ -4142,7 +4550,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
     this.servidor = const Value.absent(),
     this.puerto = const Value.absent(),
     this.usuario = const Value.absent(),
-    this.contrasena = const Value.absent(),
+    this.tieneContrasena = const Value.absent(),
     this.correoDestino = const Value.absent(),
     this.nombreRemitente = const Value.absent(),
     this.ssl = const Value.absent(),
@@ -4154,7 +4562,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
     this.servidor = const Value.absent(),
     this.puerto = const Value.absent(),
     this.usuario = const Value.absent(),
-    this.contrasena = const Value.absent(),
+    this.tieneContrasena = const Value.absent(),
     this.correoDestino = const Value.absent(),
     this.nombreRemitente = const Value.absent(),
     this.ssl = const Value.absent(),
@@ -4166,7 +4574,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
     Expression<String>? servidor,
     Expression<int>? puerto,
     Expression<String>? usuario,
-    Expression<String>? contrasena,
+    Expression<bool>? tieneContrasena,
     Expression<String>? correoDestino,
     Expression<String>? nombreRemitente,
     Expression<bool>? ssl,
@@ -4178,7 +4586,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
       if (servidor != null) 'servidor': servidor,
       if (puerto != null) 'puerto': puerto,
       if (usuario != null) 'usuario': usuario,
-      if (contrasena != null) 'contrasena': contrasena,
+      if (tieneContrasena != null) 'tiene_contrasena': tieneContrasena,
       if (correoDestino != null) 'correo_destino': correoDestino,
       if (nombreRemitente != null) 'nombre_remitente': nombreRemitente,
       if (ssl != null) 'ssl': ssl,
@@ -4192,7 +4600,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
     Value<String>? servidor,
     Value<int>? puerto,
     Value<String>? usuario,
-    Value<String>? contrasena,
+    Value<bool>? tieneContrasena,
     Value<String>? correoDestino,
     Value<String>? nombreRemitente,
     Value<bool>? ssl,
@@ -4204,7 +4612,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
       servidor: servidor ?? this.servidor,
       puerto: puerto ?? this.puerto,
       usuario: usuario ?? this.usuario,
-      contrasena: contrasena ?? this.contrasena,
+      tieneContrasena: tieneContrasena ?? this.tieneContrasena,
       correoDestino: correoDestino ?? this.correoDestino,
       nombreRemitente: nombreRemitente ?? this.nombreRemitente,
       ssl: ssl ?? this.ssl,
@@ -4228,8 +4636,8 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
     if (usuario.present) {
       map['usuario'] = Variable<String>(usuario.value);
     }
-    if (contrasena.present) {
-      map['contrasena'] = Variable<String>(contrasena.value);
+    if (tieneContrasena.present) {
+      map['tiene_contrasena'] = Variable<bool>(tieneContrasena.value);
     }
     if (correoDestino.present) {
       map['correo_destino'] = Variable<String>(correoDestino.value);
@@ -4256,7 +4664,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
           ..write('servidor: $servidor, ')
           ..write('puerto: $puerto, ')
           ..write('usuario: $usuario, ')
-          ..write('contrasena: $contrasena, ')
+          ..write('tieneContrasena: $tieneContrasena, ')
           ..write('correoDestino: $correoDestino, ')
           ..write('nombreRemitente: $nombreRemitente, ')
           ..write('ssl: $ssl, ')
@@ -4271,6 +4679,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $DeudasTable deudas = $DeudasTable(this);
+  late final $PagosDeudaTable pagosDeuda = $PagosDeudaTable(this);
   late final $PrestamosTable prestamos = $PrestamosTable(this);
   late final $PagosRecibidosTable pagosRecibidos = $PagosRecibidosTable(this);
   late final $IngresosTable ingresos = $IngresosTable(this);
@@ -4278,6 +4687,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RecordatoriosTable recordatorios = $RecordatoriosTable(this);
   late final $ConfigSmtpsTable configSmtps = $ConfigSmtpsTable(this);
   late final DeudasDao deudasDao = DeudasDao(this as AppDatabase);
+  late final PagosDeudaDao pagosDeudaDao = PagosDeudaDao(this as AppDatabase);
   late final PrestamosDao prestamosDao = PrestamosDao(this as AppDatabase);
   late final IngresosDao ingresosDao = IngresosDao(this as AppDatabase);
   late final GastosFijosDao gastosFijosDao = GastosFijosDao(
@@ -4293,6 +4703,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     deudas,
+    pagosDeuda,
     prestamos,
     pagosRecibidos,
     ingresos,
@@ -4334,6 +4745,29 @@ typedef $$DeudasTableUpdateCompanionBuilder =
       Value<DateTime> creadoEn,
       Value<DateTime> actualizadoEn,
     });
+
+final class $$DeudasTableReferences
+    extends BaseReferences<_$AppDatabase, $DeudasTable, Deuda> {
+  $$DeudasTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$PagosDeudaTable, List<PagosDeudaData>>
+  _pagosDeudaRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.pagosDeuda,
+    aliasName: $_aliasNameGenerator(db.deudas.id, db.pagosDeuda.deudaId),
+  );
+
+  $$PagosDeudaTableProcessedTableManager get pagosDeudaRefs {
+    final manager = $$PagosDeudaTableTableManager(
+      $_db,
+      $_db.pagosDeuda,
+    ).filter((f) => f.deudaId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pagosDeudaRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
 
 class $$DeudasTableFilterComposer
     extends Composer<_$AppDatabase, $DeudasTable> {
@@ -4408,6 +4842,31 @@ class $$DeudasTableFilterComposer
     column: $table.actualizadoEn,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> pagosDeudaRefs(
+    Expression<bool> Function($$PagosDeudaTableFilterComposer f) f,
+  ) {
+    final $$PagosDeudaTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pagosDeuda,
+      getReferencedColumn: (t) => t.deudaId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PagosDeudaTableFilterComposer(
+            $db: $db,
+            $table: $db.pagosDeuda,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$DeudasTableOrderingComposer
@@ -4550,6 +5009,31 @@ class $$DeudasTableAnnotationComposer
     column: $table.actualizadoEn,
     builder: (column) => column,
   );
+
+  Expression<T> pagosDeudaRefs<T extends Object>(
+    Expression<T> Function($$PagosDeudaTableAnnotationComposer a) f,
+  ) {
+    final $$PagosDeudaTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pagosDeuda,
+      getReferencedColumn: (t) => t.deudaId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PagosDeudaTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pagosDeuda,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$DeudasTableTableManager
@@ -4563,9 +5047,9 @@ class $$DeudasTableTableManager
           $$DeudasTableAnnotationComposer,
           $$DeudasTableCreateCompanionBuilder,
           $$DeudasTableUpdateCompanionBuilder,
-          (Deuda, BaseReferences<_$AppDatabase, $DeudasTable, Deuda>),
+          (Deuda, $$DeudasTableReferences),
           Deuda,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool pagosDeudaRefs})
         > {
   $$DeudasTableTableManager(_$AppDatabase db, $DeudasTable table)
     : super(
@@ -4639,9 +5123,37 @@ class $$DeudasTableTableManager
                 actualizadoEn: actualizadoEn,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) =>
+                    (e.readTable(table), $$DeudasTableReferences(db, table, e)),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({pagosDeudaRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (pagosDeudaRefs) db.pagosDeuda],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (pagosDeudaRefs)
+                    await $_getPrefetchedData<
+                      Deuda,
+                      $DeudasTable,
+                      PagosDeudaData
+                    >(
+                      currentTable: table,
+                      referencedTable: $$DeudasTableReferences
+                          ._pagosDeudaRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$DeudasTableReferences(db, table, p0).pagosDeudaRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.deudaId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
         ),
       );
 }
@@ -4656,9 +5168,342 @@ typedef $$DeudasTableProcessedTableManager =
       $$DeudasTableAnnotationComposer,
       $$DeudasTableCreateCompanionBuilder,
       $$DeudasTableUpdateCompanionBuilder,
-      (Deuda, BaseReferences<_$AppDatabase, $DeudasTable, Deuda>),
+      (Deuda, $$DeudasTableReferences),
       Deuda,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool pagosDeudaRefs})
+    >;
+typedef $$PagosDeudaTableCreateCompanionBuilder =
+    PagosDeudaCompanion Function({
+      Value<int> id,
+      required int deudaId,
+      required double montoAbonado,
+      required DateTime fechaPago,
+      Value<String> notas,
+      Value<DateTime> creadoEn,
+    });
+typedef $$PagosDeudaTableUpdateCompanionBuilder =
+    PagosDeudaCompanion Function({
+      Value<int> id,
+      Value<int> deudaId,
+      Value<double> montoAbonado,
+      Value<DateTime> fechaPago,
+      Value<String> notas,
+      Value<DateTime> creadoEn,
+    });
+
+final class $$PagosDeudaTableReferences
+    extends BaseReferences<_$AppDatabase, $PagosDeudaTable, PagosDeudaData> {
+  $$PagosDeudaTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $DeudasTable _deudaIdTable(_$AppDatabase db) => db.deudas.createAlias(
+    $_aliasNameGenerator(db.pagosDeuda.deudaId, db.deudas.id),
+  );
+
+  $$DeudasTableProcessedTableManager get deudaId {
+    final $_column = $_itemColumn<int>('deuda_id')!;
+
+    final manager = $$DeudasTableTableManager(
+      $_db,
+      $_db.deudas,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_deudaIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PagosDeudaTableFilterComposer
+    extends Composer<_$AppDatabase, $PagosDeudaTable> {
+  $$PagosDeudaTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get montoAbonado => $composableBuilder(
+    column: $table.montoAbonado,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fechaPago => $composableBuilder(
+    column: $table.fechaPago,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notas => $composableBuilder(
+    column: $table.notas,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creadoEn => $composableBuilder(
+    column: $table.creadoEn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$DeudasTableFilterComposer get deudaId {
+    final $$DeudasTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.deudaId,
+      referencedTable: $db.deudas,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DeudasTableFilterComposer(
+            $db: $db,
+            $table: $db.deudas,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PagosDeudaTableOrderingComposer
+    extends Composer<_$AppDatabase, $PagosDeudaTable> {
+  $$PagosDeudaTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get montoAbonado => $composableBuilder(
+    column: $table.montoAbonado,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fechaPago => $composableBuilder(
+    column: $table.fechaPago,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notas => $composableBuilder(
+    column: $table.notas,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creadoEn => $composableBuilder(
+    column: $table.creadoEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$DeudasTableOrderingComposer get deudaId {
+    final $$DeudasTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.deudaId,
+      referencedTable: $db.deudas,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DeudasTableOrderingComposer(
+            $db: $db,
+            $table: $db.deudas,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PagosDeudaTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PagosDeudaTable> {
+  $$PagosDeudaTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get montoAbonado => $composableBuilder(
+    column: $table.montoAbonado,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get fechaPago =>
+      $composableBuilder(column: $table.fechaPago, builder: (column) => column);
+
+  GeneratedColumn<String> get notas =>
+      $composableBuilder(column: $table.notas, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creadoEn =>
+      $composableBuilder(column: $table.creadoEn, builder: (column) => column);
+
+  $$DeudasTableAnnotationComposer get deudaId {
+    final $$DeudasTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.deudaId,
+      referencedTable: $db.deudas,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DeudasTableAnnotationComposer(
+            $db: $db,
+            $table: $db.deudas,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PagosDeudaTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PagosDeudaTable,
+          PagosDeudaData,
+          $$PagosDeudaTableFilterComposer,
+          $$PagosDeudaTableOrderingComposer,
+          $$PagosDeudaTableAnnotationComposer,
+          $$PagosDeudaTableCreateCompanionBuilder,
+          $$PagosDeudaTableUpdateCompanionBuilder,
+          (PagosDeudaData, $$PagosDeudaTableReferences),
+          PagosDeudaData,
+          PrefetchHooks Function({bool deudaId})
+        > {
+  $$PagosDeudaTableTableManager(_$AppDatabase db, $PagosDeudaTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PagosDeudaTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PagosDeudaTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PagosDeudaTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> deudaId = const Value.absent(),
+                Value<double> montoAbonado = const Value.absent(),
+                Value<DateTime> fechaPago = const Value.absent(),
+                Value<String> notas = const Value.absent(),
+                Value<DateTime> creadoEn = const Value.absent(),
+              }) => PagosDeudaCompanion(
+                id: id,
+                deudaId: deudaId,
+                montoAbonado: montoAbonado,
+                fechaPago: fechaPago,
+                notas: notas,
+                creadoEn: creadoEn,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int deudaId,
+                required double montoAbonado,
+                required DateTime fechaPago,
+                Value<String> notas = const Value.absent(),
+                Value<DateTime> creadoEn = const Value.absent(),
+              }) => PagosDeudaCompanion.insert(
+                id: id,
+                deudaId: deudaId,
+                montoAbonado: montoAbonado,
+                fechaPago: fechaPago,
+                notas: notas,
+                creadoEn: creadoEn,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PagosDeudaTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({deudaId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (deudaId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.deudaId,
+                                referencedTable: $$PagosDeudaTableReferences
+                                    ._deudaIdTable(db),
+                                referencedColumn: $$PagosDeudaTableReferences
+                                    ._deudaIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PagosDeudaTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PagosDeudaTable,
+      PagosDeudaData,
+      $$PagosDeudaTableFilterComposer,
+      $$PagosDeudaTableOrderingComposer,
+      $$PagosDeudaTableAnnotationComposer,
+      $$PagosDeudaTableCreateCompanionBuilder,
+      $$PagosDeudaTableUpdateCompanionBuilder,
+      (PagosDeudaData, $$PagosDeudaTableReferences),
+      PagosDeudaData,
+      PrefetchHooks Function({bool deudaId})
     >;
 typedef $$PrestamosTableCreateCompanionBuilder =
     PrestamosCompanion Function({
@@ -6318,7 +7163,7 @@ typedef $$ConfigSmtpsTableCreateCompanionBuilder =
       Value<String> servidor,
       Value<int> puerto,
       Value<String> usuario,
-      Value<String> contrasena,
+      Value<bool> tieneContrasena,
       Value<String> correoDestino,
       Value<String> nombreRemitente,
       Value<bool> ssl,
@@ -6331,7 +7176,7 @@ typedef $$ConfigSmtpsTableUpdateCompanionBuilder =
       Value<String> servidor,
       Value<int> puerto,
       Value<String> usuario,
-      Value<String> contrasena,
+      Value<bool> tieneContrasena,
       Value<String> correoDestino,
       Value<String> nombreRemitente,
       Value<bool> ssl,
@@ -6368,8 +7213,8 @@ class $$ConfigSmtpsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get contrasena => $composableBuilder(
-    column: $table.contrasena,
+  ColumnFilters<bool> get tieneContrasena => $composableBuilder(
+    column: $table.tieneContrasena,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6428,8 +7273,8 @@ class $$ConfigSmtpsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get contrasena => $composableBuilder(
-    column: $table.contrasena,
+  ColumnOrderings<bool> get tieneContrasena => $composableBuilder(
+    column: $table.tieneContrasena,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6480,8 +7325,8 @@ class $$ConfigSmtpsTableAnnotationComposer
   GeneratedColumn<String> get usuario =>
       $composableBuilder(column: $table.usuario, builder: (column) => column);
 
-  GeneratedColumn<String> get contrasena => $composableBuilder(
-    column: $table.contrasena,
+  GeneratedColumn<bool> get tieneContrasena => $composableBuilder(
+    column: $table.tieneContrasena,
     builder: (column) => column,
   );
 
@@ -6544,7 +7389,7 @@ class $$ConfigSmtpsTableTableManager
                 Value<String> servidor = const Value.absent(),
                 Value<int> puerto = const Value.absent(),
                 Value<String> usuario = const Value.absent(),
-                Value<String> contrasena = const Value.absent(),
+                Value<bool> tieneContrasena = const Value.absent(),
                 Value<String> correoDestino = const Value.absent(),
                 Value<String> nombreRemitente = const Value.absent(),
                 Value<bool> ssl = const Value.absent(),
@@ -6555,7 +7400,7 @@ class $$ConfigSmtpsTableTableManager
                 servidor: servidor,
                 puerto: puerto,
                 usuario: usuario,
-                contrasena: contrasena,
+                tieneContrasena: tieneContrasena,
                 correoDestino: correoDestino,
                 nombreRemitente: nombreRemitente,
                 ssl: ssl,
@@ -6568,7 +7413,7 @@ class $$ConfigSmtpsTableTableManager
                 Value<String> servidor = const Value.absent(),
                 Value<int> puerto = const Value.absent(),
                 Value<String> usuario = const Value.absent(),
-                Value<String> contrasena = const Value.absent(),
+                Value<bool> tieneContrasena = const Value.absent(),
                 Value<String> correoDestino = const Value.absent(),
                 Value<String> nombreRemitente = const Value.absent(),
                 Value<bool> ssl = const Value.absent(),
@@ -6579,7 +7424,7 @@ class $$ConfigSmtpsTableTableManager
                 servidor: servidor,
                 puerto: puerto,
                 usuario: usuario,
-                contrasena: contrasena,
+                tieneContrasena: tieneContrasena,
                 correoDestino: correoDestino,
                 nombreRemitente: nombreRemitente,
                 ssl: ssl,
@@ -6617,6 +7462,8 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$DeudasTableTableManager get deudas =>
       $$DeudasTableTableManager(_db, _db.deudas);
+  $$PagosDeudaTableTableManager get pagosDeuda =>
+      $$PagosDeudaTableTableManager(_db, _db.pagosDeuda);
   $$PrestamosTableTableManager get prestamos =>
       $$PrestamosTableTableManager(_db, _db.prestamos);
   $$PagosRecibidosTableTableManager get pagosRecibidos =>

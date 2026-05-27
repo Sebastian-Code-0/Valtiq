@@ -5,6 +5,7 @@ import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
 import '../../utils/format.dart';
+import 'deuda_detalle.dart';
 import 'deuda_form.dart';
 
 class DeudasScreen extends StatefulWidget {
@@ -198,7 +199,17 @@ class _DeudasScreenState extends State<DeudasScreen> {
                         deuda: d,
                         atenuada: _mostrarPagadas,
                         colorSec: colorSec,
-                        onTap: () => _abrirForm(deuda: d),
+                        onTap: _mostrarPagadas
+                            ? () => _abrirForm(deuda: d)
+                            : () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => DeudaDetalle(
+                                    db: widget.db,
+                                    deudaId: d.id,
+                                  ),
+                                ),
+                              ),
                         onLongPress: () => _confirmarEliminar(d),
                         onMarcarPagada: _mostrarPagadas
                             ? null

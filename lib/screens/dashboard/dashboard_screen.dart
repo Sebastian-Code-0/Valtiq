@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/format.dart';
-import '../config/config_smtp_screen.dart';
+import '../config/settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key, required this.db});
@@ -81,7 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ConfigSmtpScreen(db: widget.db),
+                        builder: (_) => SettingsScreen(db: widget.db),
                       ),
                     ),
                   ),

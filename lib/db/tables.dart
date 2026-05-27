@@ -41,6 +41,15 @@ class PagosRecibidos extends Table {
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
 }
 
+class PagosDeuda extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get deudaId => integer().references(Deudas, #id)();
+  RealColumn get montoAbonado => real()();
+  DateTimeColumn get fechaPago => dateTime()();
+  TextColumn get notas => text().withDefault(const Constant(''))();
+  DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
+}
+
 class Ingresos extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get concepto => text()();
@@ -83,7 +92,7 @@ class ConfigSmtps extends Table {
   TextColumn get servidor => text().withDefault(const Constant(''))();
   IntColumn get puerto => integer().withDefault(const Constant(587))();
   TextColumn get usuario => text().withDefault(const Constant(''))();
-  TextColumn get contrasena => text().withDefault(const Constant(''))();
+  BoolColumn get tieneContrasena => boolean().withDefault(const Constant(false))();
   TextColumn get correoDestino => text().withDefault(const Constant(''))();
   TextColumn get nombreRemitente =>
       text().withDefault(const Constant('Valtiq'))();

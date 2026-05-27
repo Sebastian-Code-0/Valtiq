@@ -105,6 +105,14 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
     }
   }
 
+  Future<void> _toggleIngreso(Ingreso ingreso) async {
+    await widget.db.ingresosDao.setActivo(ingreso.id, activo: !ingreso.activo);
+  }
+
+  Future<void> _toggleGasto(GastosFijo gasto) async {
+    await widget.db.gastosFijosDao.setActivo(gasto.id, activo: !gasto.activo);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -147,11 +155,13 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                 child: SegmentedButton<String>(
                   segments: const [
                     ButtonSegment(value: 'ingresos', label: Text('Ingresos')),
-                    ButtonSegment(value: 'gastos', label: Text('Gastos Fijos')),
+                    ButtonSegment(
+                      value: 'gastos',
+                      label: Text('Gastos Fijos'),
+                    ),
                   ],
                   selected: {_modo},
-                  onSelectionChanged: (s) =>
-                      setState(() => _modo = s.first),
+                  onSelectionChanged: (s) => setState(() => _modo = s.first),
                   style: ButtonStyle(
                     backgroundColor: WidgetStateProperty.resolveWith<Color?>(
                       (states) {
@@ -226,11 +236,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _totalRow(
-              theme: theme,
-              total: total,
-              color: AppColors.positivo,
-            ),
+            _totalRow(theme: theme, total: total, color: AppColors.positivo),
             const SizedBox(height: AppSpacing.md),
             Expanded(
               child: ingresos.isEmpty
@@ -254,6 +260,9 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                           frecuenciaLabel: _capitalizar(ing.frecuencia),
                           onTap: () => _abrirIngresoForm(ingreso: ing),
                           onLongPress: () => _confirmarEliminarIngreso(ing),
+                          onEditar: () => _abrirIngresoForm(ingreso: ing),
+                          onToggleActivo: () => _toggleIngreso(ing),
+                          onEliminar: () => _confirmarEliminarIngreso(ing),
                         );
                       },
                     ),
@@ -279,11 +288,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _totalRow(
-              theme: theme,
-              total: total,
-              color: AppColors.alerta,
-            ),
+            _totalRow(theme: theme, total: total, color: AppColors.alerta),
             const SizedBox(height: AppSpacing.md),
             Expanded(
               child: gastos.isEmpty
@@ -307,6 +312,9 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                           frecuenciaLabel: _capitalizar(g.frecuencia),
                           onTap: () => _abrirGastoForm(gasto: g),
                           onLongPress: () => _confirmarEliminarGasto(g),
+                          onEditar: () => _abrirGastoForm(gasto: g),
+                          onToggleActivo: () => _toggleGasto(g),
+                          onEliminar: () => _confirmarEliminarGasto(g),
                         );
                       },
                     ),
@@ -353,6 +361,9 @@ class _IngresoCard extends StatelessWidget {
     required this.frecuenciaLabel,
     required this.onTap,
     required this.onLongPress,
+    required this.onEditar,
+    required this.onToggleActivo,
+    required this.onEliminar,
   });
 
   final Ingreso ingreso;
@@ -360,6 +371,9 @@ class _IngresoCard extends StatelessWidget {
   final String frecuenciaLabel;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback onEditar;
+  final VoidCallback onToggleActivo;
+  final VoidCallback onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -370,7 +384,12 @@ class _IngresoCard extends StatelessWidget {
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -393,6 +412,68 @@ class _IngresoCard extends StatelessWidget {
                       color: AppColors.positivo,
                     ),
                   ),
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: colorSec, size: 20),
+                    tooltip: 'Acciones',
+                    onSelected: (v) {
+                      switch (v) {
+                        case 'editar':
+                          onEditar();
+                          break;
+                        case 'toggle':
+                          onToggleActivo();
+                          break;
+                        case 'eliminar':
+                          onEliminar();
+                          break;
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'editar',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 18),
+                            SizedBox(width: AppSpacing.sm),
+                            Text('Editar'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'toggle',
+                        child: Row(
+                          children: [
+                            Icon(
+                              ingreso.activo
+                                  ? Icons.pause_circle_outline
+                                  : Icons.play_circle_outline,
+                              size: 18,
+                              color: ingreso.activo ? null : AppColors.positivo,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(ingreso.activo ? 'Desactivar' : 'Activar'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'eliminar',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: AppColors.alerta,
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Text(
+                              'Eliminar',
+                              style: TextStyle(color: AppColors.alerta),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
@@ -404,9 +485,7 @@ class _IngresoCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     formatFecha(ingreso.fecha),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorSec,
-                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
                   ),
                 ],
               ),
@@ -426,6 +505,9 @@ class _GastoFijoCard extends StatelessWidget {
     required this.frecuenciaLabel,
     required this.onTap,
     required this.onLongPress,
+    required this.onEditar,
+    required this.onToggleActivo,
+    required this.onEliminar,
   });
 
   final GastosFijo gasto;
@@ -433,6 +515,9 @@ class _GastoFijoCard extends StatelessWidget {
   final String frecuenciaLabel;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback onEditar;
+  final VoidCallback onToggleActivo;
+  final VoidCallback onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -443,7 +528,12 @@ class _GastoFijoCard extends StatelessWidget {
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -465,6 +555,68 @@ class _GastoFijoCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: AppColors.alerta,
                     ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: colorSec, size: 20),
+                    tooltip: 'Acciones',
+                    onSelected: (v) {
+                      switch (v) {
+                        case 'editar':
+                          onEditar();
+                          break;
+                        case 'toggle':
+                          onToggleActivo();
+                          break;
+                        case 'eliminar':
+                          onEliminar();
+                          break;
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'editar',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 18),
+                            SizedBox(width: AppSpacing.sm),
+                            Text('Editar'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'toggle',
+                        child: Row(
+                          children: [
+                            Icon(
+                              gasto.activo
+                                  ? Icons.pause_circle_outline
+                                  : Icons.play_circle_outline,
+                              size: 18,
+                              color: gasto.activo ? null : AppColors.positivo,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(gasto.activo ? 'Desactivar' : 'Activar'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'eliminar',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: AppColors.alerta,
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Text(
+                              'Eliminar',
+                              style: TextStyle(color: AppColors.alerta),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

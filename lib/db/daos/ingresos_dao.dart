@@ -35,6 +35,15 @@ class IngresosDao extends DatabaseAccessor<AppDatabase>
     return (delete(ingresos)..where((t) => t.id.equals(id))).go();
   }
 
+  Future<void> setActivo(int id, {required bool activo}) async {
+    await (update(ingresos)..where((t) => t.id.equals(id))).write(
+      IngresosCompanion(
+        activo: Value(activo),
+        actualizadoEn: Value(DateTime.now()),
+      ),
+    );
+  }
+
   Future<double> getTotalIngresosActivos() async {
     final sum = ingresos.monto.sum();
     final query = selectOnly(ingresos)

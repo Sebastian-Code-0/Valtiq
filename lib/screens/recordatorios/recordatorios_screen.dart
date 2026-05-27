@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
+import '../../services/notification_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
 import 'recordatorio_form.dart';
@@ -61,6 +62,37 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
     }
   }
 
+  Future<void> _inactivar(Recordatorio r) async {
+    await widget.db.recordatoriosDao.desactivarRecordatorio(r.id);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Recordatorio "${r.titulo}" desactivado')),
+      );
+    }
+  }
+
+  Future<void> _activar(Recordatorio r) async {
+    await widget.db.recordatoriosDao.activarRecordatorio(r.id);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Recordatorio "${r.titulo}" activado')),
+      );
+    }
+  }
+
+  Future<void> _probarNotificacion(Recordatorio r) async {
+    await NotificationService.showNotification(
+      id: r.id,
+      title: r.titulo,
+      body: '🔔 Prueba — ${fechaRelativa(r.fechaAlerta)}',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Notificación enviada')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -103,9 +135,8 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: () => setState(
-                    () => _mostrarInactivos = !_mostrarInactivos,
-                  ),
+                  onPressed: () =>
+                      setState(() => _mostrarInactivos = !_mostrarInactivos),
                   icon: Icon(
                     _mostrarInactivos ? Icons.visibility : Icons.history,
                   ),
@@ -149,6 +180,10 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
                         colorSec: colorSec,
                         onTap: () => _abrirForm(recordatorio: r),
                         onLongPress: () => _confirmarEliminar(r),
+                        onProbarNotificacion: () => _probarNotificacion(r),
+                        onInactivar: _mostrarInactivos ? null : () => _inactivar(r),
+                        onActivar: _mostrarInactivos ? () => _activar(r) : null,
+                        onEliminar: () => _confirmarEliminar(r),
                       );
                     },
                   );
@@ -169,6 +204,10 @@ class _RecordatorioCard extends StatelessWidget {
     required this.colorSec,
     required this.onTap,
     required this.onLongPress,
+    required this.onProbarNotificacion,
+    required this.onEliminar,
+    this.onInactivar,
+    this.onActivar,
   });
 
   final Recordatorio recordatorio;
@@ -176,6 +215,10 @@ class _RecordatorioCard extends StatelessWidget {
   final Color colorSec;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback onProbarNotificacion;
+  final VoidCallback onEliminar;
+  final VoidCallback? onInactivar;
+  final VoidCallback? onActivar;
 
   String _labelReferencia(String tabla) {
     switch (tabla) {
@@ -202,8 +245,7 @@ class _RecordatorioCard extends StatelessWidget {
     );
     final diasFaltantes = diaAlerta.difference(hoy).inDays;
     final vencido = diasFaltantes < 0;
-    final proximo = !vencido &&
-        diasFaltantes <= recordatorio.diasAnticipacion;
+    final proximo = !vencido && diasFaltantes <= recordatorio.diasAnticipacion;
 
     final card = Card(
       color: proximo ? AppColors.acento.withValues(alpha: 0.12) : null,
@@ -219,16 +261,109 @@ class _RecordatorioCard extends StatelessWidget {
                   ),
                 )
               : null,
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                recordatorio.titulo,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      recordatorio.titulo,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: colorSec, size: 20),
+                    tooltip: 'Acciones',
+                    onSelected: (v) {
+                      switch (v) {
+                        case 'probar':
+                          onProbarNotificacion();
+                          break;
+                        case 'inactivar':
+                          onInactivar?.call();
+                          break;
+                        case 'activar':
+                          onActivar?.call();
+                          break;
+                        case 'eliminar':
+                          onEliminar();
+                          break;
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'probar',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.notifications_outlined,
+                              size: 18,
+                              color: AppColors.acento,
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Text('Probar notificación'),
+                          ],
+                        ),
+                      ),
+                      if (onInactivar != null)
+                        const PopupMenuItem(
+                          value: 'inactivar',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.pause_circle_outline,
+                                size: 18,
+                              ),
+                              SizedBox(width: AppSpacing.sm),
+                              Text('Inactivar'),
+                            ],
+                          ),
+                        ),
+                      if (onActivar != null)
+                        const PopupMenuItem(
+                          value: 'activar',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.play_circle_outline,
+                                size: 18,
+                                color: AppColors.positivo,
+                              ),
+                              SizedBox(width: AppSpacing.sm),
+                              Text('Activar'),
+                            ],
+                          ),
+                        ),
+                      const PopupMenuItem(
+                        value: 'eliminar',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: AppColors.alerta,
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Text(
+                              'Eliminar',
+                              style: TextStyle(color: AppColors.alerta),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(
@@ -266,8 +401,7 @@ class _RecordatorioCard extends StatelessWidget {
                   children: [
                     if (recordatorio.referenciaTabla != null)
                       _Chip(
-                        label:
-                            _labelReferencia(recordatorio.referenciaTabla!),
+                        label: _labelReferencia(recordatorio.referenciaTabla!),
                       ),
                     if (recordatorio.repetir) const _Chip(label: 'Mensual'),
                   ],
