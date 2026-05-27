@@ -88,7 +88,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                       Icon(
                         Icons.construction_outlined,
                         size: 18,
-                        color: AppColors.textoSecundarioClaro,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Text(
@@ -103,7 +103,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                   Text(
                     'Próximamente: fuentes, colores personalizados y más.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textoSecundarioClaro,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],

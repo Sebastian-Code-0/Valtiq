@@ -2,6 +2,7 @@ import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 
 import '../db/database.dart';
+import 'email_template.dart';
 
 class SmtpResult {
   const SmtpResult({required this.exito, this.mensaje});
@@ -76,12 +77,14 @@ class SmtpService {
         mensaje: 'Configuración SMTP incompleta',
       );
     }
+    const cuerpo =
+        '✅ Configuración exitosa — Tu cuenta de correo está conectada correctamente con Valtiq.\n\n'
+        'A partir de ahora recibirás recordatorios de tus deudas, préstamos y pagos en este correo.';
     return _enviarCon(
       config: config,
       password: password,
       asunto: 'Prueba de configuración Valtiq',
-      cuerpo:
-          'Si recibes este correo, la configuración SMTP de Valtiq funciona correctamente.',
+      cuerpo: cuerpo,
     );
   }
 
@@ -99,7 +102,8 @@ class SmtpService {
         ..from = Address(config.usuario, remitente)
         ..recipients.add(config.correoDestino)
         ..subject = asunto
-        ..text = cuerpo;
+        ..text = cuerpo
+        ..html = EmailTemplate.build(asunto, cuerpo);
 
       await send(mensaje, server);
       return const SmtpResult(exito: true, mensaje: 'Correo enviado');

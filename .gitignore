@@ -52,3 +52,5 @@ app.*.map.json
 .env.*
 secrets.json
 credentials.json
+*.p12
+valtiq_key.bin

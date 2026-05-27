@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'db/database.dart';
 import 'screens/splash_screen.dart';
+import 'services/crypto_service.dart';
 import 'services/notification_service.dart';
 import 'theme/theme.dart';
 
@@ -23,6 +24,7 @@ void main() async {
     themeModeNotifier.value = ThemeMode.dark;
   }
 
+  await CryptoService.init();
   await NotificationService.init();
   unawaited(NotificationService.revisarRecordatorios(db));
   runApp(ValtiqApp(db: db));

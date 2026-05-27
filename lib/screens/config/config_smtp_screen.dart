@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../db/database.dart';
 import '../../services/smtp_service.dart';
@@ -19,18 +20,8 @@ typedef _Preset = ({String nombre, String servidor, int puerto, bool ssl});
 
 const _presets = <_Preset>[
   (nombre: 'Gmail', servidor: 'smtp.gmail.com', puerto: 587, ssl: false),
-  (
-    nombre: 'Outlook',
-    servidor: 'smtp.office365.com',
-    puerto: 587,
-    ssl: false,
-  ),
-  (
-    nombre: 'Yahoo',
-    servidor: 'smtp.mail.yahoo.com',
-    puerto: 587,
-    ssl: false,
-  ),
+  (nombre: 'Outlook', servidor: 'smtp.office365.com', puerto: 587, ssl: false),
+  (nombre: 'Yahoo', servidor: 'smtp.mail.yahoo.com', puerto: 587, ssl: false),
 ];
 
 class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
@@ -50,18 +41,21 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
   bool _probando = false;
   bool _cargando = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _servidorCtrl.addListener(_onServidorChanged);
+    _cargarConfig();
+  }
+
+  void _onServidorChanged() => setState(() {});
+
   void _aplicarPreset(_Preset preset) {
     setState(() {
       _servidorCtrl.text = preset.servidor;
       _puertoCtrl.text = preset.puerto.toString();
       _ssl = preset.ssl;
     });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _cargarConfig();
   }
 
   Future<void> _cargarConfig() async {
@@ -88,6 +82,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
 
   @override
   void dispose() {
+    _servidorCtrl.removeListener(_onServidorChanged);
     _servidorCtrl.dispose();
     _puertoCtrl.dispose();
     _usuarioCtrl.dispose();
@@ -153,6 +148,63 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     );
   }
 
+  Future<void> _abrirAppPasswords() async {
+    final uri = Uri.parse('https://myaccount.google.com/apppasswords');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir el navegador')),
+        );
+      }
+    }
+  }
+
+  Widget _bannerGmail() {
+    return Card(
+      color: AppColors.acento.withValues(alpha: 0.08),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: AppColors.acento,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'Gmail requiere App Password',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.acento,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'No uses tu contraseña normal de Google. '
+              'Gmail exige una Contraseña de aplicación para acceso SMTP.',
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              onPressed: _abrirAppPasswords,
+              icon: const Icon(Icons.open_in_new, size: 16),
+              label: const Text('Crear contraseña de aplicación'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.acento,
+                side: const BorderSide(color: AppColors.acento),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_cargando) {
@@ -160,6 +212,8 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
+
+    final esGmail = _servidorCtrl.text.trim() == 'smtp.gmail.com';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Configuración SMTP')),
@@ -199,6 +253,10 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
                 ),
               ),
             ),
+            if (esGmail) ...[
+              const SizedBox(height: AppSpacing.md),
+              _bannerGmail(),
+            ],
             const SizedBox(height: AppSpacing.md),
             FormSection(
               title: 'Servidor',
@@ -285,9 +343,8 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
                             ? Icons.visibility_off
                             : Icons.visibility,
                       ),
-                      onPressed: () => setState(
-                        () => _mostrarPassword = !_mostrarPassword,
-                      ),
+                      onPressed: () =>
+                          setState(() => _mostrarPassword = !_mostrarPassword),
                     ),
                   ),
                   obscureText: !_mostrarPassword,
