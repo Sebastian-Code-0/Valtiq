@@ -92,6 +92,7 @@ class ConfigSmtps extends Table {
   TextColumn get servidor => text().withDefault(const Constant(''))();
   IntColumn get puerto => integer().withDefault(const Constant(587))();
   TextColumn get usuario => text().withDefault(const Constant(''))();
+  TextColumn get contrasenaEncriptada => text().nullable()();
   BoolColumn get tieneContrasena => boolean().withDefault(const Constant(false))();
   TextColumn get correoDestino => text().withDefault(const Constant(''))();
   TextColumn get nombreRemitente =>

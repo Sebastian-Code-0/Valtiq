@@ -65,20 +65,25 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
   }
 
   Future<void> _cargarConfig() async {
-    final config = await widget.db.configSmtpDao.getConfig();
-    final password = await widget.db.configSmtpDao.getPassword();
-    if (!mounted) return;
-    setState(() {
-      _servidorCtrl.text = config.servidor;
-      _puertoCtrl.text = config.puerto.toString();
-      _usuarioCtrl.text = config.usuario;
-      _passCtrl.text = password ?? '';
-      _destinoCtrl.text = config.correoDestino;
-      _remitenteCtrl.text = config.nombreRemitente;
-      _ssl = config.ssl;
-      _habilitado = config.habilitado;
-      _cargando = false;
-    });
+    try {
+      final config = await widget.db.configSmtpDao.getConfig();
+      final password = await widget.db.configSmtpDao.getPassword();
+      if (!mounted) return;
+      setState(() {
+        _servidorCtrl.text = config.servidor;
+        _puertoCtrl.text = config.puerto.toString();
+        _usuarioCtrl.text = config.usuario;
+        _passCtrl.text = password ?? '';
+        _destinoCtrl.text = config.correoDestino;
+        _remitenteCtrl.text = config.nombreRemitente;
+        _ssl = config.ssl;
+        _habilitado = config.habilitado;
+        _cargando = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _cargando = false);
+    }
   }
 
   @override

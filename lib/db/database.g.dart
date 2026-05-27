@@ -4119,6 +4119,17 @@ class $ConfigSmtpsTable extends ConfigSmtps
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _contrasenaEncriptadaMeta =
+      const VerificationMeta('contrasenaEncriptada');
+  @override
+  late final GeneratedColumn<String> contrasenaEncriptada =
+      GeneratedColumn<String>(
+        'contrasena_encriptada',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _tieneContrasenaMeta = const VerificationMeta(
     'tieneContrasena',
   );
@@ -4205,6 +4216,7 @@ class $ConfigSmtpsTable extends ConfigSmtps
     servidor,
     puerto,
     usuario,
+    contrasenaEncriptada,
     tieneContrasena,
     correoDestino,
     nombreRemitente,
@@ -4243,6 +4255,15 @@ class $ConfigSmtpsTable extends ConfigSmtps
       context.handle(
         _usuarioMeta,
         usuario.isAcceptableOrUnknown(data['usuario']!, _usuarioMeta),
+      );
+    }
+    if (data.containsKey('contrasena_encriptada')) {
+      context.handle(
+        _contrasenaEncriptadaMeta,
+        contrasenaEncriptada.isAcceptableOrUnknown(
+          data['contrasena_encriptada']!,
+          _contrasenaEncriptadaMeta,
+        ),
       );
     }
     if (data.containsKey('tiene_contrasena')) {
@@ -4318,6 +4339,10 @@ class $ConfigSmtpsTable extends ConfigSmtps
         DriftSqlType.string,
         data['${effectivePrefix}usuario'],
       )!,
+      contrasenaEncriptada: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contrasena_encriptada'],
+      ),
       tieneContrasena: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}tiene_contrasena'],
@@ -4356,6 +4381,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
   final String servidor;
   final int puerto;
   final String usuario;
+  final String? contrasenaEncriptada;
   final bool tieneContrasena;
   final String correoDestino;
   final String nombreRemitente;
@@ -4367,6 +4393,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
     required this.servidor,
     required this.puerto,
     required this.usuario,
+    this.contrasenaEncriptada,
     required this.tieneContrasena,
     required this.correoDestino,
     required this.nombreRemitente,
@@ -4381,6 +4408,9 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
     map['servidor'] = Variable<String>(servidor);
     map['puerto'] = Variable<int>(puerto);
     map['usuario'] = Variable<String>(usuario);
+    if (!nullToAbsent || contrasenaEncriptada != null) {
+      map['contrasena_encriptada'] = Variable<String>(contrasenaEncriptada);
+    }
     map['tiene_contrasena'] = Variable<bool>(tieneContrasena);
     map['correo_destino'] = Variable<String>(correoDestino);
     map['nombre_remitente'] = Variable<String>(nombreRemitente);
@@ -4396,6 +4426,9 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
       servidor: Value(servidor),
       puerto: Value(puerto),
       usuario: Value(usuario),
+      contrasenaEncriptada: contrasenaEncriptada == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contrasenaEncriptada),
       tieneContrasena: Value(tieneContrasena),
       correoDestino: Value(correoDestino),
       nombreRemitente: Value(nombreRemitente),
@@ -4415,6 +4448,9 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
       servidor: serializer.fromJson<String>(json['servidor']),
       puerto: serializer.fromJson<int>(json['puerto']),
       usuario: serializer.fromJson<String>(json['usuario']),
+      contrasenaEncriptada: serializer.fromJson<String?>(
+        json['contrasenaEncriptada'],
+      ),
       tieneContrasena: serializer.fromJson<bool>(json['tieneContrasena']),
       correoDestino: serializer.fromJson<String>(json['correoDestino']),
       nombreRemitente: serializer.fromJson<String>(json['nombreRemitente']),
@@ -4431,6 +4467,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
       'servidor': serializer.toJson<String>(servidor),
       'puerto': serializer.toJson<int>(puerto),
       'usuario': serializer.toJson<String>(usuario),
+      'contrasenaEncriptada': serializer.toJson<String?>(contrasenaEncriptada),
       'tieneContrasena': serializer.toJson<bool>(tieneContrasena),
       'correoDestino': serializer.toJson<String>(correoDestino),
       'nombreRemitente': serializer.toJson<String>(nombreRemitente),
@@ -4445,6 +4482,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
     String? servidor,
     int? puerto,
     String? usuario,
+    Value<String?> contrasenaEncriptada = const Value.absent(),
     bool? tieneContrasena,
     String? correoDestino,
     String? nombreRemitente,
@@ -4456,6 +4494,9 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
     servidor: servidor ?? this.servidor,
     puerto: puerto ?? this.puerto,
     usuario: usuario ?? this.usuario,
+    contrasenaEncriptada: contrasenaEncriptada.present
+        ? contrasenaEncriptada.value
+        : this.contrasenaEncriptada,
     tieneContrasena: tieneContrasena ?? this.tieneContrasena,
     correoDestino: correoDestino ?? this.correoDestino,
     nombreRemitente: nombreRemitente ?? this.nombreRemitente,
@@ -4469,6 +4510,9 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
       servidor: data.servidor.present ? data.servidor.value : this.servidor,
       puerto: data.puerto.present ? data.puerto.value : this.puerto,
       usuario: data.usuario.present ? data.usuario.value : this.usuario,
+      contrasenaEncriptada: data.contrasenaEncriptada.present
+          ? data.contrasenaEncriptada.value
+          : this.contrasenaEncriptada,
       tieneContrasena: data.tieneContrasena.present
           ? data.tieneContrasena.value
           : this.tieneContrasena,
@@ -4495,6 +4539,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
           ..write('servidor: $servidor, ')
           ..write('puerto: $puerto, ')
           ..write('usuario: $usuario, ')
+          ..write('contrasenaEncriptada: $contrasenaEncriptada, ')
           ..write('tieneContrasena: $tieneContrasena, ')
           ..write('correoDestino: $correoDestino, ')
           ..write('nombreRemitente: $nombreRemitente, ')
@@ -4511,6 +4556,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
     servidor,
     puerto,
     usuario,
+    contrasenaEncriptada,
     tieneContrasena,
     correoDestino,
     nombreRemitente,
@@ -4526,6 +4572,7 @@ class ConfigSmtp extends DataClass implements Insertable<ConfigSmtp> {
           other.servidor == this.servidor &&
           other.puerto == this.puerto &&
           other.usuario == this.usuario &&
+          other.contrasenaEncriptada == this.contrasenaEncriptada &&
           other.tieneContrasena == this.tieneContrasena &&
           other.correoDestino == this.correoDestino &&
           other.nombreRemitente == this.nombreRemitente &&
@@ -4539,6 +4586,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
   final Value<String> servidor;
   final Value<int> puerto;
   final Value<String> usuario;
+  final Value<String?> contrasenaEncriptada;
   final Value<bool> tieneContrasena;
   final Value<String> correoDestino;
   final Value<String> nombreRemitente;
@@ -4550,6 +4598,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
     this.servidor = const Value.absent(),
     this.puerto = const Value.absent(),
     this.usuario = const Value.absent(),
+    this.contrasenaEncriptada = const Value.absent(),
     this.tieneContrasena = const Value.absent(),
     this.correoDestino = const Value.absent(),
     this.nombreRemitente = const Value.absent(),
@@ -4562,6 +4611,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
     this.servidor = const Value.absent(),
     this.puerto = const Value.absent(),
     this.usuario = const Value.absent(),
+    this.contrasenaEncriptada = const Value.absent(),
     this.tieneContrasena = const Value.absent(),
     this.correoDestino = const Value.absent(),
     this.nombreRemitente = const Value.absent(),
@@ -4574,6 +4624,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
     Expression<String>? servidor,
     Expression<int>? puerto,
     Expression<String>? usuario,
+    Expression<String>? contrasenaEncriptada,
     Expression<bool>? tieneContrasena,
     Expression<String>? correoDestino,
     Expression<String>? nombreRemitente,
@@ -4586,6 +4637,8 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
       if (servidor != null) 'servidor': servidor,
       if (puerto != null) 'puerto': puerto,
       if (usuario != null) 'usuario': usuario,
+      if (contrasenaEncriptada != null)
+        'contrasena_encriptada': contrasenaEncriptada,
       if (tieneContrasena != null) 'tiene_contrasena': tieneContrasena,
       if (correoDestino != null) 'correo_destino': correoDestino,
       if (nombreRemitente != null) 'nombre_remitente': nombreRemitente,
@@ -4600,6 +4653,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
     Value<String>? servidor,
     Value<int>? puerto,
     Value<String>? usuario,
+    Value<String?>? contrasenaEncriptada,
     Value<bool>? tieneContrasena,
     Value<String>? correoDestino,
     Value<String>? nombreRemitente,
@@ -4612,6 +4666,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
       servidor: servidor ?? this.servidor,
       puerto: puerto ?? this.puerto,
       usuario: usuario ?? this.usuario,
+      contrasenaEncriptada: contrasenaEncriptada ?? this.contrasenaEncriptada,
       tieneContrasena: tieneContrasena ?? this.tieneContrasena,
       correoDestino: correoDestino ?? this.correoDestino,
       nombreRemitente: nombreRemitente ?? this.nombreRemitente,
@@ -4635,6 +4690,11 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
     }
     if (usuario.present) {
       map['usuario'] = Variable<String>(usuario.value);
+    }
+    if (contrasenaEncriptada.present) {
+      map['contrasena_encriptada'] = Variable<String>(
+        contrasenaEncriptada.value,
+      );
     }
     if (tieneContrasena.present) {
       map['tiene_contrasena'] = Variable<bool>(tieneContrasena.value);
@@ -4664,6 +4724,7 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
           ..write('servidor: $servidor, ')
           ..write('puerto: $puerto, ')
           ..write('usuario: $usuario, ')
+          ..write('contrasenaEncriptada: $contrasenaEncriptada, ')
           ..write('tieneContrasena: $tieneContrasena, ')
           ..write('correoDestino: $correoDestino, ')
           ..write('nombreRemitente: $nombreRemitente, ')
@@ -7163,6 +7224,7 @@ typedef $$ConfigSmtpsTableCreateCompanionBuilder =
       Value<String> servidor,
       Value<int> puerto,
       Value<String> usuario,
+      Value<String?> contrasenaEncriptada,
       Value<bool> tieneContrasena,
       Value<String> correoDestino,
       Value<String> nombreRemitente,
@@ -7176,6 +7238,7 @@ typedef $$ConfigSmtpsTableUpdateCompanionBuilder =
       Value<String> servidor,
       Value<int> puerto,
       Value<String> usuario,
+      Value<String?> contrasenaEncriptada,
       Value<bool> tieneContrasena,
       Value<String> correoDestino,
       Value<String> nombreRemitente,
@@ -7210,6 +7273,11 @@ class $$ConfigSmtpsTableFilterComposer
 
   ColumnFilters<String> get usuario => $composableBuilder(
     column: $table.usuario,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contrasenaEncriptada => $composableBuilder(
+    column: $table.contrasenaEncriptada,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7273,6 +7341,11 @@ class $$ConfigSmtpsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get contrasenaEncriptada => $composableBuilder(
+    column: $table.contrasenaEncriptada,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get tieneContrasena => $composableBuilder(
     column: $table.tieneContrasena,
     builder: (column) => ColumnOrderings(column),
@@ -7324,6 +7397,11 @@ class $$ConfigSmtpsTableAnnotationComposer
 
   GeneratedColumn<String> get usuario =>
       $composableBuilder(column: $table.usuario, builder: (column) => column);
+
+  GeneratedColumn<String> get contrasenaEncriptada => $composableBuilder(
+    column: $table.contrasenaEncriptada,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get tieneContrasena => $composableBuilder(
     column: $table.tieneContrasena,
@@ -7389,6 +7467,7 @@ class $$ConfigSmtpsTableTableManager
                 Value<String> servidor = const Value.absent(),
                 Value<int> puerto = const Value.absent(),
                 Value<String> usuario = const Value.absent(),
+                Value<String?> contrasenaEncriptada = const Value.absent(),
                 Value<bool> tieneContrasena = const Value.absent(),
                 Value<String> correoDestino = const Value.absent(),
                 Value<String> nombreRemitente = const Value.absent(),
@@ -7400,6 +7479,7 @@ class $$ConfigSmtpsTableTableManager
                 servidor: servidor,
                 puerto: puerto,
                 usuario: usuario,
+                contrasenaEncriptada: contrasenaEncriptada,
                 tieneContrasena: tieneContrasena,
                 correoDestino: correoDestino,
                 nombreRemitente: nombreRemitente,
@@ -7413,6 +7493,7 @@ class $$ConfigSmtpsTableTableManager
                 Value<String> servidor = const Value.absent(),
                 Value<int> puerto = const Value.absent(),
                 Value<String> usuario = const Value.absent(),
+                Value<String?> contrasenaEncriptada = const Value.absent(),
                 Value<bool> tieneContrasena = const Value.absent(),
                 Value<String> correoDestino = const Value.absent(),
                 Value<String> nombreRemitente = const Value.absent(),
@@ -7424,6 +7505,7 @@ class $$ConfigSmtpsTableTableManager
                 servidor: servidor,
                 puerto: puerto,
                 usuario: usuario,
+                contrasenaEncriptada: contrasenaEncriptada,
                 tieneContrasena: tieneContrasena,
                 correoDestino: correoDestino,
                 nombreRemitente: nombreRemitente,

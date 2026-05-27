@@ -17,7 +17,10 @@ abstract class AppTheme {
         onSurface: AppColors.textoClaro,
       ),
       scaffoldBackgroundColor: AppColors.fondoClaro,
-      textTheme: textTheme(),
+      textTheme: textTheme().apply(
+        bodyColor: AppColors.textoClaro,
+        displayColor: AppColors.textoClaro,
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -75,7 +78,10 @@ abstract class AppTheme {
         onSurface: AppColors.textoOscuro,
       ),
       scaffoldBackgroundColor: AppColors.fondoOscuro,
-      textTheme: textTheme(),
+      textTheme: textTheme().apply(
+        bodyColor: AppColors.textoOscuro,
+        displayColor: AppColors.textoOscuro,
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,

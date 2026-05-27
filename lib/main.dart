@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'db/database.dart';
-import 'screens/shell.dart';
+import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 import 'theme/theme.dart';
 
@@ -26,10 +28,6 @@ void main() async {
   runApp(ValtiqApp(db: db));
 }
 
-void unawaited(Future<void> future) {
-  future.catchError((_) {});
-}
-
 class ValtiqApp extends StatelessWidget {
   const ValtiqApp({super.key, required this.db});
 
@@ -46,7 +44,7 @@ class ValtiqApp extends StatelessWidget {
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: mode,
-          home: ShellScreen(db: db),
+          home: SplashScreen(db: db),
         );
       },
     );

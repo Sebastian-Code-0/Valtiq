@@ -12,6 +12,19 @@ class SmtpResult {
 
 class SmtpService {
   static SmtpServer _build(ConfigSmtp config, String password) {
+    if (config.servidor == 'smtp.gmail.com') {
+      return gmail(config.usuario, password);
+    }
+    if (config.servidor == 'smtp.office365.com') {
+      return SmtpServer(
+        'smtp.office365.com',
+        port: 587,
+        username: config.usuario,
+        password: password,
+        ssl: false,
+        allowInsecure: false,
+      );
+    }
     return SmtpServer(
       config.servidor,
       port: config.puerto,

@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../services/crypto_service.dart';
 import '../database.dart';
 import '../tables.dart';
 
@@ -12,8 +12,6 @@ class ConfigSmtpDao extends DatabaseAccessor<AppDatabase>
   ConfigSmtpDao(super.db);
 
   static const int _configId = 1;
-  static const String _storageKey = 'valtiq_smtp_password';
-  static const _storage = FlutterSecureStorage();
 
   Future<ConfigSmtp> getConfig() async {
     final existing = await (select(configSmtps)
@@ -34,14 +32,12 @@ class ConfigSmtpDao extends DatabaseAccessor<AppDatabase>
         .watchSingle();
   }
 
-  Future<String?> getPassword() => _storage.read(key: _storageKey);
-
-  Future<void> savePassword(String? password) async {
-    if (password == null || password.isEmpty) {
-      await _storage.delete(key: _storageKey);
-    } else {
-      await _storage.write(key: _storageKey, value: password);
-    }
+  Future<String?> getPassword() async {
+    final config = await getConfig();
+    final enc = config.contrasenaEncriptada;
+    if (enc == null || enc.isEmpty) return null;
+    final decrypted = CryptoService.decrypt(enc);
+    return decrypted.isEmpty ? null : decrypted;
   }
 
   Future<void> guardarConfig({
@@ -55,16 +51,27 @@ class ConfigSmtpDao extends DatabaseAccessor<AppDatabase>
     required bool habilitado,
   }) async {
     await getConfig();
+
+    Value<String?> encValue = const Value.absent();
+    Value<bool> tienePassValue = const Value.absent();
+
     if (contrasena != null) {
-      await savePassword(contrasena);
+      if (contrasena.isNotEmpty) {
+        encValue = Value(CryptoService.encrypt(contrasena));
+        tienePassValue = const Value(true);
+      } else {
+        encValue = const Value(null);
+        tienePassValue = const Value(false);
+      }
     }
-    final tienePass = (await getPassword())?.isNotEmpty ?? false;
+
     await (update(configSmtps)..where((t) => t.id.equals(_configId))).write(
       ConfigSmtpsCompanion(
         servidor: Value(servidor),
         puerto: Value(puerto),
         usuario: Value(usuario),
-        tieneContrasena: Value(tienePass),
+        contrasenaEncriptada: encValue,
+        tieneContrasena: tienePassValue,
         correoDestino: Value(correoDestino),
         nombreRemitente: Value(nombreRemitente),
         ssl: Value(ssl),
