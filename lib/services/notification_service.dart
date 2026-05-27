@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -13,13 +15,29 @@ class NotificationService {
   static bool _initialized = false;
 
   static bool get _soportado =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.linux;
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.windows);
 
   static Future<void> init() async {
     if (_initialized || !_soportado) return;
-    const linux = LinuxInitializationSettings(defaultActionName: 'Abrir');
-    const settings = InitializationSettings(linux: linux);
-    await _plugin.initialize(settings: settings);
+
+    InitializationSettings settings;
+    if (Platform.isLinux) {
+      const linux = LinuxInitializationSettings(defaultActionName: 'Abrir');
+      settings = const InitializationSettings(linux: linux);
+    } else {
+      // Windows: AUMID must match the app registered in the Start menu.
+      // Without MSIX packaging the toast API still works for basic show().
+      const windows = WindowsInitializationSettings(
+        appName: 'Valtiq',
+        appUserModelId: 'com.valtiq.Valtiq',
+        guid: 'a8b4c2d6-1e3f-4a5b-8c9d-0e2f7a6b3c1d',
+      );
+      settings = const InitializationSettings(windows: windows);
+    }
+
+    await _plugin.initialize(settings);
     _initialized = true;
   }
 
@@ -30,11 +48,19 @@ class NotificationService {
   }) async {
     if (!_soportado) return;
     await init();
-    const linuxDetails = LinuxNotificationDetails(
-      defaultActionName: 'Abrir',
-      urgency: LinuxNotificationUrgency.normal,
-    );
-    const details = NotificationDetails(linux: linuxDetails);
+
+    NotificationDetails details;
+    if (Platform.isLinux) {
+      const linuxDetails = LinuxNotificationDetails(
+        defaultActionName: 'Abrir',
+        urgency: LinuxNotificationUrgency.normal,
+      );
+      details = const NotificationDetails(linux: linuxDetails);
+    } else {
+      // Windows: basic toast notification; no extra details needed.
+      details = const NotificationDetails(windows: WindowsNotificationDetails());
+    }
+
     await _plugin.show(
       id: id,
       title: title,
@@ -196,6 +222,8 @@ class NotificationService {
 
   static Future<void> cancelar(int id) async {
     await init();
-    await _plugin.cancel(id: id);
-  }
+    try {
+      // cancel() requires MSIX packaging on Windows; ignore the error otherwise.
+      await _plugin.cancel(id: id);
+    } catch (_) {}
 }

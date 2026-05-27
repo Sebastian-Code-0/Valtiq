@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:encrypt/encrypt.dart' as enc;
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 abstract class CryptoService {
@@ -11,7 +12,7 @@ abstract class CryptoService {
 
   static Future<void> init() async {
     final dir = await getApplicationDocumentsDirectory();
-    final keyFile = File('${dir.path}/valtiq_key.bin');
+    final keyFile = File(p.join(dir.path, 'valtiq_key.bin'));
 
     Uint8List keyBytes;
     if (await keyFile.exists()) {
