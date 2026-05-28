@@ -37,7 +37,7 @@ class NotificationService {
       settings = const InitializationSettings(windows: windows);
     }
 
-    await _plugin.initialize(settings);
+    await _plugin.initialize(settings: settings);
     _initialized = true;
   }
 
@@ -226,4 +226,5 @@ class NotificationService {
       // cancel() requires MSIX packaging on Windows; ignore the error otherwise.
       await _plugin.cancel(id: id);
     } catch (_) {}
+  }
 }
