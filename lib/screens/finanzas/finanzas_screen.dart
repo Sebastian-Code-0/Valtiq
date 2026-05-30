@@ -414,6 +414,7 @@ class _IngresoCard extends StatelessWidget {
                   ),
                   PopupMenuButton<String>(
                     icon: Icon(Icons.more_vert, color: colorSec, size: 20),
+                    padding: EdgeInsets.zero,
                     tooltip: 'Acciones',
                     onSelected: (v) {
                       switch (v) {
@@ -558,6 +559,7 @@ class _GastoFijoCard extends StatelessWidget {
                   ),
                   PopupMenuButton<String>(
                     icon: Icon(Icons.more_vert, color: colorSec, size: 20),
+                    padding: EdgeInsets.zero,
                     tooltip: 'Acciones',
                     onSelected: (v) {
                       switch (v) {

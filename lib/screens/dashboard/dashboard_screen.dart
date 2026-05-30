@@ -186,9 +186,10 @@ class _ResumenCard extends StatelessWidget {
                   child: Text(
                     formatCOP(valor),
                     style: monoStyle(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
                   ),
                 );
               },
@@ -258,14 +259,17 @@ class _BalanceMensualCard extends StatelessWidget {
                           ),
                         ),
                         Flexible(
-                          child: Text(
-                            formatCOP(disponible),
-                            style: monoStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: disponibleColor,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              formatCOP(disponible),
+                              style: monoStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: disponibleColor,
+                              ),
+                              maxLines: 1,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -339,14 +343,17 @@ class _PosicionPrestamosCard extends StatelessWidget {
                           ),
                         ),
                         Flexible(
-                          child: Text(
-                            formatCOP(neto),
-                            style: monoStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: netoColor,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              formatCOP(neto),
+                              style: monoStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: netoColor,
+                              ),
+                              maxLines: 1,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

@@ -38,32 +38,18 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primario,
+      backgroundColor: AppColors.fondoOscuro,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.account_balance_wallet_rounded,
-              size: 80,
-              color: AppColors.acento,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Valtiq',
-              style: GoogleFonts.inter(
-                fontSize: 42,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 2,
-              ),
-            ),
-            const SizedBox(height: 8),
+            Image.asset('assets/logo_horizontal.png', width: 260),
+            const SizedBox(height: 16),
             Text(
               'Tu dinero, tu control',
               style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Colors.white70,
+                fontSize: 15,
+                color: Colors.white54,
               ),
             ),
           ],
