@@ -572,7 +572,7 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
     return AlertDialog(
       title: const Text('Registrar pago'),
       content: SizedBox(
-        width: 400,
+        width: double.maxFinite,
         child: Form(
           key: _formKey,
           child: Column(

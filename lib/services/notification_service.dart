@@ -17,7 +17,8 @@ class NotificationService {
   static bool get _soportado =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.linux ||
-          defaultTargetPlatform == TargetPlatform.windows);
+          defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.android);
 
   static Future<void> init() async {
     if (_initialized || !_soportado) return;
@@ -26,6 +27,9 @@ class NotificationService {
     if (Platform.isLinux) {
       const linux = LinuxInitializationSettings(defaultActionName: 'Abrir');
       settings = const InitializationSettings(linux: linux);
+    } else if (Platform.isAndroid) {
+      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      settings = const InitializationSettings(android: android);
     } else {
       // Windows: AUMID must match the app registered in the Start menu.
       // Without MSIX packaging the toast API still works for basic show().
@@ -38,6 +42,14 @@ class NotificationService {
     }
 
     await _plugin.initialize(settings: settings);
+
+    if (Platform.isAndroid) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    }
+
     _initialized = true;
   }
 
@@ -56,6 +68,15 @@ class NotificationService {
         urgency: LinuxNotificationUrgency.normal,
       );
       details = const NotificationDetails(linux: linuxDetails);
+    } else if (Platform.isAndroid) {
+      const androidDetails = AndroidNotificationDetails(
+        'valtiq_recordatorios',
+        'Recordatorios',
+        channelDescription: 'Notificaciones de recordatorios de pagos',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      details = const NotificationDetails(android: androidDetails);
     } else {
       // Windows: basic toast notification; no extra details needed.
       details = const NotificationDetails(windows: WindowsNotificationDetails());

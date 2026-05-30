@@ -547,7 +547,7 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
     return AlertDialog(
       title: const Text('Registrar abono'),
       content: SizedBox(
-        width: 400,
+        width: double.maxFinite,
         child: Form(
           key: _formKey,
           child: Column(
