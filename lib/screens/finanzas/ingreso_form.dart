@@ -55,6 +55,7 @@ class _IngresoFormState extends State<IngresoForm> {
       initialDate: _fecha,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      locale: const Locale('es', 'CO'),
     );
     if (f != null) setState(() => _fecha = f);
   }

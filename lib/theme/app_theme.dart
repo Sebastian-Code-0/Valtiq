@@ -9,6 +9,9 @@ abstract class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      splashFactory: InkRipple.splashFactory,
+      splashColor: AppColors.acento.withValues(alpha: 0.15),
+      highlightColor: Colors.transparent,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primario,
         secondary: AppColors.acento,
@@ -70,6 +73,9 @@ abstract class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      splashFactory: InkRipple.splashFactory,
+      splashColor: AppColors.acento.withValues(alpha: 0.15),
+      highlightColor: Colors.transparent,
       colorScheme: const ColorScheme.dark(
         primary: AppColors.acento,
         secondary: AppColors.primario,

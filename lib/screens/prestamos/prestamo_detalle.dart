@@ -252,12 +252,16 @@ class _ResumenCard extends StatelessWidget {
                   'Saldo pendiente:',
                   style: theme.textTheme.titleSmall?.copyWith(color: colorSec),
                 ),
-                Text(
-                  formatCOP(saldo),
-                  style: monoStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: colorSaldo,
+                Flexible(
+                  child: Text(
+                    formatCOP(saldo),
+                    style: monoStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: colorSaldo,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
                   ),
                 ),
               ],
@@ -302,12 +306,16 @@ class _ResumenCard extends StatelessWidget {
               style: (chico ? theme.textTheme.bodySmall : theme.textTheme.bodyMedium)
                   ?.copyWith(color: colorSec),
             ),
-            Text(
-              formatCOP(valor),
-              style: monoStyle(
-                fontSize: chico ? 13 : 15,
-                fontWeight: negrita ? FontWeight.bold : FontWeight.w500,
-                color: colorValor,
+            Flexible(
+              child: Text(
+                formatCOP(valor),
+                style: monoStyle(
+                  fontSize: chico ? 13 : 15,
+                  fontWeight: negrita ? FontWeight.bold : FontWeight.w500,
+                  color: colorValor,
+                ),
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
               ),
             ),
           ],
@@ -439,10 +447,10 @@ class _PagosSection extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                FilledButton.tonalIcon(
+                IconButton(
                   onPressed: onRegistrar,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Registrar pago'),
+                  icon: const Icon(Icons.add_circle_outline),
+                  tooltip: 'Registrar pago',
                 ),
               ],
             ),
@@ -548,6 +556,7 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
       initialDate: _fecha,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      locale: const Locale('es', 'CO'),
     );
     if (f != null) setState(() => _fecha = f);
   }

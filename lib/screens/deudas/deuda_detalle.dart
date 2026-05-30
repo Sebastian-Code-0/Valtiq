@@ -242,12 +242,16 @@ class _ResumenCard extends StatelessWidget {
                   style:
                       theme.textTheme.titleSmall?.copyWith(color: colorSec),
                 ),
-                Text(
-                  formatCOP(saldoReal),
-                  style: monoStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: colorSaldo,
+                Flexible(
+                  child: Text(
+                    formatCOP(saldoReal),
+                    style: monoStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: colorSaldo,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
                   ),
                 ),
               ],
@@ -273,12 +277,16 @@ class _ResumenCard extends StatelessWidget {
           label,
           style: theme.textTheme.bodyMedium?.copyWith(color: colorSec),
         ),
-        Text(
-          formatCOP(valor),
-          style: monoStyle(
-            fontSize: 15,
-            fontWeight: negrita ? FontWeight.bold : FontWeight.w500,
-            color: colorValor,
+        Flexible(
+          child: Text(
+            formatCOP(valor),
+            style: monoStyle(
+              fontSize: 15,
+              fontWeight: negrita ? FontWeight.bold : FontWeight.w500,
+              color: colorValor,
+            ),
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
           ),
         ),
       ],
@@ -414,10 +422,10 @@ class _AbonosSection extends StatelessWidget {
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
-                FilledButton.tonalIcon(
+                IconButton(
                   onPressed: onRegistrar,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Registrar abono'),
+                  icon: const Icon(Icons.add_circle_outline),
+                  tooltip: 'Registrar abono',
                 ),
               ],
             ),
@@ -523,6 +531,7 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
       initialDate: _fecha,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      locale: const Locale('es', 'CO'),
     );
     if (f != null) setState(() => _fecha = f);
   }

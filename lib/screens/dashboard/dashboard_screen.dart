@@ -90,7 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: AppSpacing.md),
               GridView.count(
                 crossAxisCount: 2,
-                childAspectRatio: 1.5,
+                childAspectRatio: 1.8,
                 crossAxisSpacing: AppSpacing.md,
                 mainAxisSpacing: AppSpacing.md,
                 shrinkWrap: true,
@@ -180,11 +180,15 @@ class _ResumenCard extends StatelessWidget {
               stream: stream,
               builder: (context, snapshot) {
                 final valor = snapshot.data ?? 0.0;
-                return Text(
-                  formatCOP(valor),
-                  style: monoStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                return FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    formatCOP(valor),
+                    style: monoStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 );
               },
@@ -253,12 +257,15 @@ class _BalanceMensualCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          formatCOP(disponible),
-                          style: monoStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: disponibleColor,
+                        Flexible(
+                          child: Text(
+                            formatCOP(disponible),
+                            style: monoStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: disponibleColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
@@ -331,12 +338,15 @@ class _PosicionPrestamosCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          formatCOP(neto),
-                          style: monoStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: netoColor,
+                        Flexible(
+                          child: Text(
+                            formatCOP(neto),
+                            style: monoStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: netoColor,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

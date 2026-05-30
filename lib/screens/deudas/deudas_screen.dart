@@ -290,12 +290,16 @@ class _DeudaCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Text(
-                    formatCOP(deuda.montoOriginal),
-                    style: monoStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.alerta,
+                  Flexible(
+                    child: Text(
+                      formatCOP(deuda.montoOriginal),
+                      style: monoStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.alerta,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
                     ),
                   ),
                   PopupMenuButton<String>(

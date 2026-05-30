@@ -84,6 +84,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
       initialDate: _fechaAlerta,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      locale: const Locale('es', 'CO'),
     );
     if (f != null) setState(() => _fechaAlerta = f);
   }

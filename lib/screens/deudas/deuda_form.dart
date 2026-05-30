@@ -77,6 +77,7 @@ class _DeudaFormState extends State<DeudaForm> {
       initialDate: _fechaPrestamo,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      locale: const Locale('es', 'CO'),
     );
     if (f != null) setState(() => _fechaPrestamo = f);
   }
@@ -87,6 +88,7 @@ class _DeudaFormState extends State<DeudaForm> {
       initialDate: _fechaLimite ?? _fechaPrestamo,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      locale: const Locale('es', 'CO'),
     );
     if (f != null) setState(() => _fechaLimite = f);
   }
