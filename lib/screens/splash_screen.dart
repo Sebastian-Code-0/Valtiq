@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../db/database.dart';
 import '../theme/theme.dart';
@@ -42,14 +41,20 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Image.asset('assets/logo_horizontal.png', width: 260),
+            Image.asset(
+              'assets/logo_horizontal.png',
+              width: 260,
+              fit: BoxFit.contain,
+            ),
             const SizedBox(height: 16),
             Text(
               'Tu dinero, tu control',
-              style: GoogleFonts.inter(
-                fontSize: 15,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.white54,
+                fontSize: 15,
               ),
             ),
           ],

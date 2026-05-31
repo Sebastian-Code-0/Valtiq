@@ -290,7 +290,8 @@ class _DeudaCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Flexible(
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 150),
                     child: Text(
                       formatCOP(deuda.montoOriginal),
                       style: monoStyle(

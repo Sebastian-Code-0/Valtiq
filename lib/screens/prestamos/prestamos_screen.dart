@@ -269,17 +269,14 @@ class _PrestamoCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Flexible(
-                    child: Text(
-                      formatCOP(prestamo.montoPrestado),
-                      style: monoStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.acento,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
+                  Text(
+                    formatCOP(prestamo.montoPrestado),
+                    style: monoStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.acento,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

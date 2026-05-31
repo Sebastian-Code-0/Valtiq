@@ -57,8 +57,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -68,11 +66,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Row(
                 children: [
-                  Text(
-                    'Dashboard',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Image.asset(
+                    'assets/logo_icono.png',
+                    height: 32,
+                    color: AppColors.acento,
+                    colorBlendMode: BlendMode.srcIn,
                   ),
                   const Spacer(),
                   IconButton(

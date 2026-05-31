@@ -25,8 +25,11 @@ class NotificationService {
 
     InitializationSettings settings;
     if (Platform.isLinux) {
-      const linux = LinuxInitializationSettings(defaultActionName: 'Abrir');
-      settings = const InitializationSettings(linux: linux);
+      final linux = LinuxInitializationSettings(
+        defaultActionName: 'Abrir',
+        defaultIcon: AssetsLinuxIcon('assets/logo_icono.png'),
+      );
+      settings = InitializationSettings(linux: linux);
     } else if (Platform.isAndroid) {
       const android = AndroidInitializationSettings('@mipmap/ic_launcher');
       settings = const InitializationSettings(android: android);
@@ -75,6 +78,7 @@ class NotificationService {
         channelDescription: 'Notificaciones de recordatorios de pagos',
         importance: Importance.high,
         priority: Priority.high,
+        largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
       );
       details = const NotificationDetails(android: androidDetails);
     } else {
