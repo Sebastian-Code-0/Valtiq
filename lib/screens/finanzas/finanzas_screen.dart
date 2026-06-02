@@ -407,7 +407,7 @@ class _IngresoCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Flexible(
+                  Expanded(
                     child: Text(
                       formatCOP(ingreso.monto),
                       style: monoStyle(
@@ -556,7 +556,7 @@ class _GastoFijoCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Flexible(
+                  Expanded(
                     child: Text(
                       formatCOP(gasto.monto),
                       style: monoStyle(
