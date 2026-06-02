@@ -76,4 +76,12 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
     );
     return count > 0;
   }
+
+  Future<int> marcarNotificado(int id, DateTime cuando) =>
+      (update(recordatorios)..where((t) => t.id.equals(id)))
+          .write(RecordatoriosCompanion(ultimaNotificacion: Value(cuando)));
+
+  Future<int> marcarEnvioCorreo(int id, DateTime cuando) =>
+      (update(recordatorios)..where((t) => t.id.equals(id)))
+          .write(RecordatoriosCompanion(ultimoEnvioCorreo: Value(cuando)));
 }

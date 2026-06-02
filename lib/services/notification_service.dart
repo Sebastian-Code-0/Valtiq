@@ -252,4 +252,83 @@ class NotificationService {
       await _plugin.cancel(id: id);
     } catch (_) {}
   }
+
+  // Decide si toca avisar hoy por un canal concreto. Exclusivo de Android.
+  // Modelo: ventana [fechaAlerta - diasAnticipacion, fechaAlerta] inclusive.
+  // 'unica'  -> un único aviso, el primer día de la ventana en que ya pasó la hora.
+  // 'diaria' -> un aviso por día calendario dentro de la ventana, a la hora fijada.
+  static bool _debeAvisarHoyAndroid({
+    required DateTime fechaAlerta,
+    required int diasAnticipacion,
+    required int horaAviso,
+    required int minutoAviso,
+    required String frecuenciaAviso,
+    required DateTime? ultimoAvisoCanal,
+    required DateTime ahora,
+  }) {
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final diaAlerta = DateTime(fechaAlerta.year, fechaAlerta.month, fechaAlerta.day);
+    final inicioVentana = diaAlerta.subtract(Duration(days: diasAnticipacion));
+    // fuera de ventana
+    if (hoy.isBefore(inicioVentana) || hoy.isAfter(diaAlerta)) return false;
+    // aún no llega la hora configurada hoy
+    final objetivo = DateTime(ahora.year, ahora.month, ahora.day, horaAviso, minutoAviso);
+    if (ahora.isBefore(objetivo)) return false;
+    // 'unica': si ya se avisó alguna vez (en cualquier fecha), no repetir
+    if (frecuenciaAviso == 'unica') {
+      return ultimoAvisoCanal == null;
+    }
+    // 'diaria': permitir un aviso por día calendario
+    if (ultimoAvisoCanal != null) {
+      final ultimoDia = DateTime(ultimoAvisoCanal.year, ultimoAvisoCanal.month, ultimoAvisoCanal.day);
+      if (!hoy.isAfter(ultimoDia)) return false; // ya avisó hoy
+    }
+    return true;
+  }
+
+  // Revisión EXCLUSIVA de Android (la llamará WorkManager en background).
+  static Future<int> revisarRecordatoriosAndroid(AppDatabase db) async {
+    await init();
+    final lista = await db.recordatoriosDao.getRecordatoriosActivos();
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    int notificados = 0;
+    for (final r in lista) {
+      final diaAlerta = DateTime(r.fechaAlerta.year, r.fechaAlerta.month, r.fechaAlerta.day);
+      final diasFaltantes = diaAlerta.difference(hoy).inDays;
+      final contenido = await _buildContenido(r, db, diasFaltantes);
+      if ((r.tipoNotificacion == 'sistema' || r.tipoNotificacion == 'ambos') &&
+          _debeAvisarHoyAndroid(
+            fechaAlerta: r.fechaAlerta,
+            diasAnticipacion: r.diasAnticipacion,
+            horaAviso: r.horaAviso,
+            minutoAviso: r.minutoAviso,
+            frecuenciaAviso: r.frecuenciaAviso,
+            ultimoAvisoCanal: r.ultimaNotificacion,
+            ahora: ahora,
+          )) {
+        await showNotification(id: r.id, title: r.titulo, body: contenido.sistema);
+        await db.recordatoriosDao.marcarNotificado(r.id, ahora);
+        notificados++;
+      }
+      if ((r.tipoNotificacion == 'correo' || r.tipoNotificacion == 'ambos') &&
+          _debeAvisarHoyAndroid(
+            fechaAlerta: r.fechaAlerta,
+            diasAnticipacion: r.diasAnticipacion,
+            horaAviso: r.horaAviso,
+            minutoAviso: r.minutoAviso,
+            frecuenciaAviso: r.frecuenciaAviso,
+            ultimoAvisoCanal: r.ultimoEnvioCorreo,
+            ahora: ahora,
+          )) {
+        final res = await SmtpService.enviarCorreo(
+          db: db,
+          asunto: 'Recordatorio: ${r.titulo}',
+          cuerpo: contenido.email,
+        );
+        if (res.exito) await db.recordatoriosDao.marcarEnvioCorreo(r.id, ahora);
+      }
+    }
+    return notificados;
+  }
 }
