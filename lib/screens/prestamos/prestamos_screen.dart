@@ -413,18 +413,24 @@ class _PrestamoCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Row(
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: 4,
                 children: [
-                  Icon(Icons.calendar_today, size: 14, color: colorSec),
-                  const SizedBox(width: 4),
-                  Text(
-                    formatFecha(prestamo.fechaPrestamo),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorSec,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.calendar_today, size: 14, color: colorSec),
+                      const SizedBox(width: 4),
+                      Text(
+                        formatFecha(prestamo.fechaPrestamo),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorSec,
+                        ),
+                      ),
+                    ],
                   ),
-                  if (prestamo.tasaInteres > 0) ...[
-                    const SizedBox(width: AppSpacing.sm),
+                  if (prestamo.tasaInteres > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.sm,
@@ -445,9 +451,7 @@ class _PrestamoCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ],
-                  if (vencido) ...[
-                    const SizedBox(width: AppSpacing.sm),
+                  if (vencido)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.sm,
@@ -467,7 +471,6 @@ class _PrestamoCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ],
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),

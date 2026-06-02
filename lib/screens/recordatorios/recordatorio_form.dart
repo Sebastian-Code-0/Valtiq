@@ -100,6 +100,12 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     final t = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: _horaAviso, minute: _minutoAviso),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+          child: child!,
+        );
+      },
     );
     if (t != null) {
       setState(() {
