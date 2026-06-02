@@ -30,6 +30,10 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
   int? _referenciaId;
   bool _guardando = false;
 
+  late int _horaAviso;
+  late int _minutoAviso;
+  late String _frecuenciaAviso;
+
   List<Deuda> _deudas = const [];
   List<Prestamo> _prestamos = const [];
   List<GastosFijo> _gastosFijos = const [];
@@ -48,6 +52,9 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     _tipoNotificacion = r?.tipoNotificacion ?? 'sistema';
     _repetir = r?.repetir ?? false;
     _tipoReferencia = r?.referenciaTabla ?? 'ninguna';
+    _horaAviso = r?.horaAviso ?? 12;
+    _minutoAviso = r?.minutoAviso ?? 0;
+    _frecuenciaAviso = r?.frecuenciaAviso ?? 'unica';
     _referenciaId = r?.referenciaId;
 
     if (_tipoReferencia != 'ninguna') {
@@ -89,6 +96,19 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     if (f != null) setState(() => _fechaAlerta = f);
   }
 
+  Future<void> _seleccionarHora() async {
+    final t = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: _horaAviso, minute: _minutoAviso),
+    );
+    if (t != null) {
+      setState(() {
+        _horaAviso = t.hour;
+        _minutoAviso = t.minute;
+      });
+    }
+  }
+
   void _onTipoReferenciaChanged(String? nuevo) {
     if (nuevo == null) return;
     setState(() {
@@ -126,6 +146,9 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
           repetir: Value(_repetir),
           referenciaTabla: Value(refTabla),
           referenciaId: Value(refId),
+          horaAviso: Value(_horaAviso),
+          minutoAviso: Value(_minutoAviso),
+          frecuenciaAviso: Value(_frecuenciaAviso),
         ),
       );
     } else {
@@ -138,11 +161,60 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
           repetir: _repetir,
           referenciaTabla: Value(refTabla),
           referenciaId: Value(refId),
+          horaAviso: _horaAviso,
+          minutoAviso: _minutoAviso,
+          frecuenciaAviso: _frecuenciaAviso,
         ),
       );
     }
 
     if (mounted) Navigator.pop(context, true);
+  }
+
+  Widget _buildHoraPicker(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorSec = isDark
+        ? AppColors.textoSecundarioOscuro
+        : AppColors.textoSecundarioClaro;
+    final tod = TimeOfDay(hour: _horaAviso, minute: _minutoAviso);
+    final horaFormateada = MaterialLocalizations.of(context).formatTimeOfDay(tod);
+    return InkWell(
+      onTap: _seleccionarHora,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          border: Border.all(color: theme.dividerColor, width: 1),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.schedule, size: 20, color: colorSec),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hora del aviso',
+                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    horaFormateada,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: colorSec),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget? _buildReferenciaSelector() {
@@ -308,6 +380,33 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
                   ],
                   onChanged: (v) =>
                       setState(() => _tipoNotificacion = v ?? 'sistema'),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _buildHoraPicker(context),
+                const SizedBox(height: AppSpacing.md),
+                DropdownButtonFormField<String>(
+                  value: _frecuenciaAviso,
+                  decoration: const InputDecoration(
+                    labelText: 'Frecuencia del aviso',
+                    prefixIcon: Icon(Icons.repeat_one_outlined),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'unica',
+                      child: Text('Un solo aviso'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'diaria',
+                      child: Text('Avisar cada día'),
+                    ),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _frecuenciaAviso = v ?? 'unica'),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Único: avisa una sola vez. Diario: te recuerda cada día hasta la fecha.',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 SwitchTile(
