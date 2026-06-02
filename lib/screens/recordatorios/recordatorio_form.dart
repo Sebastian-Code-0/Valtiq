@@ -96,16 +96,26 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     if (f != null) setState(() => _fechaAlerta = f);
   }
 
+  String _formatHora12h(int hora, int minuto) {
+    final period = hora < 12 ? 'AM' : 'PM';
+    final h = hora % 12 == 0 ? 12 : hora % 12;
+    final m = minuto.toString().padLeft(2, '0');
+    return '$h:$m $period';
+  }
+
   Future<void> _seleccionarHora() async {
     final t = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: _horaAviso, minute: _minutoAviso),
-      builder: (context, child) {
-        return MediaQuery(
+      initialEntryMode: TimePickerEntryMode.dial,
+      builder: (context, child) => Localizations.override(
+        context: context,
+        locale: const Locale('en'),
+        child: MediaQuery(
           data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
           child: child!,
-        );
-      },
+        ),
+      ),
     );
     if (t != null) {
       setState(() {
@@ -183,8 +193,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     final colorSec = isDark
         ? AppColors.textoSecundarioOscuro
         : AppColors.textoSecundarioClaro;
-    final tod = TimeOfDay(hour: _horaAviso, minute: _minutoAviso);
-    final horaFormateada = MaterialLocalizations.of(context).formatTimeOfDay(tod);
+    final horaFormateada = _formatHora12h(_horaAviso, _minutoAviso);
     return InkWell(
       onTap: _seleccionarHora,
       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
