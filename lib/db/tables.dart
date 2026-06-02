@@ -85,6 +85,10 @@ class Recordatorios extends Table {
   BoolColumn get repetir => boolean().withDefault(const Constant(false))();
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
+  // 'unica': avisa una sola vez al entrar en ventana | 'diaria': re-avisa una vez al día
+  TextColumn get frecuenciaAviso => text().withDefault(const Constant('unica'))();
+  DateTimeColumn get ultimaNotificacion => dateTime().nullable()();
+  DateTimeColumn get ultimoEnvioCorreo => dateTime().nullable()();
 }
 
 class ConfigSmtps extends Table {
