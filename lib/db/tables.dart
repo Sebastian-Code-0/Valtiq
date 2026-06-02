@@ -89,6 +89,8 @@ class Recordatorios extends Table {
   TextColumn get frecuenciaAviso => text().withDefault(const Constant('unica'))();
   DateTimeColumn get ultimaNotificacion => dateTime().nullable()();
   DateTimeColumn get ultimoEnvioCorreo => dateTime().nullable()();
+  IntColumn get horaAviso => integer().withDefault(const Constant(12))();
+  IntColumn get minutoAviso => integer().withDefault(const Constant(0))();
 }
 
 class ConfigSmtps extends Table {

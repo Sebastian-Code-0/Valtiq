@@ -3610,6 +3610,30 @@ class $RecordatoriosTable extends Recordatorios
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _horaAvisoMeta = const VerificationMeta(
+    'horaAviso',
+  );
+  @override
+  late final GeneratedColumn<int> horaAviso = GeneratedColumn<int>(
+    'hora_aviso',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(12),
+  );
+  static const VerificationMeta _minutoAvisoMeta = const VerificationMeta(
+    'minutoAviso',
+  );
+  @override
+  late final GeneratedColumn<int> minutoAviso = GeneratedColumn<int>(
+    'minuto_aviso',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3625,6 +3649,8 @@ class $RecordatoriosTable extends Recordatorios
     frecuenciaAviso,
     ultimaNotificacion,
     ultimoEnvioCorreo,
+    horaAviso,
+    minutoAviso,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3741,6 +3767,21 @@ class $RecordatoriosTable extends Recordatorios
         ),
       );
     }
+    if (data.containsKey('hora_aviso')) {
+      context.handle(
+        _horaAvisoMeta,
+        horaAviso.isAcceptableOrUnknown(data['hora_aviso']!, _horaAvisoMeta),
+      );
+    }
+    if (data.containsKey('minuto_aviso')) {
+      context.handle(
+        _minutoAvisoMeta,
+        minutoAviso.isAcceptableOrUnknown(
+          data['minuto_aviso']!,
+          _minutoAvisoMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3802,6 +3843,14 @@ class $RecordatoriosTable extends Recordatorios
         DriftSqlType.dateTime,
         data['${effectivePrefix}ultimo_envio_correo'],
       ),
+      horaAviso: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}hora_aviso'],
+      )!,
+      minutoAviso: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}minuto_aviso'],
+      )!,
     );
   }
 
@@ -3825,6 +3874,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
   final String frecuenciaAviso;
   final DateTime? ultimaNotificacion;
   final DateTime? ultimoEnvioCorreo;
+  final int horaAviso;
+  final int minutoAviso;
   const Recordatorio({
     required this.id,
     required this.titulo,
@@ -3839,6 +3890,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
     required this.frecuenciaAviso,
     this.ultimaNotificacion,
     this.ultimoEnvioCorreo,
+    required this.horaAviso,
+    required this.minutoAviso,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3864,6 +3917,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
     if (!nullToAbsent || ultimoEnvioCorreo != null) {
       map['ultimo_envio_correo'] = Variable<DateTime>(ultimoEnvioCorreo);
     }
+    map['hora_aviso'] = Variable<int>(horaAviso);
+    map['minuto_aviso'] = Variable<int>(minutoAviso);
     return map;
   }
 
@@ -3890,6 +3945,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
       ultimoEnvioCorreo: ultimoEnvioCorreo == null && nullToAbsent
           ? const Value.absent()
           : Value(ultimoEnvioCorreo),
+      horaAviso: Value(horaAviso),
+      minutoAviso: Value(minutoAviso),
     );
   }
 
@@ -3916,6 +3973,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
       ultimoEnvioCorreo: serializer.fromJson<DateTime?>(
         json['ultimoEnvioCorreo'],
       ),
+      horaAviso: serializer.fromJson<int>(json['horaAviso']),
+      minutoAviso: serializer.fromJson<int>(json['minutoAviso']),
     );
   }
   @override
@@ -3935,6 +3994,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
       'frecuenciaAviso': serializer.toJson<String>(frecuenciaAviso),
       'ultimaNotificacion': serializer.toJson<DateTime?>(ultimaNotificacion),
       'ultimoEnvioCorreo': serializer.toJson<DateTime?>(ultimoEnvioCorreo),
+      'horaAviso': serializer.toJson<int>(horaAviso),
+      'minutoAviso': serializer.toJson<int>(minutoAviso),
     };
   }
 
@@ -3952,6 +4013,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
     String? frecuenciaAviso,
     Value<DateTime?> ultimaNotificacion = const Value.absent(),
     Value<DateTime?> ultimoEnvioCorreo = const Value.absent(),
+    int? horaAviso,
+    int? minutoAviso,
   }) => Recordatorio(
     id: id ?? this.id,
     titulo: titulo ?? this.titulo,
@@ -3972,6 +4035,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
     ultimoEnvioCorreo: ultimoEnvioCorreo.present
         ? ultimoEnvioCorreo.value
         : this.ultimoEnvioCorreo,
+    horaAviso: horaAviso ?? this.horaAviso,
+    minutoAviso: minutoAviso ?? this.minutoAviso,
   );
   Recordatorio copyWithCompanion(RecordatoriosCompanion data) {
     return Recordatorio(
@@ -4004,6 +4069,10 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
       ultimoEnvioCorreo: data.ultimoEnvioCorreo.present
           ? data.ultimoEnvioCorreo.value
           : this.ultimoEnvioCorreo,
+      horaAviso: data.horaAviso.present ? data.horaAviso.value : this.horaAviso,
+      minutoAviso: data.minutoAviso.present
+          ? data.minutoAviso.value
+          : this.minutoAviso,
     );
   }
 
@@ -4022,7 +4091,9 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
           ..write('creadoEn: $creadoEn, ')
           ..write('frecuenciaAviso: $frecuenciaAviso, ')
           ..write('ultimaNotificacion: $ultimaNotificacion, ')
-          ..write('ultimoEnvioCorreo: $ultimoEnvioCorreo')
+          ..write('ultimoEnvioCorreo: $ultimoEnvioCorreo, ')
+          ..write('horaAviso: $horaAviso, ')
+          ..write('minutoAviso: $minutoAviso')
           ..write(')'))
         .toString();
   }
@@ -4042,6 +4113,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
     frecuenciaAviso,
     ultimaNotificacion,
     ultimoEnvioCorreo,
+    horaAviso,
+    minutoAviso,
   );
   @override
   bool operator ==(Object other) =>
@@ -4059,7 +4132,9 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
           other.creadoEn == this.creadoEn &&
           other.frecuenciaAviso == this.frecuenciaAviso &&
           other.ultimaNotificacion == this.ultimaNotificacion &&
-          other.ultimoEnvioCorreo == this.ultimoEnvioCorreo);
+          other.ultimoEnvioCorreo == this.ultimoEnvioCorreo &&
+          other.horaAviso == this.horaAviso &&
+          other.minutoAviso == this.minutoAviso);
 }
 
 class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
@@ -4076,6 +4151,8 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
   final Value<String> frecuenciaAviso;
   final Value<DateTime?> ultimaNotificacion;
   final Value<DateTime?> ultimoEnvioCorreo;
+  final Value<int> horaAviso;
+  final Value<int> minutoAviso;
   const RecordatoriosCompanion({
     this.id = const Value.absent(),
     this.titulo = const Value.absent(),
@@ -4090,6 +4167,8 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
     this.frecuenciaAviso = const Value.absent(),
     this.ultimaNotificacion = const Value.absent(),
     this.ultimoEnvioCorreo = const Value.absent(),
+    this.horaAviso = const Value.absent(),
+    this.minutoAviso = const Value.absent(),
   });
   RecordatoriosCompanion.insert({
     this.id = const Value.absent(),
@@ -4105,6 +4184,8 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
     this.frecuenciaAviso = const Value.absent(),
     this.ultimaNotificacion = const Value.absent(),
     this.ultimoEnvioCorreo = const Value.absent(),
+    this.horaAviso = const Value.absent(),
+    this.minutoAviso = const Value.absent(),
   }) : titulo = Value(titulo),
        fechaAlerta = Value(fechaAlerta);
   static Insertable<Recordatorio> custom({
@@ -4121,6 +4202,8 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
     Expression<String>? frecuenciaAviso,
     Expression<DateTime>? ultimaNotificacion,
     Expression<DateTime>? ultimoEnvioCorreo,
+    Expression<int>? horaAviso,
+    Expression<int>? minutoAviso,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4136,6 +4219,8 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
       if (frecuenciaAviso != null) 'frecuencia_aviso': frecuenciaAviso,
       if (ultimaNotificacion != null) 'ultima_notificacion': ultimaNotificacion,
       if (ultimoEnvioCorreo != null) 'ultimo_envio_correo': ultimoEnvioCorreo,
+      if (horaAviso != null) 'hora_aviso': horaAviso,
+      if (minutoAviso != null) 'minuto_aviso': minutoAviso,
     });
   }
 
@@ -4153,6 +4238,8 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
     Value<String>? frecuenciaAviso,
     Value<DateTime?>? ultimaNotificacion,
     Value<DateTime?>? ultimoEnvioCorreo,
+    Value<int>? horaAviso,
+    Value<int>? minutoAviso,
   }) {
     return RecordatoriosCompanion(
       id: id ?? this.id,
@@ -4168,6 +4255,8 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
       frecuenciaAviso: frecuenciaAviso ?? this.frecuenciaAviso,
       ultimaNotificacion: ultimaNotificacion ?? this.ultimaNotificacion,
       ultimoEnvioCorreo: ultimoEnvioCorreo ?? this.ultimoEnvioCorreo,
+      horaAviso: horaAviso ?? this.horaAviso,
+      minutoAviso: minutoAviso ?? this.minutoAviso,
     );
   }
 
@@ -4213,6 +4302,12 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
     if (ultimoEnvioCorreo.present) {
       map['ultimo_envio_correo'] = Variable<DateTime>(ultimoEnvioCorreo.value);
     }
+    if (horaAviso.present) {
+      map['hora_aviso'] = Variable<int>(horaAviso.value);
+    }
+    if (minutoAviso.present) {
+      map['minuto_aviso'] = Variable<int>(minutoAviso.value);
+    }
     return map;
   }
 
@@ -4231,7 +4326,9 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
           ..write('creadoEn: $creadoEn, ')
           ..write('frecuenciaAviso: $frecuenciaAviso, ')
           ..write('ultimaNotificacion: $ultimaNotificacion, ')
-          ..write('ultimoEnvioCorreo: $ultimoEnvioCorreo')
+          ..write('ultimoEnvioCorreo: $ultimoEnvioCorreo, ')
+          ..write('horaAviso: $horaAviso, ')
+          ..write('minutoAviso: $minutoAviso')
           ..write(')'))
         .toString();
   }
@@ -7102,6 +7199,8 @@ typedef $$RecordatoriosTableCreateCompanionBuilder =
       Value<String> frecuenciaAviso,
       Value<DateTime?> ultimaNotificacion,
       Value<DateTime?> ultimoEnvioCorreo,
+      Value<int> horaAviso,
+      Value<int> minutoAviso,
     });
 typedef $$RecordatoriosTableUpdateCompanionBuilder =
     RecordatoriosCompanion Function({
@@ -7118,6 +7217,8 @@ typedef $$RecordatoriosTableUpdateCompanionBuilder =
       Value<String> frecuenciaAviso,
       Value<DateTime?> ultimaNotificacion,
       Value<DateTime?> ultimoEnvioCorreo,
+      Value<int> horaAviso,
+      Value<int> minutoAviso,
     });
 
 class $$RecordatoriosTableFilterComposer
@@ -7191,6 +7292,16 @@ class $$RecordatoriosTableFilterComposer
 
   ColumnFilters<DateTime> get ultimoEnvioCorreo => $composableBuilder(
     column: $table.ultimoEnvioCorreo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get horaAviso => $composableBuilder(
+    column: $table.horaAviso,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get minutoAviso => $composableBuilder(
+    column: $table.minutoAviso,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7268,6 +7379,16 @@ class $$RecordatoriosTableOrderingComposer
     column: $table.ultimoEnvioCorreo,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get horaAviso => $composableBuilder(
+    column: $table.horaAviso,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get minutoAviso => $composableBuilder(
+    column: $table.minutoAviso,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RecordatoriosTableAnnotationComposer
@@ -7333,6 +7454,14 @@ class $$RecordatoriosTableAnnotationComposer
     column: $table.ultimoEnvioCorreo,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get horaAviso =>
+      $composableBuilder(column: $table.horaAviso, builder: (column) => column);
+
+  GeneratedColumn<int> get minutoAviso => $composableBuilder(
+    column: $table.minutoAviso,
+    builder: (column) => column,
+  );
 }
 
 class $$RecordatoriosTableTableManager
@@ -7379,6 +7508,8 @@ class $$RecordatoriosTableTableManager
                 Value<String> frecuenciaAviso = const Value.absent(),
                 Value<DateTime?> ultimaNotificacion = const Value.absent(),
                 Value<DateTime?> ultimoEnvioCorreo = const Value.absent(),
+                Value<int> horaAviso = const Value.absent(),
+                Value<int> minutoAviso = const Value.absent(),
               }) => RecordatoriosCompanion(
                 id: id,
                 titulo: titulo,
@@ -7393,6 +7524,8 @@ class $$RecordatoriosTableTableManager
                 frecuenciaAviso: frecuenciaAviso,
                 ultimaNotificacion: ultimaNotificacion,
                 ultimoEnvioCorreo: ultimoEnvioCorreo,
+                horaAviso: horaAviso,
+                minutoAviso: minutoAviso,
               ),
           createCompanionCallback:
               ({
@@ -7409,6 +7542,8 @@ class $$RecordatoriosTableTableManager
                 Value<String> frecuenciaAviso = const Value.absent(),
                 Value<DateTime?> ultimaNotificacion = const Value.absent(),
                 Value<DateTime?> ultimoEnvioCorreo = const Value.absent(),
+                Value<int> horaAviso = const Value.absent(),
+                Value<int> minutoAviso = const Value.absent(),
               }) => RecordatoriosCompanion.insert(
                 id: id,
                 titulo: titulo,
@@ -7423,6 +7558,8 @@ class $$RecordatoriosTableTableManager
                 frecuenciaAviso: frecuenciaAviso,
                 ultimaNotificacion: ultimaNotificacion,
                 ultimoEnvioCorreo: ultimoEnvioCorreo,
+                horaAviso: horaAviso,
+                minutoAviso: minutoAviso,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

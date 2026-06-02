@@ -39,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor openConnection() => conn.openValtiqConnection();
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -78,6 +78,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(recordatorios, recordatorios.frecuenciaAviso);
         await m.addColumn(recordatorios, recordatorios.ultimaNotificacion);
         await m.addColumn(recordatorios, recordatorios.ultimoEnvioCorreo);
+      }
+      if (from < 6) {
+        await m.addColumn(recordatorios, recordatorios.horaAviso);
+        await m.addColumn(recordatorios, recordatorios.minutoAviso);
       }
     },
   );
