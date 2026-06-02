@@ -58,6 +58,14 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     return count > 0;
   }
 
+  Future<void> reactivarPrestamo(int id) =>
+      (update(prestamos)..where((p) => p.id.equals(id))).write(
+        PrestamosCompanion(
+          estado: const Value('activo'),
+          actualizadoEn: Value(DateTime.now()),
+        ),
+      );
+
   Future<List<PagosRecibido>> getPagosDelPrestamo(int prestamoId) {
     return (select(pagosRecibidos)
           ..where((t) => t.prestamoId.equals(prestamoId))

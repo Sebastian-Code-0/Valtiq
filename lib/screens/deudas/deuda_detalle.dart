@@ -480,12 +480,16 @@ class _AbonosSection extends StatelessWidget {
                               ],
                             ),
                           ),
-                          Text(
-                            formatCOP(p.montoAbonado),
-                            style: monoStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.positivo,
+                          Flexible(
+                            child: Text(
+                              formatCOP(p.montoAbonado),
+                              style: monoStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.positivo,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.end,
                             ),
                           ),
                         ],

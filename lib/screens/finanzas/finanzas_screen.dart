@@ -209,12 +209,15 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
-        Text(
-          formatCOP(total),
-          style: monoStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
+        Flexible(
+          child: Text(
+            formatCOP(total),
+            style: monoStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -404,12 +407,16 @@ class _IngresoCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Text(
-                    formatCOP(ingreso.monto),
-                    style: monoStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.positivo,
+                  Flexible(
+                    child: Text(
+                      formatCOP(ingreso.monto),
+                      style: monoStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.positivo,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
                     ),
                   ),
                   PopupMenuButton<String>(
@@ -549,12 +556,16 @@ class _GastoFijoCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Text(
-                    formatCOP(gasto.monto),
-                    style: monoStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.alerta,
+                  Flexible(
+                    child: Text(
+                      formatCOP(gasto.monto),
+                      style: monoStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.alerta,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
                     ),
                   ),
                   PopupMenuButton<String>(

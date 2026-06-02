@@ -75,6 +75,56 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
     );
   }
 
+  Future<void> _confirmarMarcarPagado(Prestamo prestamo) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Marcar como pagado'),
+        content: Text(
+          '¿Confirmas que el préstamo a ${prestamo.deudorNombre} ya fue pagado por completo?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await widget.db.prestamosDao.marcarComoPagado(prestamo.id);
+    }
+  }
+
+  Future<void> _confirmarReactivar(Prestamo prestamo) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reactivar préstamo'),
+        content: Text(
+          '¿Volver a marcar como activo el préstamo a ${prestamo.deudorNombre}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await widget.db.prestamosDao.reactivarPrestamo(prestamo.id);
+    }
+  }
+
   Future<void> _confirmarEliminar(Prestamo prestamo) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -197,6 +247,12 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
                         colorSec: colorSec,
                         onTap: () => _abrirDetalle(item.prestamo.id),
                         onLongPress: () => _confirmarEliminar(item.prestamo),
+                        onMarcarPagado: _mostrarPagados
+                            ? null
+                            : () => _confirmarMarcarPagado(item.prestamo),
+                        onReactivar: _mostrarPagados
+                            ? () => _confirmarReactivar(item.prestamo)
+                            : null,
                       );
                     },
                   );
@@ -219,6 +275,8 @@ class _PrestamoCard extends StatelessWidget {
     required this.colorSec,
     required this.onTap,
     required this.onLongPress,
+    this.onMarcarPagado,
+    this.onReactivar,
   });
 
   final Prestamo prestamo;
@@ -227,6 +285,8 @@ class _PrestamoCard extends StatelessWidget {
   final Color colorSec;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback? onMarcarPagado;
+  final VoidCallback? onReactivar;
 
   String _fmtTasa(double t) {
     if (t == t.truncateToDouble()) return t.toStringAsFixed(0);
@@ -254,7 +314,12 @@ class _PrestamoCard extends StatelessWidget {
         onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -269,14 +334,81 @@ class _PrestamoCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Text(
-                    formatCOP(prestamo.montoPrestado),
-                    style: monoStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.acento,
+                  Flexible(
+                    child: Text(
+                      formatCOP(prestamo.montoPrestado),
+                      style: monoStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.acento,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
                     ),
-                    overflow: TextOverflow.ellipsis,
+                  ),
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: colorSec, size: 20),
+                    padding: EdgeInsets.zero,
+                    tooltip: 'Acciones',
+                    onSelected: (v) {
+                      switch (v) {
+                        case 'pagado':
+                          onMarcarPagado?.call();
+                        case 'reactivar':
+                          onReactivar?.call();
+                        case 'eliminar':
+                          onLongPress();
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      if (onMarcarPagado != null)
+                        const PopupMenuItem(
+                          value: 'pagado',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline,
+                                size: 18,
+                                color: AppColors.positivo,
+                              ),
+                              SizedBox(width: AppSpacing.sm),
+                              Text('Marcar como pagado'),
+                            ],
+                          ),
+                        ),
+                      if (onReactivar != null)
+                        const PopupMenuItem(
+                          value: 'reactivar',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.undo,
+                                size: 18,
+                                color: AppColors.acento,
+                              ),
+                              SizedBox(width: AppSpacing.sm),
+                              Text('Reactivar préstamo'),
+                            ],
+                          ),
+                        ),
+                      const PopupMenuItem(
+                        value: 'eliminar',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: AppColors.alerta,
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Text(
+                              'Eliminar',
+                              style: TextStyle(color: AppColors.alerta),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -348,14 +480,18 @@ class _PrestamoCard extends StatelessWidget {
                       color: colorSec,
                     ),
                   ),
-                  Text(
-                    formatCOP(saldo),
-                    style: monoStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: saldo > 0
-                          ? AppColors.alerta
-                          : AppColors.positivo,
+                  Flexible(
+                    child: Text(
+                      formatCOP(saldo),
+                      style: monoStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: saldo > 0
+                            ? AppColors.alerta
+                            : AppColors.positivo,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
                     ),
                   ),
                 ],
