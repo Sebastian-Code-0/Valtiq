@@ -24,6 +24,19 @@ void callbackDispatcher() {
   });
 }
 
+const valtiqTareaPrueba = 'valtiq_prueba_inmediata';
+
+Future<void> dispararWorkerPrueba() async {
+  await Workmanager().initialize(callbackDispatcher);
+  await Workmanager().registerOneOffTask(
+    valtiqTareaPrueba,
+    valtiqTareaPrueba,
+    initialDelay: const Duration(seconds: 10),
+    existingWorkPolicy: ExistingWorkPolicy.replace,
+    constraints: Constraints(networkType: NetworkType.notRequired),
+  );
+}
+
 Future<void> registrarWorkerRecordatorios() async {
   await Workmanager().initialize(callbackDispatcher);
   await Workmanager().registerPeriodicTask(

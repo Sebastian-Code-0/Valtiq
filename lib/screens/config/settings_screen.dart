@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
 import '../../main.dart';
+import '../../services/background_worker.dart';
 import '../../theme/theme.dart';
 import 'apariencia_screen.dart';
 import 'config_smtp_screen.dart';
@@ -56,6 +58,28 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (kDebugMode) ...[
+                const SizedBox(height: AppSpacing.md),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.bug_report),
+                    title: const Text('Probar notificación (debug)'),
+                    subtitle: const Text('Fuerza el worker en 10 segundos'),
+                    onTap: () async {
+                      await dispararWorkerPrueba();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Worker programado: espera ~10s con la app cerrada',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
             ],
           );
         },
