@@ -20,7 +20,7 @@ class NotificationService {
           defaultTargetPlatform == TargetPlatform.windows ||
           defaultTargetPlatform == TargetPlatform.android);
 
-  static Future<void> init() async {
+  static Future<void> init({bool esBackground = false}) async {
     if (_initialized || !_soportado) return;
 
     InitializationSettings settings;
@@ -31,7 +31,7 @@ class NotificationService {
       );
       settings = InitializationSettings(linux: linux);
     } else if (Platform.isAndroid) {
-      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const android = AndroidInitializationSettings('@drawable/ic_stat_notif');
       settings = const InitializationSettings(android: android);
     } else {
       // Windows: AUMID must match the app registered in the Start menu.
@@ -50,7 +50,6 @@ class NotificationService {
       final androidImpl = _plugin
           .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
-      // Obligatorio en Android 8+ (API 26+): sin canal registrado la notificación se descarta.
       const canal = AndroidNotificationChannel(
         'valtiq_recordatorios',
         'Recordatorios',
@@ -58,7 +57,10 @@ class NotificationService {
         importance: Importance.high,
       );
       await androidImpl?.createNotificationChannel(canal);
-      await androidImpl?.requestNotificationsPermission();
+      if (!esBackground) {
+        // Solo pedir permiso cuando hay UI (foreground). Requiere Activity.
+        await androidImpl?.requestNotificationsPermission();
+      }
     }
 
     _initialized = true;
@@ -86,6 +88,7 @@ class NotificationService {
         channelDescription: 'Notificaciones de recordatorios de pagos',
         importance: Importance.high,
         priority: Priority.high,
+        icon: '@drawable/ic_stat_notif',
         largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
       );
       details = const NotificationDetails(android: androidDetails);

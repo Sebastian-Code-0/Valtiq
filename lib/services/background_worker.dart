@@ -13,14 +13,15 @@ void callbackDispatcher() {
     try {
       debugPrint('VALTIQ_WORKER: iniciando');
       WidgetsFlutterBinding.ensureInitialized();
+      debugPrint('VALTIQ_WORKER: binding ok');
       final db = AppDatabase(AppDatabase.openConnection());
       debugPrint('VALTIQ_WORKER: db ok');
       await CryptoService.init();
       debugPrint('VALTIQ_WORKER: crypto ok');
-      await NotificationService.init();
+      await NotificationService.init(esBackground: true);
       debugPrint('VALTIQ_WORKER: notif init ok');
-      await NotificationService.revisarRecordatoriosAndroid(db);
-      debugPrint('VALTIQ_WORKER: revisar ok');
+      final n = await NotificationService.revisarRecordatoriosAndroid(db);
+      debugPrint('VALTIQ_WORKER: revisar ok, notificados=$n');
       await db.close();
       return true;
     } catch (e, st) {
