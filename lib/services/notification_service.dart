@@ -47,10 +47,18 @@ class NotificationService {
     await _plugin.initialize(settings: settings);
 
     if (Platform.isAndroid) {
-      await _plugin
+      final androidImpl = _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
-          ?.requestNotificationsPermission();
+              AndroidFlutterLocalNotificationsPlugin>();
+      // Obligatorio en Android 8+ (API 26+): sin canal registrado la notificación se descarta.
+      const canal = AndroidNotificationChannel(
+        'valtiq_recordatorios',
+        'Recordatorios',
+        description: 'Notificaciones de recordatorios de pagos',
+        importance: Importance.high,
+      );
+      await androidImpl?.createNotificationChannel(canal);
+      await androidImpl?.requestNotificationsPermission();
     }
 
     _initialized = true;
@@ -330,5 +338,14 @@ class NotificationService {
       }
     }
     return notificados;
+  }
+
+  static Future<void> notificacionDePrueba() async {
+    await init();
+    await showNotification(
+      id: 999999,
+      title: 'Prueba Valtiq',
+      body: 'Si ves esto, las notificaciones funcionan.',
+    );
   }
 }

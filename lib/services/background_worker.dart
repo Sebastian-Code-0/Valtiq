@@ -11,14 +11,21 @@ const valtiqTareaRecordatorios = 'valtiq_revision_recordatorios';
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
+      debugPrint('VALTIQ_WORKER: iniciando');
       WidgetsFlutterBinding.ensureInitialized();
       final db = AppDatabase(AppDatabase.openConnection());
+      debugPrint('VALTIQ_WORKER: db ok');
       await CryptoService.init();
+      debugPrint('VALTIQ_WORKER: crypto ok');
       await NotificationService.init();
+      debugPrint('VALTIQ_WORKER: notif init ok');
       await NotificationService.revisarRecordatoriosAndroid(db);
+      debugPrint('VALTIQ_WORKER: revisar ok');
       await db.close();
       return true;
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('VALTIQ_WORKER_ERROR: $e');
+      debugPrint('VALTIQ_WORKER_STACK: $st');
       return false;
     }
   });
