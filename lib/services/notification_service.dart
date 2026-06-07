@@ -14,6 +14,8 @@ class NotificationService {
 
   static bool _initialized = false;
 
+  static void resetInitialized() => _initialized = false;
+
   static bool get _soportado =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.linux ||

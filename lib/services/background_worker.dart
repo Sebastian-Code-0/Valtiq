@@ -18,6 +18,7 @@ void callbackDispatcher() {
       debugPrint('VALTIQ_WORKER: db ok');
       await CryptoService.init();
       debugPrint('VALTIQ_WORKER: crypto ok');
+      NotificationService.resetInitialized();
       await NotificationService.init(esBackground: true);
       debugPrint('VALTIQ_WORKER: notif init ok');
       final n = await NotificationService.revisarRecordatoriosAndroid(db);
