@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,12 +27,6 @@ void main() async {
 
   await CryptoService.init();
   await NotificationService.init();
-  if (!kIsWeb && Platform.isAndroid) {
-    final tiene = await NotificationService.verificarPermisoAlarmaExacta();
-    if (!tiene) {
-      await NotificationService.solicitarPermisoAlarmaExacta();
-    }
-  }
   unawaited(NotificationService.revisarRecordatorios(db));
   runApp(ValtiqApp(db: db));
 }

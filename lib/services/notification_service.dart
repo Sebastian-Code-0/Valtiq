@@ -419,7 +419,7 @@ class NotificationService {
             largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        androidScheduleMode: AndroidScheduleMode.inexact,
         payload: 'recordatorio_$id',
       );
       alarmasCreadas++;
@@ -429,21 +429,4 @@ class NotificationService {
     debugPrint('VALTIQ: $alarmasCreadas alarmas programadas para recordatorio $id');
   }
 
-  static Future<bool> verificarPermisoAlarmaExacta() async {
-    if (!Platform.isAndroid) return true;
-    final androidImpl = _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    if (androidImpl == null) return false;
-    final permitido = await androidImpl.canScheduleExactNotifications();
-    return permitido ?? false;
-  }
-
-  static Future<void> solicitarPermisoAlarmaExacta() async {
-    if (!Platform.isAndroid) return;
-    final androidImpl = _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    await androidImpl?.requestExactAlarmsPermission();
-  }
 }
