@@ -396,9 +396,11 @@ class NotificationService {
         diaObjetivo.year, diaObjetivo.month, diaObjetivo.day,
         horaAviso, minutoAviso,
       );
-      if (momentoObjetivo.isBefore(ahora)) continue;
-
-      final tzMomento = tz.TZDateTime.from(momentoObjetivo, tz.local);
+      // Si el momento ya pasó, añade 1 minuto de margen para programar igualmente.
+      final momentoFinal = momentoObjetivo.isBefore(ahora)
+          ? ahora.add(const Duration(minutes: 1))
+          : momentoObjetivo;
+      final tzMomento = tz.TZDateTime.from(momentoFinal, tz.local);
       final notifId = id * 100 + i;
       final diasFaltantes = diaAlerta.difference(diaObjetivo).inDays;
       final cuerpo = _bodyParaRecordatorio(diasFaltantes);
