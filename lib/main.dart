@@ -1,14 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'db/database.dart';
 import 'screens/splash_screen.dart';
-import 'services/background_worker.dart';
 import 'services/crypto_service.dart';
 import 'services/notification_service.dart';
 import 'theme/theme.dart';
@@ -30,13 +27,7 @@ void main() async {
 
   await CryptoService.init();
   await NotificationService.init();
-  if (!kIsWeb && (Platform.isLinux || Platform.isWindows)) {
-    // Escritorio: sin background real, se revisa al abrir (igual que antes).
-    unawaited(NotificationService.revisarRecordatorios(db));
-  } else if (!kIsWeb && Platform.isAndroid) {
-    // Android: la revisión la hace WorkManager en segundo plano cada hora.
-    unawaited(registrarWorkerRecordatorios());
-  }
+  unawaited(NotificationService.revisarRecordatorios(db));
   runApp(ValtiqApp(db: db));
 }
 
