@@ -419,7 +419,7 @@ class NotificationService {
             largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
         payload: 'recordatorio_$id',
       );
       alarmasCreadas++;

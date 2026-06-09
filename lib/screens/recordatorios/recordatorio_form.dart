@@ -191,16 +191,20 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     }
 
     if (!kIsWeb && Platform.isAndroid) {
-      await NotificationService.programarAlarmas(
-        id: rId,
-        titulo: titulo,
-        fechaAlerta: _fechaAlerta,
-        diasAnticipacion: dias,
-        horaAviso: _horaAviso,
-        minutoAviso: _minutoAviso,
-        frecuenciaAviso: _frecuenciaAviso,
-        tipoNotificacion: _tipoNotificacion,
-      );
+      try {
+        await NotificationService.programarAlarmas(
+          id: rId,
+          titulo: titulo,
+          fechaAlerta: _fechaAlerta,
+          diasAnticipacion: dias,
+          horaAviso: _horaAviso,
+          minutoAviso: _minutoAviso,
+          frecuenciaAviso: _frecuenciaAviso,
+          tipoNotificacion: _tipoNotificacion,
+        );
+      } catch (e) {
+        debugPrint('VALTIQ_ALARMA_ERROR: $e');
+      }
     }
 
     if (mounted) Navigator.pop(context, true);
