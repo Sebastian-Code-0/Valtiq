@@ -204,6 +204,11 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
         );
       } catch (e) {
         debugPrint('VALTIQ_ALARMA_ERROR: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error alarma: $e'), duration: const Duration(seconds: 8)),
+          );
+        }
       }
     }
 
