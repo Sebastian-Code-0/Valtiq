@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 
 import '../db/database.dart';
 import '../utils/date_format.dart';
@@ -352,5 +355,77 @@ class NotificationService {
       title: 'Prueba Valtiq',
       body: 'Si ves esto, las notificaciones funcionan.',
     );
+  }
+
+  static Future<void> _initTimezone() async {
+    tz_data.initializeTimeZones();
+    final info = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(info.identifier));
+  }
+
+  static Future<void> cancelarAlarmas(int recordatorioId) async {
+    await init();
+    for (int i = 0; i < 60; i++) {
+      await _plugin.cancel(id: recordatorioId * 100 + i);
+    }
+  }
+
+  static Future<void> programarAlarmas({
+    required int id,
+    required String titulo,
+    required DateTime fechaAlerta,
+    required int diasAnticipacion,
+    required int horaAviso,
+    required int minutoAviso,
+    required String frecuenciaAviso,
+    required String tipoNotificacion,
+  }) async {
+    if (tipoNotificacion == 'correo') return;
+    await init();
+    await _initTimezone();
+    await cancelarAlarmas(id);
+
+    final ahora = DateTime.now();
+    final diaAlerta = DateTime(fechaAlerta.year, fechaAlerta.month, fechaAlerta.day);
+    final inicioVentana = diaAlerta.subtract(Duration(days: diasAnticipacion));
+
+    int alarmasCreadas = 0;
+    for (int i = 0; i <= diasAnticipacion; i++) {
+      final diaObjetivo = inicioVentana.add(Duration(days: i));
+      final momentoObjetivo = DateTime(
+        diaObjetivo.year, diaObjetivo.month, diaObjetivo.day,
+        horaAviso, minutoAviso,
+      );
+      if (momentoObjetivo.isBefore(ahora)) continue;
+
+      final tzMomento = tz.TZDateTime.from(momentoObjetivo, tz.local);
+      final notifId = id * 100 + i;
+      final diasFaltantes = diaAlerta.difference(diaObjetivo).inDays;
+      final cuerpo = _bodyParaRecordatorio(diasFaltantes);
+
+      await _plugin.zonedSchedule(
+        id: notifId,
+        title: titulo,
+        body: cuerpo,
+        scheduledDate: tzMomento,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'valtiq_recordatorios',
+            'Recordatorios',
+            channelDescription: 'Notificaciones de recordatorios de pagos',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@drawable/ic_stat_notif',
+            largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: 'recordatorio_$id',
+      );
+      alarmasCreadas++;
+
+      if (frecuenciaAviso == 'unica') break;
+    }
+    debugPrint('VALTIQ: $alarmasCreadas alarmas programadas para recordatorio $id');
   }
 }

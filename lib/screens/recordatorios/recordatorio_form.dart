@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
+import '../../services/notification_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
@@ -152,8 +156,9 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     final refId = _tipoReferencia == 'ninguna' ? null : _referenciaId;
 
     final dao = widget.db.recordatoriosDao;
+    final int rId;
     if (widget.recordatorio == null) {
-      await dao.insertRecordatorio(
+      rId = await dao.insertRecordatorio(
         RecordatoriosCompanion.insert(
           titulo: titulo,
           fechaAlerta: _fechaAlerta,
@@ -168,6 +173,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
         ),
       );
     } else {
+      rId = widget.recordatorio!.id;
       await dao.updateRecordatorio(
         widget.recordatorio!.copyWith(
           titulo: titulo,
@@ -181,6 +187,19 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
           minutoAviso: _minutoAviso,
           frecuenciaAviso: _frecuenciaAviso,
         ),
+      );
+    }
+
+    if (!kIsWeb && Platform.isAndroid) {
+      await NotificationService.programarAlarmas(
+        id: rId,
+        titulo: titulo,
+        fechaAlerta: _fechaAlerta,
+        diasAnticipacion: dias,
+        horaAviso: _horaAviso,
+        minutoAviso: _minutoAviso,
+        frecuenciaAviso: _frecuenciaAviso,
+        tipoNotificacion: _tipoNotificacion,
       );
     }
 
