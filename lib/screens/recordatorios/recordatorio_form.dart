@@ -191,6 +191,20 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     }
 
     if (!kIsWeb && Platform.isAndroid) {
+      final tienePermiso = await NotificationService.verificarPermisoAlarmaExacta();
+      if (!tienePermiso) {
+        await NotificationService.solicitarPermisoAlarmaExacta();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Activa "Alarmas y recordatorios" para Valtiq y guarda de nuevo.'),
+              duration: Duration(seconds: 6),
+            ),
+          );
+        }
+        setState(() => _guardando = false);
+        return;
+      }
       try {
         await NotificationService.programarAlarmas(
           id: rId,
@@ -204,11 +218,6 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
         );
       } catch (e) {
         debugPrint('VALTIQ_ALARMA_ERROR: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error alarma: $e'), duration: const Duration(seconds: 8)),
-          );
-        }
       }
     }
 
