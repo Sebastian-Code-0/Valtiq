@@ -96,35 +96,6 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     if (f != null) setState(() => _fechaAlerta = f);
   }
 
-  String _formatHora12h(int hora, int minuto) {
-    final period = hora < 12 ? 'AM' : 'PM';
-    final h = hora % 12 == 0 ? 12 : hora % 12;
-    final m = minuto.toString().padLeft(2, '0');
-    return '$h:$m $period';
-  }
-
-  Future<void> _seleccionarHora() async {
-    final t = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: _horaAviso, minute: _minutoAviso),
-      initialEntryMode: TimePickerEntryMode.dial,
-      builder: (context, child) => Localizations.override(
-        context: context,
-        locale: const Locale('en'),
-        child: MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-          child: child!,
-        ),
-      ),
-    );
-    if (t != null) {
-      setState(() {
-        _horaAviso = t.hour;
-        _minutoAviso = t.minute;
-      });
-    }
-  }
-
   void _onTipoReferenciaChanged(String? nuevo) {
     if (nuevo == null) return;
     setState(() {
@@ -182,54 +153,12 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
           frecuenciaAviso: _frecuenciaAviso,
         ),
       );
+      if (widget.recordatorio!.fechaAlerta != _fechaAlerta) {
+        await dao.resetearDeduplicacion(widget.recordatorio!.id);
+      }
     }
 
     if (mounted) Navigator.pop(context, true);
-  }
-
-  Widget _buildHoraPicker(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
-    final horaFormateada = _formatHora12h(_horaAviso, _minutoAviso);
-    return InkWell(
-      onTap: _seleccionarHora,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        decoration: BoxDecoration(
-          border: Border.all(color: theme.dividerColor, width: 1),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.schedule, size: 20, color: colorSec),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hora del aviso',
-                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    horaFormateada,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: colorSec),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget? _buildReferenciaSelector() {
@@ -396,8 +325,6 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
                   onChanged: (v) =>
                       setState(() => _tipoNotificacion = v ?? 'sistema'),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                _buildHoraPicker(context),
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   value: _frecuenciaAviso,

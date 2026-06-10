@@ -73,6 +73,7 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
 
   Future<void> _activar(Recordatorio r) async {
     await widget.db.recordatoriosDao.activarRecordatorio(r.id);
+    await widget.db.recordatoriosDao.resetearDeduplicacion(r.id);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Recordatorio "${r.titulo}" activado')),

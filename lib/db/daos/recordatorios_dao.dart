@@ -84,4 +84,19 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
   Future<int> marcarEnvioCorreo(int id, DateTime cuando) =>
       (update(recordatorios)..where((t) => t.id.equals(id)))
           .write(RecordatoriosCompanion(ultimoEnvioCorreo: Value(cuando)));
+
+  Future<int> resetearDeduplicacion(int id) =>
+      (update(recordatorios)..where((t) => t.id.equals(id)))
+          .write(const RecordatoriosCompanion(
+            ultimaNotificacion: Value(null),
+            ultimoEnvioCorreo: Value(null),
+          ));
+
+  Future<int> reprogramarMensual(int id, DateTime nuevaFecha) =>
+      (update(recordatorios)..where((t) => t.id.equals(id)))
+          .write(RecordatoriosCompanion(
+            fechaAlerta: Value(nuevaFecha),
+            ultimaNotificacion: const Value(null),
+            ultimoEnvioCorreo: const Value(null),
+          ));
 }

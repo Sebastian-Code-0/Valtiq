@@ -104,43 +104,64 @@ class NotificationService {
 
   static Future<int> revisarRecordatorios(AppDatabase db) async {
     await init();
-    final recordatorios = await db.recordatoriosDao.getRecordatoriosActivos();
+    final lista = await db.recordatoriosDao.getRecordatoriosActivos();
     final ahora = DateTime.now();
     final hoy = DateTime(ahora.year, ahora.month, ahora.day);
-
     int notificados = 0;
-    for (final r in recordatorios) {
-      final diaAlerta = DateTime(
-        r.fechaAlerta.year,
-        r.fechaAlerta.month,
-        r.fechaAlerta.day,
-      );
+
+    for (final r in lista) {
+      final diaAlerta = DateTime(r.fechaAlerta.year, r.fechaAlerta.month, r.fechaAlerta.day);
       final diasFaltantes = diaAlerta.difference(hoy).inDays;
 
-      final dentroDeVentana =
-          diasFaltantes <= r.diasAnticipacion && diasFaltantes >= -7;
+      // Si pasó la ventana de gracia y tiene repetir, reprogramar al mes siguiente.
+      if (diasFaltantes < -7 && r.repetir) {
+        final nuevaFecha = DateTime(
+          r.fechaAlerta.year,
+          r.fechaAlerta.month + 1,
+          r.fechaAlerta.day,
+        );
+        await db.recordatoriosDao.reprogramarMensual(r.id, nuevaFecha);
+        continue;
+      }
+
+      final dentroDeVentana = diasFaltantes <= r.diasAnticipacion && diasFaltantes >= -7;
       if (!dentroDeVentana) continue;
 
-      final contenido = await _buildContenido(r, db, diasFaltantes);
       final tipo = r.tipoNotificacion;
+      final contenido = await _buildContenido(r, db, diasFaltantes);
 
       if (tipo == 'sistema' || tipo == 'ambos') {
-        await showNotification(
-          id: r.id,
-          title: r.titulo,
-          body: contenido.sistema,
-        );
-        notificados++;
+        if (_debeAvisar(frecuencia: r.frecuenciaAviso, ultimoAviso: r.ultimaNotificacion, hoy: hoy)) {
+          await showNotification(id: r.id, title: r.titulo, body: contenido.sistema);
+          await db.recordatoriosDao.marcarNotificado(r.id, ahora);
+          notificados++;
+        }
       }
+
       if (tipo == 'correo' || tipo == 'ambos') {
-        await SmtpService.enviarCorreo(
-          db: db,
-          asunto: 'Recordatorio: ${r.titulo}',
-          cuerpo: contenido.email,
-        );
+        if (_debeAvisar(frecuencia: r.frecuenciaAviso, ultimoAviso: r.ultimoEnvioCorreo, hoy: hoy)) {
+          final res = await SmtpService.enviarCorreo(
+            db: db,
+            asunto: 'Recordatorio: ${r.titulo}',
+            cuerpo: contenido.email,
+          );
+          if (res.exito) await db.recordatoriosDao.marcarEnvioCorreo(r.id, ahora);
+        }
       }
     }
     return notificados;
+  }
+
+  static bool _debeAvisar({
+    required String frecuencia,
+    required DateTime? ultimoAviso,
+    required DateTime hoy,
+  }) {
+    if (ultimoAviso == null) return true;
+    if (frecuencia == 'unica') return false;
+    // 'diaria': un aviso por día calendario
+    final ultimoDia = DateTime(ultimoAviso.year, ultimoAviso.month, ultimoAviso.day);
+    return hoy.isAfter(ultimoDia);
   }
 
   // Returns both the short OS notification body and the rich email body.
