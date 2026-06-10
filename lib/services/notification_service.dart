@@ -115,11 +115,14 @@ class NotificationService {
 
       // Si pasó la ventana de gracia y tiene repetir, reprogramar al mes siguiente.
       if (diasFaltantes < -7 && r.repetir) {
-        final nuevaFecha = DateTime(
-          r.fechaAlerta.year,
-          r.fechaAlerta.month + 1,
-          r.fechaAlerta.day,
-        );
+        // Avanza mes a mes hasta que la fecha quede en ventana o futuro.
+        DateTime nuevaFecha = r.fechaAlerta;
+        while (true) {
+          nuevaFecha = DateTime(nuevaFecha.year, nuevaFecha.month + 1, nuevaFecha.day);
+          final diaNuevo = DateTime(nuevaFecha.year, nuevaFecha.month, nuevaFecha.day);
+          final diff = diaNuevo.difference(hoy).inDays;
+          if (diff >= -7) break;
+        }
         await db.recordatoriosDao.reprogramarMensual(r.id, nuevaFecha);
         continue;
       }
