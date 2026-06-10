@@ -111,12 +111,27 @@ class SmtpService {
       final detalle = e.problems.isNotEmpty
           ? e.problems.map((p) => '${p.code}: ${p.msg}').join('; ')
           : e.message;
-      return SmtpResult(
-        exito: false,
-        mensaje: 'Error al enviar: $detalle',
-      );
+      return SmtpResult(exito: false, mensaje: _mensajeAmigable(detalle));
     } catch (e) {
-      return SmtpResult(exito: false, mensaje: 'Error inesperado: $e');
+      return SmtpResult(exito: false, mensaje: _mensajeAmigable(e.toString()));
     }
+  }
+
+  static String _mensajeAmigable(String errorTecnico) {
+    final e = errorTecnico.toLowerCase();
+    if (e.contains('535') || e.contains('authentication') ||
+        e.contains('password not accepted') || e.contains('badcredentials')) {
+      return 'Credenciales incorrectas. Si usas Gmail, necesitas una Contraseña de Aplicación (no tu contraseña normal). Ve a myaccount.google.com → Seguridad → Verificación en dos pasos → Contraseñas de aplicación.';
+    }
+    if (e.contains('connection') || e.contains('timeout') || e.contains('connect')) {
+      return 'No se pudo conectar al servidor de correo. Verifica tu conexión a internet y los datos del servidor SMTP.';
+    }
+    if (e.contains('550') || e.contains('recipient')) {
+      return 'El correo destino no es válido o fue rechazado por el servidor.';
+    }
+    if (e.contains('ssl') || e.contains('tls') || e.contains('certificate')) {
+      return 'Error de seguridad SSL/TLS. Verifica el puerto y la configuración de seguridad del servidor.';
+    }
+    return 'Error al enviar: $errorTecnico';
   }
 }

@@ -295,9 +295,8 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
                     LengthLimitingTextInputFormatter(3),
                   ],
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Requerido';
-                    final n = int.tryParse(v.trim());
-                    if (n == null || n < 0) return 'Inválido';
+                    final n = int.tryParse(v ?? '');
+                    if (n == null || n < 1) return 'Mínimo 1 día de anticipación';
                     return null;
                   },
                 ),
