@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart' show OrderingTerm;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
@@ -61,17 +58,11 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
       ),
     );
     if (ok == true) {
-      if (!kIsWeb && Platform.isAndroid) {
-        await NotificationService.cancelarAlarmas(r.id);
-      }
       await widget.db.recordatoriosDao.deleteRecordatorio(r.id);
     }
   }
 
   Future<void> _inactivar(Recordatorio r) async {
-    if (!kIsWeb && Platform.isAndroid) {
-      await NotificationService.cancelarAlarmas(r.id);
-    }
     await widget.db.recordatoriosDao.desactivarRecordatorio(r.id);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
