@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../db/database.dart';
 import '../../main.dart';
 import '../../theme/theme.dart';
+import 'acerca_de_screen.dart';
 import 'apariencia_screen.dart';
 import 'config_smtp_screen.dart';
 
@@ -52,6 +53,21 @@ class SettingsScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => ConfigSmtpScreen(db: db),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.info_outlined),
+                  title: const Text('Acerca de'),
+                  subtitle: const Text('Versión, licencia y repositorio'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AcercaDeScreen(),
                     ),
                   ),
                 ),
