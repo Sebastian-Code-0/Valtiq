@@ -7,10 +7,7 @@ class AcercaDeScreen extends StatelessWidget {
   const AcercaDeScreen({super.key});
 
   Future<void> _abrirUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -173,7 +170,7 @@ class _FilaPrivacidad extends StatelessWidget {
         children: [
           Icon(icono, size: 16, color: AppColors.positivo),
           const SizedBox(width: AppSpacing.sm),
-          Text(texto, style: theme.textTheme.bodyMedium),
+          Flexible(child: Text(texto, style: theme.textTheme.bodyMedium)),
         ],
       ),
     );
