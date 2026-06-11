@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide Column, Table;
 import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
+import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/format.dart';
 import '../config/settings_screen.dart';
@@ -26,19 +27,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     final db = widget.db;
 
-    final sumDeudas = db.deudas.montoOriginal.sum();
-    _streamDeudas = (db.selectOnly(db.deudas)
-          ..addColumns([sumDeudas])
-          ..where(db.deudas.estado.equals('activa')))
-        .watchSingle()
-        .map((row) => row.read(sumDeudas) ?? 0.0);
+    final d = db.deudas;
+    final pd = db.pagosDeuda;
+    final sumPagosDeuda = pd.montoAbonado.sum();
+    final queryDeudas = db.select(d).join([
+      leftOuterJoin(pd, pd.deudaId.equalsExp(d.id)),
+    ])
+      ..where(d.estado.equals('activa'))
+      ..groupBy([d.id])
+      ..addColumns([sumPagosDeuda]);
 
-    final sumPrestamos = db.prestamos.montoPrestado.sum();
-    _streamPrestamos = (db.selectOnly(db.prestamos)
-          ..addColumns([sumPrestamos])
-          ..where(db.prestamos.estado.equals('activo')))
-        .watchSingle()
-        .map((row) => row.read(sumPrestamos) ?? 0.0);
+    _streamDeudas = queryDeudas.watch().map((rows) {
+      double total = 0;
+      for (final row in rows) {
+        final deuda = row.readTable(d);
+        final abonado = row.read(sumPagosDeuda) ?? 0.0;
+        final interes = InteresCalculator.calcularInteresSimple(
+          monto: deuda.montoOriginal,
+          tasaInteres: deuda.tasaInteres,
+          tipoInteres: deuda.tipoInteres,
+          fechaInicio: deuda.fechaPrestamo,
+        );
+        final saldo = deuda.montoOriginal + interes - abonado;
+        total += saldo < 0 ? 0 : saldo;
+      }
+      return total;
+    });
+
+    final p = db.prestamos;
+    final pr = db.pagosRecibidos;
+    final sumAbonosPrestamos = pr.montoAbonado.sum();
+    final queryPrestamos = db.select(p).join([
+      leftOuterJoin(pr, pr.prestamoId.equalsExp(p.id)),
+    ])
+      ..where(p.estado.equals('activo'))
+      ..groupBy([p.id])
+      ..addColumns([sumAbonosPrestamos]);
+
+    _streamPrestamos = queryPrestamos.watch().map((rows) {
+      double total = 0;
+      for (final row in rows) {
+        final prestamo = row.readTable(p);
+        final abonado = row.read(sumAbonosPrestamos) ?? 0.0;
+        final saldo = InteresCalculator.calcularDeudaTotal(
+          montoPrestado: prestamo.montoPrestado,
+          tasaInteres: prestamo.tasaInteres,
+          tipoInteres: prestamo.tipoInteres,
+          modalidadCalculo: prestamo.modalidadCalculo,
+          fechaPrestamo: prestamo.fechaPrestamo,
+          totalAbonado: abonado,
+        );
+        total += saldo;
+      }
+      return total;
+    });
 
     final sumIngresos = db.ingresos.monto.sum();
     _streamIngresos = (db.selectOnly(db.ingresos)

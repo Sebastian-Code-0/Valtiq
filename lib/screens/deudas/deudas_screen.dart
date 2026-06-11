@@ -1,12 +1,19 @@
-import 'package:drift/drift.dart' show OrderingTerm;
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
+import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
 import '../../utils/format.dart';
 import 'deuda_detalle.dart';
 import 'deuda_form.dart';
+
+class _DeudaConAbonos {
+  _DeudaConAbonos(this.deuda, this.abonado);
+  final Deuda deuda;
+  final double abonado;
+}
 
 class DeudasScreen extends StatefulWidget {
   const DeudasScreen({super.key, required this.db});
@@ -20,12 +27,28 @@ class DeudasScreen extends StatefulWidget {
 class _DeudasScreenState extends State<DeudasScreen> {
   bool _mostrarPagadas = false;
 
-  Stream<List<Deuda>> _stream() {
+  Stream<List<_DeudaConAbonos>> _stream() {
     final estado = _mostrarPagadas ? 'pagada' : 'activa';
-    return (widget.db.select(widget.db.deudas)
-          ..where((d) => d.estado.equals(estado))
-          ..orderBy([(d) => OrderingTerm.desc(d.fechaPrestamo)]))
-        .watch();
+    final d = widget.db.deudas;
+    final pd = widget.db.pagosDeuda;
+    final sumExpr = pd.montoAbonado.sum();
+
+    final query = widget.db.select(d).join([
+      leftOuterJoin(pd, pd.deudaId.equalsExp(d.id)),
+    ])
+      ..where(d.estado.equals(estado))
+      ..groupBy([d.id])
+      ..orderBy([OrderingTerm.desc(d.fechaPrestamo)])
+      ..addColumns([sumExpr]);
+
+    return query.watch().map(
+      (rows) => rows
+          .map((row) => _DeudaConAbonos(
+                row.readTable(d),
+                row.read(sumExpr) ?? 0.0,
+              ))
+          .toList(),
+    );
   }
 
   Future<void> _abrirForm({Deuda? deuda}) async {
@@ -168,14 +191,14 @@ class _DeudasScreenState extends State<DeudasScreen> {
               ),
             ),
             Expanded(
-              child: StreamBuilder<List<Deuda>>(
+              child: StreamBuilder<List<_DeudaConAbonos>>(
                 stream: _stream(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  final deudas = snapshot.data!;
-                  if (deudas.isEmpty) {
+                  final items = snapshot.data!;
+                  if (items.isEmpty) {
                     final mensaje = _mostrarPagadas
                         ? 'No tienes deudas pagadas'
                         : 'No tienes deudas registradas';
@@ -190,34 +213,36 @@ class _DeudasScreenState extends State<DeudasScreen> {
                   }
                   return ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: deudas.length,
+                    itemCount: items.length,
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (_, i) {
-                      final d = deudas[i];
+                      final item = items[i];
                       return _DeudaCard(
-                        deuda: d,
+                        key: ValueKey(item.deuda.id),
+                        deuda: item.deuda,
+                        abonado: item.abonado,
                         atenuada: _mostrarPagadas,
                         colorSec: colorSec,
                         onTap: _mostrarPagadas
-                            ? () => _abrirForm(deuda: d)
+                            ? () => _abrirForm(deuda: item.deuda)
                             : () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => DeudaDetalle(
                                     db: widget.db,
-                                    deudaId: d.id,
+                                    deudaId: item.deuda.id,
                                   ),
                                 ),
                               ),
-                        onLongPress: () => _confirmarEliminar(d),
+                        onLongPress: () => _confirmarEliminar(item.deuda),
                         onMarcarPagada: _mostrarPagadas
                             ? null
-                            : () => _confirmarMarcarPagada(d),
+                            : () => _confirmarMarcarPagada(item.deuda),
                         onMarcarActiva: _mostrarPagadas
-                            ? () => _confirmarMarcarActiva(d)
+                            ? () => _confirmarMarcarActiva(item.deuda)
                             : null,
-                        onEliminar: () => _confirmarEliminar(d),
+                        onEliminar: () => _confirmarEliminar(item.deuda),
                       );
                     },
                   );
@@ -233,7 +258,9 @@ class _DeudasScreenState extends State<DeudasScreen> {
 
 class _DeudaCard extends StatelessWidget {
   const _DeudaCard({
+    super.key,
     required this.deuda,
+    required this.abonado,
     required this.atenuada,
     required this.colorSec,
     required this.onTap,
@@ -244,6 +271,7 @@ class _DeudaCard extends StatelessWidget {
   });
 
   final Deuda deuda;
+  final double abonado;
   final bool atenuada;
   final Color colorSec;
   final VoidCallback onTap;
@@ -260,6 +288,14 @@ class _DeudaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final interes = InteresCalculator.calcularInteresSimple(
+      monto: deuda.montoOriginal,
+      tasaInteres: deuda.tasaInteres,
+      tipoInteres: deuda.tipoInteres,
+      fechaInicio: deuda.fechaPrestamo,
+    );
+    final saldo =
+        (deuda.montoOriginal + interes - abonado).clamp(0.0, double.infinity);
     final vencida =
         deuda.fechaLimite != null &&
         deuda.fechaLimite!.isBefore(DateTime.now());
@@ -423,6 +459,28 @@ class _DeudaCard extends StatelessWidget {
                   ),
                 ),
               ],
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Saldo pendiente',
+                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+                  ),
+                  Flexible(
+                    child: Text(
+                      formatCOP(saldo),
+                      style: monoStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: saldo > 0 ? AppColors.alerta : AppColors.positivo,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
