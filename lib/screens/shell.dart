@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../db/database.dart';
-import '../theme/theme.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'deudas/deudas_screen.dart';
 import 'finanzas/finanzas_screen.dart';
@@ -47,7 +46,6 @@ class _ShellScreenState extends State<ShellScreen> {
         currentIndex: _index,
         onTap: (i) => setState(() => _index = i),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.acento,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),

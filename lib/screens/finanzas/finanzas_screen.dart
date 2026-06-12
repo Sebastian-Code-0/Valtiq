@@ -162,6 +162,10 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                   ],
                   selected: {_modo},
                   onSelectionChanged: (s) => setState(() => _modo = s.first),
+                  style: SegmentedButton.styleFrom(
+                    selectedBackgroundColor: Theme.of(context).colorScheme.primary,
+                    selectedForegroundColor: Theme.of(context).colorScheme.onPrimary,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
