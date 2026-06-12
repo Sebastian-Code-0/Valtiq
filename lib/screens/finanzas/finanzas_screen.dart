@@ -162,24 +162,6 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                   ],
                   selected: {_modo},
                   onSelectionChanged: (s) => setState(() => _modo = s.first),
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.resolveWith<Color?>(
-                      (states) {
-                        if (states.contains(WidgetState.selected)) {
-                          return AppColors.acento;
-                        }
-                        return null;
-                      },
-                    ),
-                    foregroundColor: WidgetStateProperty.resolveWith<Color?>(
-                      (states) {
-                        if (states.contains(WidgetState.selected)) {
-                          return Colors.white;
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -343,13 +325,13 @@ class _FrecuenciaChip extends StatelessWidget {
         vertical: 2,
       ),
       decoration: BoxDecoration(
-        color: AppColors.acento.withValues(alpha: 0.15),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
       child: Text(
         label,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: AppColors.acento,
+          color: Theme.of(context).colorScheme.primary,
           fontWeight: FontWeight.w600,
         ),
       ),

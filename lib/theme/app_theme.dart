@@ -13,11 +13,12 @@ abstract class AppTheme {
       splashColor: acento.withValues(alpha: 0.15),
       highlightColor: Colors.transparent,
       colorScheme: ColorScheme.light(
-        primary: AppColors.primario,
-        secondary: acento,
+        primary: acento,
+        secondary: AppColors.primario,
         error: AppColors.alerta,
         surface: AppColors.superficieClaro,
         onSurface: AppColors.textoClaro,
+        onPrimary: Colors.white,
       ),
       scaffoldBackgroundColor: AppColors.fondoClaro,
       textTheme: textTheme().apply(

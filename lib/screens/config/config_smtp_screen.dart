@@ -160,47 +160,54 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
   }
 
   Widget _bannerGmail() {
-    return Card(
-      color: AppColors.acento.withValues(alpha: 0.08),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.info_outline,
-                  size: 18,
-                  color: AppColors.acento,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorIcono = isDark ? AppColors.acento : AppColors.primario;
+    final colorBorde = theme.colorScheme.outline;
+    final colorFondo = theme.colorScheme.surfaceContainerHighest;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorFondo,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: colorBorde),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 18, color: colorIcono),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'Gmail requiere App Password',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: colorIcono,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  'Gmail requiere App Password',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AppColors.acento,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'No uses tu contraseña normal de Google. '
-              'Gmail exige una Contraseña de aplicación para acceso SMTP.',
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: _abrirAppPasswords,
-              icon: const Icon(Icons.open_in_new, size: 16),
-              label: const Text('Crear contraseña de aplicación'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.acento,
-                side: const BorderSide(color: AppColors.acento),
               ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'No uses tu contraseña normal de Google. '
+            'Gmail exige una Contraseña de aplicación para acceso SMTP.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          OutlinedButton.icon(
+            onPressed: _abrirAppPasswords,
+            icon: const Icon(Icons.open_in_new, size: 16),
+            label: const Text('Crear contraseña de aplicación'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colorIcono,
+              side: BorderSide(color: colorIcono),
+            ),
+          ),
+        ],
       ),
     );
   }
