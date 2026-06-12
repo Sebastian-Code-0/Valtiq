@@ -5,16 +5,16 @@ import 'app_spacing.dart';
 import 'app_typography.dart';
 
 abstract class AppTheme {
-  static ThemeData light() {
+  static ThemeData light([Color acento = AppColors.acento]) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       splashFactory: InkRipple.splashFactory,
-      splashColor: AppColors.acento.withValues(alpha: 0.15),
+      splashColor: acento.withValues(alpha: 0.15),
       highlightColor: Colors.transparent,
-      colorScheme: const ColorScheme.light(
+      colorScheme: ColorScheme.light(
         primary: AppColors.primario,
-        secondary: AppColors.acento,
+        secondary: acento,
         error: AppColors.alerta,
         surface: AppColors.superficieClaro,
         onSurface: AppColors.textoClaro,
@@ -61,23 +61,23 @@ abstract class AppTheme {
         color: Color(0xFFE5E7EB),
         thickness: 0.5,
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.superficieClaro,
-        selectedItemColor: AppColors.acento,
+        selectedItemColor: acento,
         unselectedItemColor: AppColors.textoSecundarioClaro,
       ),
     );
   }
 
-  static ThemeData dark() {
+  static ThemeData dark([Color acento = AppColors.acento]) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       splashFactory: InkRipple.splashFactory,
-      splashColor: AppColors.acento.withValues(alpha: 0.15),
+      splashColor: acento.withValues(alpha: 0.15),
       highlightColor: Colors.transparent,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.acento,
+      colorScheme: ColorScheme.dark(
+        primary: acento,
         secondary: AppColors.primario,
         error: AppColors.alerta,
         surface: AppColors.superficieOscuro,
@@ -125,9 +125,9 @@ abstract class AppTheme {
         color: Color(0xFF334155),
         thickness: 0.5,
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.superficieOscuro,
-        selectedItemColor: AppColors.acento,
+        selectedItemColor: acento,
         unselectedItemColor: AppColors.textoSecundarioOscuro,
       ),
     );

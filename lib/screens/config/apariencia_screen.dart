@@ -13,6 +13,17 @@ class AparienciaScreen extends StatefulWidget {
 
 class _AparienciaScreenState extends State<AparienciaScreen> {
   ThemeMode _modoActual = themeModeNotifier.value;
+  Color _acentoActual = acentoNotifier.value;
+
+  Future<void> _cambiarAcento(Color color) async {
+    setState(() => _acentoActual = color);
+    acentoNotifier.value = color;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'valtiq_acento',
+      color.toARGB32().toRadixString(16),
+    );
+  }
 
   Future<void> _cambiarTema(ThemeMode modo) async {
     setState(() => _modoActual = modo);
@@ -83,28 +94,51 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.construction_outlined,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Text(
-                        'Más opciones',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Próximamente: fuentes, colores personalizados y más.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    'Color de acento',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: _coloresAcento.map((opcion) {
+                      final seleccionado = _acentoActual.toARGB32() ==
+                          opcion.color.toARGB32();
+                      return GestureDetector(
+                        onTap: () => _cambiarAcento(opcion.color),
+                        child: Tooltip(
+                          message: opcion.nombre,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: opcion.color,
+                              shape: BoxShape.circle,
+                              border: seleccionado
+                                  ? Border.all(
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                      width: 3,
+                                    )
+                                  : null,
+                            ),
+                            child: seleccionado
+                                ? Icon(
+                                    Icons.check,
+                                    size: 20,
+                                    color: ThemeData.estimateBrightnessForColor(
+                                                opcion.color) ==
+                                            Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
               ),
@@ -115,3 +149,12 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
     );
   }
 }
+
+const _coloresAcento = [
+  (color: Color(0xFF2DD4A0), nombre: 'Menta'),
+  (color: Color(0xFF6366F1), nombre: 'Índigo'),
+  (color: Color(0xFFF59E0B), nombre: 'Ámbar'),
+  (color: Color(0xFFEC4899), nombre: 'Rosa'),
+  (color: Color(0xFF38BDF8), nombre: 'Cielo'),
+  (color: Color(0xFFF97316), nombre: 'Coral'),
+];
