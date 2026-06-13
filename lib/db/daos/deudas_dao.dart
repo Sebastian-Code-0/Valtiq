@@ -61,12 +61,4 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
     return (delete(deudas)..where((t) => t.id.equals(id))).go();
   }
 
-  Future<double> getTotalDeudaActiva() async {
-    final sum = deudas.montoOriginal.sum();
-    final query = selectOnly(deudas)
-      ..addColumns([sum])
-      ..where(deudas.estado.equals('activa'));
-    final row = await query.getSingle();
-    return row.read(sum) ?? 0.0;
-  }
 }

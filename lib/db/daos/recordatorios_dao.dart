@@ -10,12 +10,6 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
     with _$RecordatoriosDaoMixin {
   RecordatoriosDao(super.db);
 
-  Future<List<Recordatorio>> getAllRecordatorios() {
-    return (select(recordatorios)
-          ..orderBy([(t) => OrderingTerm.asc(t.fechaAlerta)]))
-        .get();
-  }
-
   Future<List<Recordatorio>> getRecordatoriosActivos() {
     return (select(recordatorios)..where((t) => t.activo.equals(true))).get();
   }
@@ -33,19 +27,6 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
             (t) =>
                 t.referenciaTabla.equals(tabla) & t.referenciaId.equals(refId),
           ))
-        .get();
-  }
-
-  Future<List<Recordatorio>> getRecordatoriosProximos(int dias) {
-    final ahora = DateTime.now();
-    final limite = ahora.add(Duration(days: dias));
-    return (select(recordatorios)
-          ..where(
-            (t) =>
-                t.activo.equals(true) &
-                t.fechaAlerta.isBetweenValues(ahora, limite),
-          )
-          ..orderBy([(t) => OrderingTerm.asc(t.fechaAlerta)]))
         .get();
   }
 

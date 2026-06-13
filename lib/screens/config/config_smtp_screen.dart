@@ -92,8 +92,22 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     super.dispose();
   }
 
+  bool _esEmailValido(String email) {
+    final regex = RegExp(r'^[\w\.\+\-]+@[\w\-]+\.[a-zA-Z]{2,}$');
+    return regex.hasMatch(email.trim());
+  }
+
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_destinoCtrl.text.trim().isNotEmpty &&
+        !_esEmailValido(_destinoCtrl.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El correo destino no tiene un formato válido'),
+        ),
+      );
+      return;
+    }
     setState(() => _guardando = true);
     await widget.db.configSmtpDao.guardarConfig(
       servidor: _servidorCtrl.text.trim(),
