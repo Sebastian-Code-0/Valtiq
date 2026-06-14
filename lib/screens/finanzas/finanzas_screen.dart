@@ -6,6 +6,7 @@ import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
 import '../../utils/format.dart';
 import 'gasto_fijo_form.dart';
+import 'gasto_variable_form.dart';
 import 'ingreso_form.dart';
 
 class FinanzasScreen extends StatefulWidget {
@@ -29,6 +30,11 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         .watch();
   }
 
+  Stream<List<GastosVariable>> _streamGastosVariables() {
+    final now = DateTime.now();
+    return widget.db.gastosVariablesDao.watchGastosPorMes(now.year, now.month);
+  }
+
   Stream<List<GastosFijo>> _streamGastos() {
     return (widget.db.select(widget.db.gastosFijos)
           ..orderBy([(g) => OrderingTerm.asc(g.concepto)]))
@@ -44,6 +50,15 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
     );
   }
 
+  Future<void> _abrirGastoVariableForm({GastosVariable? gasto}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GastoVariableForm(db: widget.db, gasto: gasto),
+      ),
+    );
+  }
+
   Future<void> _abrirGastoForm({GastosFijo? gasto}) async {
     await Navigator.push(
       context,
@@ -51,6 +66,32 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         builder: (_) => GastoFijoForm(db: widget.db, gasto: gasto),
       ),
     );
+  }
+
+  Future<void> _confirmarEliminarGastoVariable(GastosVariable gasto) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar gasto'),
+        content: Text('¿Eliminar "${gasto.descripcion}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: AppColors.alerta),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await widget.db.gastosVariablesDao.deleteGastoVariable(gasto.id);
+    }
   }
 
   Future<void> _confirmarEliminarIngreso(Ingreso ingreso) async {
@@ -120,20 +161,25 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
     final colorSec = isDark
         ? AppColors.textoSecundarioOscuro
         : AppColors.textoSecundarioClaro;
-    final esIngresos = _modo == 'ingresos';
 
     return Scaffold(
-      floatingActionButton: esIngresos
-          ? FloatingActionButton(
-              heroTag: 'fab_ingresos',
-              onPressed: () => _abrirIngresoForm(),
-              child: const Icon(Icons.add),
-            )
-          : FloatingActionButton(
-              heroTag: 'fab_gastos',
-              onPressed: () => _abrirGastoForm(),
-              child: const Icon(Icons.add),
-            ),
+      floatingActionButton: switch (_modo) {
+        'ingresos' => FloatingActionButton(
+            heroTag: 'fab_ingresos',
+            onPressed: () => _abrirIngresoForm(),
+            child: const Icon(Icons.add),
+          ),
+        'variables' => FloatingActionButton(
+            heroTag: 'fab_variables',
+            onPressed: () => _abrirGastoVariableForm(),
+            child: const Icon(Icons.add),
+          ),
+        _ => FloatingActionButton(
+            heroTag: 'fab_gastos',
+            onPressed: () => _abrirGastoForm(),
+            child: const Icon(Icons.add),
+          ),
+      },
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
@@ -159,6 +205,10 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                       value: 'gastos',
                       label: Text('Gastos Fijos'),
                     ),
+                    ButtonSegment(
+                      value: 'variables',
+                      label: Text('Variables'),
+                    ),
                   ],
                   selected: {_modo},
                   onSelectionChanged: (s) => setState(() => _modo = s.first),
@@ -170,14 +220,66 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
               ),
               const SizedBox(height: AppSpacing.md),
               Expanded(
-                child: esIngresos
-                    ? _listaIngresos(theme, colorSec)
-                    : _listaGastos(theme, colorSec),
+                child: _modo == 'variables'
+                    ? _listaGastosVariables(theme, colorSec)
+                    : (_modo == 'ingresos'
+                        ? _listaIngresos(theme, colorSec)
+                        : _listaGastos(theme, colorSec)),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _listaGastosVariables(ThemeData theme, Color colorSec) {
+    return StreamBuilder<List<GastosVariable>>(
+      stream: _streamGastosVariables(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final gastos = snapshot.data!;
+        final total = gastos.fold<double>(0, (s, g) => s + g.monto);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _totalRow(theme: theme, total: total, color: AppColors.alerta),
+            const SizedBox(height: AppSpacing.md),
+            Expanded(
+              child: gastos.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No hay gastos variables este mes',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: colorSec,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: gastos.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (_, i) {
+                        final g = gastos[i];
+                        return _GastoVariableCard(
+                          gasto: g,
+                          colorSec: colorSec,
+                          onTap: () => _abrirGastoVariableForm(gasto: g),
+                          onLongPress: () =>
+                              _confirmarEliminarGastoVariable(g),
+                          onEditar: () => _abrirGastoVariableForm(gasto: g),
+                          onEliminar: () =>
+                              _confirmarEliminarGastoVariable(g),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -311,6 +413,158 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+class _GastoVariableCard extends StatelessWidget {
+  const _GastoVariableCard({
+    required this.gasto,
+    required this.colorSec,
+    required this.onTap,
+    required this.onLongPress,
+    required this.onEditar,
+    required this.onEliminar,
+  });
+
+  final GastosVariable gasto;
+  final Color colorSec;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  final VoidCallback onEditar;
+  final VoidCallback onEliminar;
+
+  static IconData _iconoCategoria(String cat) {
+    switch (cat) {
+      case 'Alimentación':
+        return Icons.restaurant_outlined;
+      case 'Ropa':
+        return Icons.checkroom_outlined;
+      case 'Transporte':
+        return Icons.directions_bus_outlined;
+      case 'Entretenimiento':
+        return Icons.movie_outlined;
+      case 'Salud':
+        return Icons.health_and_safety_outlined;
+      case 'Educación':
+        return Icons.school_outlined;
+      case 'Hogar':
+        return Icons.home_outlined;
+      default:
+        return Icons.category_outlined;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _iconoCategoria(gasto.categoria),
+                    size: 18,
+                    color: colorSec,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      gasto.descripcion,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      formatCOP(gasto.monto),
+                      style: monoStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.alerta,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: colorSec, size: 20),
+                    padding: EdgeInsets.zero,
+                    tooltip: 'Acciones',
+                    onSelected: (v) {
+                      if (v == 'editar') onEditar();
+                      if (v == 'eliminar') onEliminar();
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'editar',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 18),
+                            SizedBox(width: AppSpacing.sm),
+                            Text('Editar'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'eliminar',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: AppColors.alerta,
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Text(
+                              'Eliminar',
+                              style: TextStyle(color: AppColors.alerta),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Chip(
+                    label: Text(gasto.categoria),
+                    padding: EdgeInsets.zero,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Icon(Icons.calendar_today, size: 14, color: colorSec),
+                  const SizedBox(width: 4),
+                  Text(
+                    formatFecha(gasto.fecha),
+                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

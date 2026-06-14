@@ -9,12 +9,12 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
     with _$GastosVariablesDaoMixin {
   GastosVariablesDao(super.db);
 
-  Stream<List<GastoVariable>> watchGastosVariables() =>
+  Stream<List<GastosVariable>> watchGastosVariables() =>
       (select(gastosVariables)
             ..orderBy([(g) => OrderingTerm.desc(g.fecha)]))
           .watch();
 
-  Stream<List<GastoVariable>> watchGastosPorMes(int anio, int mes) {
+  Stream<List<GastosVariable>> watchGastosPorMes(int anio, int mes) {
     final inicio = DateTime(anio, mes, 1);
     final fin = DateTime(anio, mes + 1, 1);
     return (select(gastosVariables)
@@ -60,7 +60,7 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
   Future<int> insertGastoVariable(GastosVariablesCompanion gasto) =>
       into(gastosVariables).insert(gasto);
 
-  Future<bool> updateGastoVariable(GastoVariable gasto) =>
+  Future<bool> updateGastoVariable(GastosVariable gasto) =>
       update(gastosVariables).replace(gasto);
 
   Future<int> deleteGastoVariable(int id) =>
