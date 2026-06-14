@@ -7,6 +7,7 @@ import 'daos/gastos_fijos_dao.dart';
 import 'daos/ingresos_dao.dart';
 import 'daos/pagos_deuda_dao.dart';
 import 'daos/prestamos_dao.dart';
+import 'daos/gastos_variables_dao.dart';
 import 'daos/recordatorios_dao.dart';
 import 'tables.dart';
 
@@ -22,6 +23,7 @@ part 'database.g.dart';
     GastosFijos,
     Recordatorios,
     ConfigSmtps,
+    GastosVariables,
   ],
   daos: [
     DeudasDao,
@@ -31,6 +33,7 @@ part 'database.g.dart';
     GastosFijosDao,
     RecordatoriosDao,
     ConfigSmtpDao,
+    GastosVariablesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -39,7 +42,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor openConnection() => conn.openValtiqConnection();
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -82,6 +85,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         await m.addColumn(recordatorios, recordatorios.horaAviso);
         await m.addColumn(recordatorios, recordatorios.minutoAviso);
+      }
+      if (from < 7) {
+        await m.createTable(gastosVariables);
       }
     },
   );

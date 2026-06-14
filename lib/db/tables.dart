@@ -111,3 +111,13 @@ class ConfigSmtps extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+class GastosVariables extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get descripcion => text()();
+  RealColumn get monto => real()();
+  TextColumn get categoria => text()();
+  DateTimeColumn get fecha => dateTime()();
+  TextColumn get notas => text().nullable()();
+  DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
+}

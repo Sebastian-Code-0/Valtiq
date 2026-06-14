@@ -5001,6 +5001,451 @@ class ConfigSmtpsCompanion extends UpdateCompanion<ConfigSmtp> {
   }
 }
 
+class $GastosVariablesTable extends GastosVariables
+    with TableInfo<$GastosVariablesTable, GastosVariable> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GastosVariablesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _descripcionMeta = const VerificationMeta(
+    'descripcion',
+  );
+  @override
+  late final GeneratedColumn<String> descripcion = GeneratedColumn<String>(
+    'descripcion',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montoMeta = const VerificationMeta('monto');
+  @override
+  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+    'monto',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoriaMeta = const VerificationMeta(
+    'categoria',
+  );
+  @override
+  late final GeneratedColumn<String> categoria = GeneratedColumn<String>(
+    'categoria',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fechaMeta = const VerificationMeta('fecha');
+  @override
+  late final GeneratedColumn<DateTime> fecha = GeneratedColumn<DateTime>(
+    'fecha',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notasMeta = const VerificationMeta('notas');
+  @override
+  late final GeneratedColumn<String> notas = GeneratedColumn<String>(
+    'notas',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creadoEnMeta = const VerificationMeta(
+    'creadoEn',
+  );
+  @override
+  late final GeneratedColumn<DateTime> creadoEn = GeneratedColumn<DateTime>(
+    'creado_en',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    descripcion,
+    monto,
+    categoria,
+    fecha,
+    notas,
+    creadoEn,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'gastos_variables';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GastosVariable> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('descripcion')) {
+      context.handle(
+        _descripcionMeta,
+        descripcion.isAcceptableOrUnknown(
+          data['descripcion']!,
+          _descripcionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_descripcionMeta);
+    }
+    if (data.containsKey('monto')) {
+      context.handle(
+        _montoMeta,
+        monto.isAcceptableOrUnknown(data['monto']!, _montoMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_montoMeta);
+    }
+    if (data.containsKey('categoria')) {
+      context.handle(
+        _categoriaMeta,
+        categoria.isAcceptableOrUnknown(data['categoria']!, _categoriaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoriaMeta);
+    }
+    if (data.containsKey('fecha')) {
+      context.handle(
+        _fechaMeta,
+        fecha.isAcceptableOrUnknown(data['fecha']!, _fechaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fechaMeta);
+    }
+    if (data.containsKey('notas')) {
+      context.handle(
+        _notasMeta,
+        notas.isAcceptableOrUnknown(data['notas']!, _notasMeta),
+      );
+    }
+    if (data.containsKey('creado_en')) {
+      context.handle(
+        _creadoEnMeta,
+        creadoEn.isAcceptableOrUnknown(data['creado_en']!, _creadoEnMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GastosVariable map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GastosVariable(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      descripcion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}descripcion'],
+      )!,
+      monto: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}monto'],
+      )!,
+      categoria: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}categoria'],
+      )!,
+      fecha: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha'],
+      )!,
+      notas: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notas'],
+      ),
+      creadoEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}creado_en'],
+      )!,
+    );
+  }
+
+  @override
+  $GastosVariablesTable createAlias(String alias) {
+    return $GastosVariablesTable(attachedDatabase, alias);
+  }
+}
+
+class GastosVariable extends DataClass implements Insertable<GastosVariable> {
+  final int id;
+  final String descripcion;
+  final double monto;
+  final String categoria;
+  final DateTime fecha;
+  final String? notas;
+  final DateTime creadoEn;
+  const GastosVariable({
+    required this.id,
+    required this.descripcion,
+    required this.monto,
+    required this.categoria,
+    required this.fecha,
+    this.notas,
+    required this.creadoEn,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['descripcion'] = Variable<String>(descripcion);
+    map['monto'] = Variable<double>(monto);
+    map['categoria'] = Variable<String>(categoria);
+    map['fecha'] = Variable<DateTime>(fecha);
+    if (!nullToAbsent || notas != null) {
+      map['notas'] = Variable<String>(notas);
+    }
+    map['creado_en'] = Variable<DateTime>(creadoEn);
+    return map;
+  }
+
+  GastosVariablesCompanion toCompanion(bool nullToAbsent) {
+    return GastosVariablesCompanion(
+      id: Value(id),
+      descripcion: Value(descripcion),
+      monto: Value(monto),
+      categoria: Value(categoria),
+      fecha: Value(fecha),
+      notas: notas == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notas),
+      creadoEn: Value(creadoEn),
+    );
+  }
+
+  factory GastosVariable.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GastosVariable(
+      id: serializer.fromJson<int>(json['id']),
+      descripcion: serializer.fromJson<String>(json['descripcion']),
+      monto: serializer.fromJson<double>(json['monto']),
+      categoria: serializer.fromJson<String>(json['categoria']),
+      fecha: serializer.fromJson<DateTime>(json['fecha']),
+      notas: serializer.fromJson<String?>(json['notas']),
+      creadoEn: serializer.fromJson<DateTime>(json['creadoEn']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'descripcion': serializer.toJson<String>(descripcion),
+      'monto': serializer.toJson<double>(monto),
+      'categoria': serializer.toJson<String>(categoria),
+      'fecha': serializer.toJson<DateTime>(fecha),
+      'notas': serializer.toJson<String?>(notas),
+      'creadoEn': serializer.toJson<DateTime>(creadoEn),
+    };
+  }
+
+  GastosVariable copyWith({
+    int? id,
+    String? descripcion,
+    double? monto,
+    String? categoria,
+    DateTime? fecha,
+    Value<String?> notas = const Value.absent(),
+    DateTime? creadoEn,
+  }) => GastosVariable(
+    id: id ?? this.id,
+    descripcion: descripcion ?? this.descripcion,
+    monto: monto ?? this.monto,
+    categoria: categoria ?? this.categoria,
+    fecha: fecha ?? this.fecha,
+    notas: notas.present ? notas.value : this.notas,
+    creadoEn: creadoEn ?? this.creadoEn,
+  );
+  GastosVariable copyWithCompanion(GastosVariablesCompanion data) {
+    return GastosVariable(
+      id: data.id.present ? data.id.value : this.id,
+      descripcion: data.descripcion.present
+          ? data.descripcion.value
+          : this.descripcion,
+      monto: data.monto.present ? data.monto.value : this.monto,
+      categoria: data.categoria.present ? data.categoria.value : this.categoria,
+      fecha: data.fecha.present ? data.fecha.value : this.fecha,
+      notas: data.notas.present ? data.notas.value : this.notas,
+      creadoEn: data.creadoEn.present ? data.creadoEn.value : this.creadoEn,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GastosVariable(')
+          ..write('id: $id, ')
+          ..write('descripcion: $descripcion, ')
+          ..write('monto: $monto, ')
+          ..write('categoria: $categoria, ')
+          ..write('fecha: $fecha, ')
+          ..write('notas: $notas, ')
+          ..write('creadoEn: $creadoEn')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, descripcion, monto, categoria, fecha, notas, creadoEn);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GastosVariable &&
+          other.id == this.id &&
+          other.descripcion == this.descripcion &&
+          other.monto == this.monto &&
+          other.categoria == this.categoria &&
+          other.fecha == this.fecha &&
+          other.notas == this.notas &&
+          other.creadoEn == this.creadoEn);
+}
+
+class GastosVariablesCompanion extends UpdateCompanion<GastosVariable> {
+  final Value<int> id;
+  final Value<String> descripcion;
+  final Value<double> monto;
+  final Value<String> categoria;
+  final Value<DateTime> fecha;
+  final Value<String?> notas;
+  final Value<DateTime> creadoEn;
+  const GastosVariablesCompanion({
+    this.id = const Value.absent(),
+    this.descripcion = const Value.absent(),
+    this.monto = const Value.absent(),
+    this.categoria = const Value.absent(),
+    this.fecha = const Value.absent(),
+    this.notas = const Value.absent(),
+    this.creadoEn = const Value.absent(),
+  });
+  GastosVariablesCompanion.insert({
+    this.id = const Value.absent(),
+    required String descripcion,
+    required double monto,
+    required String categoria,
+    required DateTime fecha,
+    this.notas = const Value.absent(),
+    this.creadoEn = const Value.absent(),
+  }) : descripcion = Value(descripcion),
+       monto = Value(monto),
+       categoria = Value(categoria),
+       fecha = Value(fecha);
+  static Insertable<GastosVariable> custom({
+    Expression<int>? id,
+    Expression<String>? descripcion,
+    Expression<double>? monto,
+    Expression<String>? categoria,
+    Expression<DateTime>? fecha,
+    Expression<String>? notas,
+    Expression<DateTime>? creadoEn,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (descripcion != null) 'descripcion': descripcion,
+      if (monto != null) 'monto': monto,
+      if (categoria != null) 'categoria': categoria,
+      if (fecha != null) 'fecha': fecha,
+      if (notas != null) 'notas': notas,
+      if (creadoEn != null) 'creado_en': creadoEn,
+    });
+  }
+
+  GastosVariablesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? descripcion,
+    Value<double>? monto,
+    Value<String>? categoria,
+    Value<DateTime>? fecha,
+    Value<String?>? notas,
+    Value<DateTime>? creadoEn,
+  }) {
+    return GastosVariablesCompanion(
+      id: id ?? this.id,
+      descripcion: descripcion ?? this.descripcion,
+      monto: monto ?? this.monto,
+      categoria: categoria ?? this.categoria,
+      fecha: fecha ?? this.fecha,
+      notas: notas ?? this.notas,
+      creadoEn: creadoEn ?? this.creadoEn,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (descripcion.present) {
+      map['descripcion'] = Variable<String>(descripcion.value);
+    }
+    if (monto.present) {
+      map['monto'] = Variable<double>(monto.value);
+    }
+    if (categoria.present) {
+      map['categoria'] = Variable<String>(categoria.value);
+    }
+    if (fecha.present) {
+      map['fecha'] = Variable<DateTime>(fecha.value);
+    }
+    if (notas.present) {
+      map['notas'] = Variable<String>(notas.value);
+    }
+    if (creadoEn.present) {
+      map['creado_en'] = Variable<DateTime>(creadoEn.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GastosVariablesCompanion(')
+          ..write('id: $id, ')
+          ..write('descripcion: $descripcion, ')
+          ..write('monto: $monto, ')
+          ..write('categoria: $categoria, ')
+          ..write('fecha: $fecha, ')
+          ..write('notas: $notas, ')
+          ..write('creadoEn: $creadoEn')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5012,6 +5457,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GastosFijosTable gastosFijos = $GastosFijosTable(this);
   late final $RecordatoriosTable recordatorios = $RecordatoriosTable(this);
   late final $ConfigSmtpsTable configSmtps = $ConfigSmtpsTable(this);
+  late final $GastosVariablesTable gastosVariables = $GastosVariablesTable(
+    this,
+  );
   late final DeudasDao deudasDao = DeudasDao(this as AppDatabase);
   late final PagosDeudaDao pagosDeudaDao = PagosDeudaDao(this as AppDatabase);
   late final PrestamosDao prestamosDao = PrestamosDao(this as AppDatabase);
@@ -5023,6 +5471,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final ConfigSmtpDao configSmtpDao = ConfigSmtpDao(this as AppDatabase);
+  late final GastosVariablesDao gastosVariablesDao = GastosVariablesDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5036,6 +5487,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     gastosFijos,
     recordatorios,
     configSmtps,
+    gastosVariables,
   ];
 }
 
@@ -7906,6 +8358,246 @@ typedef $$ConfigSmtpsTableProcessedTableManager =
       ConfigSmtp,
       PrefetchHooks Function()
     >;
+typedef $$GastosVariablesTableCreateCompanionBuilder =
+    GastosVariablesCompanion Function({
+      Value<int> id,
+      required String descripcion,
+      required double monto,
+      required String categoria,
+      required DateTime fecha,
+      Value<String?> notas,
+      Value<DateTime> creadoEn,
+    });
+typedef $$GastosVariablesTableUpdateCompanionBuilder =
+    GastosVariablesCompanion Function({
+      Value<int> id,
+      Value<String> descripcion,
+      Value<double> monto,
+      Value<String> categoria,
+      Value<DateTime> fecha,
+      Value<String?> notas,
+      Value<DateTime> creadoEn,
+    });
+
+class $$GastosVariablesTableFilterComposer
+    extends Composer<_$AppDatabase, $GastosVariablesTable> {
+  $$GastosVariablesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get descripcion => $composableBuilder(
+    column: $table.descripcion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoria => $composableBuilder(
+    column: $table.categoria,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notas => $composableBuilder(
+    column: $table.notas,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creadoEn => $composableBuilder(
+    column: $table.creadoEn,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$GastosVariablesTableOrderingComposer
+    extends Composer<_$AppDatabase, $GastosVariablesTable> {
+  $$GastosVariablesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get descripcion => $composableBuilder(
+    column: $table.descripcion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get monto => $composableBuilder(
+    column: $table.monto,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoria => $composableBuilder(
+    column: $table.categoria,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fecha => $composableBuilder(
+    column: $table.fecha,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notas => $composableBuilder(
+    column: $table.notas,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creadoEn => $composableBuilder(
+    column: $table.creadoEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GastosVariablesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GastosVariablesTable> {
+  $$GastosVariablesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get descripcion => $composableBuilder(
+    column: $table.descripcion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get monto =>
+      $composableBuilder(column: $table.monto, builder: (column) => column);
+
+  GeneratedColumn<String> get categoria =>
+      $composableBuilder(column: $table.categoria, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fecha =>
+      $composableBuilder(column: $table.fecha, builder: (column) => column);
+
+  GeneratedColumn<String> get notas =>
+      $composableBuilder(column: $table.notas, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creadoEn =>
+      $composableBuilder(column: $table.creadoEn, builder: (column) => column);
+}
+
+class $$GastosVariablesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GastosVariablesTable,
+          GastosVariable,
+          $$GastosVariablesTableFilterComposer,
+          $$GastosVariablesTableOrderingComposer,
+          $$GastosVariablesTableAnnotationComposer,
+          $$GastosVariablesTableCreateCompanionBuilder,
+          $$GastosVariablesTableUpdateCompanionBuilder,
+          (
+            GastosVariable,
+            BaseReferences<
+              _$AppDatabase,
+              $GastosVariablesTable,
+              GastosVariable
+            >,
+          ),
+          GastosVariable,
+          PrefetchHooks Function()
+        > {
+  $$GastosVariablesTableTableManager(
+    _$AppDatabase db,
+    $GastosVariablesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GastosVariablesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GastosVariablesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GastosVariablesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> descripcion = const Value.absent(),
+                Value<double> monto = const Value.absent(),
+                Value<String> categoria = const Value.absent(),
+                Value<DateTime> fecha = const Value.absent(),
+                Value<String?> notas = const Value.absent(),
+                Value<DateTime> creadoEn = const Value.absent(),
+              }) => GastosVariablesCompanion(
+                id: id,
+                descripcion: descripcion,
+                monto: monto,
+                categoria: categoria,
+                fecha: fecha,
+                notas: notas,
+                creadoEn: creadoEn,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String descripcion,
+                required double monto,
+                required String categoria,
+                required DateTime fecha,
+                Value<String?> notas = const Value.absent(),
+                Value<DateTime> creadoEn = const Value.absent(),
+              }) => GastosVariablesCompanion.insert(
+                id: id,
+                descripcion: descripcion,
+                monto: monto,
+                categoria: categoria,
+                fecha: fecha,
+                notas: notas,
+                creadoEn: creadoEn,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$GastosVariablesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GastosVariablesTable,
+      GastosVariable,
+      $$GastosVariablesTableFilterComposer,
+      $$GastosVariablesTableOrderingComposer,
+      $$GastosVariablesTableAnnotationComposer,
+      $$GastosVariablesTableCreateCompanionBuilder,
+      $$GastosVariablesTableUpdateCompanionBuilder,
+      (
+        GastosVariable,
+        BaseReferences<_$AppDatabase, $GastosVariablesTable, GastosVariable>,
+      ),
+      GastosVariable,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7926,4 +8618,6 @@ class $AppDatabaseManager {
       $$RecordatoriosTableTableManager(_db, _db.recordatorios);
   $$ConfigSmtpsTableTableManager get configSmtps =>
       $$ConfigSmtpsTableTableManager(_db, _db.configSmtps);
+  $$GastosVariablesTableTableManager get gastosVariables =>
+      $$GastosVariablesTableTableManager(_db, _db.gastosVariables);
 }
