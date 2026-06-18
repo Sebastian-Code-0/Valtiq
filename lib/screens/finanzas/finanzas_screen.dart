@@ -545,13 +545,7 @@ class _GastoVariableCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
-                  Chip(
-                    label: Text(gasto.categoria),
-                    padding: EdgeInsets.zero,
-                    labelPadding: const EdgeInsets.symmetric(horizontal: 8),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
+                  _FrecuenciaChip(label: gasto.categoria),
                   const SizedBox(width: AppSpacing.sm),
                   Icon(Icons.calendar_today, size: 14, color: colorSec),
                   const SizedBox(width: 4),

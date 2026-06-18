@@ -21,6 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late final Stream<double> _streamPrestamos;
   late final Stream<double> _streamIngresos;
   late final Stream<double> _streamGastos;
+  late final Stream<double> _streamGastosVariables;
 
   @override
   void initState() {
@@ -95,6 +96,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ..where(db.gastosFijos.activo.equals(true)))
         .watchSingle()
         .map((row) => row.read(sumGastos) ?? 0.0);
+
+    final now = DateTime.now();
+    _streamGastosVariables =
+        widget.db.gastosVariablesDao.watchTotalMes(now.year, now.month);
   }
 
   @override
@@ -130,7 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: AppSpacing.md),
               GridView.count(
                 crossAxisCount: 2,
-                childAspectRatio: 1.8,
+                childAspectRatio: 1.6,
                 crossAxisSpacing: AppSpacing.md,
                 mainAxisSpacing: AppSpacing.md,
                 shrinkWrap: true,
@@ -160,13 +165,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     colorIcono: AppColors.alerta,
                     stream: _streamGastos,
                   ),
+                  _ResumenCard(
+                    titulo: 'Gastos variables (mes)',
+                    icono: Icons.shopping_bag_outlined,
+                    colorIcono: AppColors.alerta,
+                    stream: _streamGastosVariables,
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
               _BalanceMensualCard(
                 streamIngresos: _streamIngresos,
                 streamGastos: _streamGastos,
+                streamGastosVariables: _streamGastosVariables,
               ),
+              const SizedBox(height: AppSpacing.md),
+              _ComparativoCategorias(db: widget.db),
               const SizedBox(height: AppSpacing.md),
               _PosicionPrestamosCard(
                 streamPrestamos: _streamPrestamos,
@@ -245,10 +259,12 @@ class _BalanceMensualCard extends StatelessWidget {
   const _BalanceMensualCard({
     required this.streamIngresos,
     required this.streamGastos,
+    required this.streamGastosVariables,
   });
 
   final Stream<double> streamIngresos;
   final Stream<double> streamGastos;
+  final Stream<double> streamGastosVariables;
 
   @override
   Widget build(BuildContext context) {
@@ -262,59 +278,71 @@ class _BalanceMensualCard extends StatelessWidget {
             return StreamBuilder<double>(
               stream: streamGastos,
               builder: (context, snapGas) {
-                final ingresos = snapIng.data ?? 0.0;
-                final gastos = snapGas.data ?? 0.0;
-                final disponible = ingresos - gastos;
-                final disponibleColor =
-                    disponible >= 0 ? AppColors.positivo : AppColors.alerta;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Balance mensual',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _FilaMonto(
-                      label: 'Ingresos',
-                      valor: formatCOP(ingresos),
-                      color: AppColors.positivo,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _FilaMonto(
-                      label: 'Gastos fijos',
-                      valor: '-${formatCOP(gastos)}',
-                      color: AppColors.alerta,
-                    ),
-                    const Divider(height: AppSpacing.lg),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                return StreamBuilder<double>(
+                  stream: streamGastosVariables,
+                  builder: (context, snapVar) {
+                    final ingresos = snapIng.data ?? 0.0;
+                    final gastos = snapGas.data ?? 0.0;
+                    final gastosVariables = snapVar.data ?? 0.0;
+                    final disponible = ingresos - gastos - gastosVariables;
+                    final disponibleColor =
+                        disponible >= 0 ? AppColors.positivo : AppColors.alerta;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Disponible',
+                          'Balance mensual',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              formatCOP(disponible),
-                              style: monoStyle(
-                                fontSize: 24,
+                        const SizedBox(height: AppSpacing.md),
+                        _FilaMonto(
+                          label: 'Ingresos',
+                          valor: formatCOP(ingresos),
+                          color: AppColors.positivo,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _FilaMonto(
+                          label: 'Gastos fijos',
+                          valor: '-${formatCOP(gastos)}',
+                          color: AppColors.alerta,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _FilaMonto(
+                          label: 'Gastos variables',
+                          valor: '-${formatCOP(gastosVariables)}',
+                          color: AppColors.alerta,
+                        ),
+                        const Divider(height: AppSpacing.lg),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Disponible',
+                              style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: disponibleColor,
                               ),
-                              maxLines: 1,
                             ),
-                          ),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  formatCOP(disponible),
+                                  style: monoStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: disponibleColor,
+                                  ),
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                  ],
+                    );
+                  },
                 );
               },
             );
@@ -398,6 +426,140 @@ class _PosicionPrestamosCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ComparativoCategorias extends StatelessWidget {
+  const _ComparativoCategorias({required this.db});
+
+  final AppDatabase db;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+    final mesAnterior = now.month == 1 ? 12 : now.month - 1;
+    final anioAnterior = now.month == 1 ? now.year - 1 : now.year;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: StreamBuilder<Map<String, double>>(
+          stream: db.gastosVariablesDao.watchTotalPorCategoria(
+            now.year,
+            now.month,
+          ),
+          builder: (context, snapActual) {
+            return StreamBuilder<Map<String, double>>(
+              stream: db.gastosVariablesDao.watchTotalPorCategoria(
+                anioAnterior,
+                mesAnterior,
+              ),
+              builder: (context, snapAnterior) {
+                final actual = snapActual.data ?? {};
+                final anterior = snapAnterior.data ?? {};
+                final categorias = {
+                  ...actual.keys,
+                  ...anterior.keys,
+                }.toList()
+                  ..sort();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Gastos por categoría',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      anterior.isEmpty
+                          ? 'Mes actual'
+                          : 'Mes actual vs mes anterior',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    if (actual.isEmpty)
+                      Text(
+                        'No hay gastos variables este mes',
+                        style: theme.textTheme.bodyMedium,
+                      )
+                    else
+                      ...categorias.map((cat) {
+                        final montoActual = actual[cat] ?? 0.0;
+                        final montoAnterior = anterior[cat] ?? 0.0;
+                        final tieneDelta =
+                            anterior.isNotEmpty && montoAnterior > 0;
+                        final delta = tieneDelta
+                            ? ((montoActual - montoAnterior) /
+                                    montoAnterior *
+                                    100)
+                                .roundToDouble()
+                            : null;
+                        final deltaColor = delta == null
+                            ? null
+                            : (delta <= 0
+                                ? AppColors.positivo
+                                : AppColors.alerta);
+                        final deltaText = delta == null
+                            ? ''
+                            : (delta > 0
+                                ? '+${delta.toInt()}%'
+                                : '${delta.toInt()}%');
+
+                        return Padding(
+                          padding:
+                              const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Text(
+                                  cat,
+                                  style: theme.textTheme.bodyLarge,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Expanded(
+                                flex: 4,
+                                child: Text(
+                                  formatCOP(montoActual),
+                                  style: monoStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.alerta,
+                                  ),
+                                  textAlign: TextAlign.end,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (deltaText.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: AppSpacing.sm,
+                                  ),
+                                  child: Text(
+                                    deltaText,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: deltaColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      }),
                   ],
                 );
               },
