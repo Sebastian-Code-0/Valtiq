@@ -466,106 +466,150 @@ class _ComparativoCategorias extends StatelessWidget {
               builder: (context, snapAnterior) {
                 final actual = snapActual.data ?? {};
                 final anterior = snapAnterior.data ?? {};
-                final categorias = {
-                  ...actual.keys,
-                  ...anterior.keys,
-                }.toList()
-                  ..sort();
+
+                final totalActual =
+                    actual.values.fold<double>(0, (s, v) => s + v);
+                final totalAnterior =
+                    anterior.values.fold<double>(0, (s, v) => s + v);
+
+                final hayMesAnterior = anterior.isNotEmpty;
+                final hayMesActual = actual.isNotEmpty;
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Gastos por categoría',
+                      'Comparación con el mes pasado',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      anterior.isEmpty
-                          ? 'Mes actual'
-                          : 'Mes actual vs mes anterior',
-                      style: theme.textTheme.bodyMedium,
-                    ),
                     const SizedBox(height: AppSpacing.md),
-                    if (actual.isEmpty)
+
+                    if (!hayMesActual)
                       Text(
-                        'No hay gastos variables este mes',
+                        'Aún no has registrado gastos este mes.',
                         style: theme.textTheme.bodyMedium,
                       )
-                    else
-                      ...categorias.map((cat) {
-                        final montoActual = actual[cat] ?? 0.0;
-                        final montoAnterior = anterior[cat] ?? 0.0;
-                        final tieneDelta =
-                            anterior.isNotEmpty && montoAnterior > 0;
-                        final delta = tieneDelta
-                            ? ((montoActual - montoAnterior) /
-                                    montoAnterior *
-                                    100)
-                                .roundToDouble()
-                            : null;
-                        final deltaColor = delta == null
-                            ? null
-                            : (delta <= 0
-                                ? AppColors.positivo
-                                : AppColors.alerta);
-                        final deltaText = delta == null
-                            ? ''
-                            : (delta > 0
-                                ? '+${delta.toInt()}%'
-                                : '${delta.toInt()}%');
-
-                        return Padding(
-                          padding:
-                              const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Text(
-                                  cat,
-                                  style: theme.textTheme.bodyLarge,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 4,
-                                child: Text(
-                                  formatCOP(montoActual),
-                                  style: monoStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.alerta,
-                                  ),
-                                  textAlign: TextAlign.end,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (deltaText.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    left: AppSpacing.sm,
-                                  ),
-                                  child: Text(
-                                    deltaText,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: deltaColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      }),
+                    else if (!hayMesAnterior)
+                      Text(
+                        'Todavía no hay datos del mes pasado para comparar. '
+                        'Vuelve en unos días para ver cómo va tu mes.',
+                        style: theme.textTheme.bodyMedium,
+                      )
+                    else ...[
+                      _FraseResumen(
+                        totalActual: totalActual,
+                        totalAnterior: totalAnterior,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      const Divider(),
+                      const SizedBox(height: AppSpacing.sm),
+                      ..._frasesPorCategoria(actual, anterior, theme),
+                    ],
                   ],
                 );
               },
             );
           },
         ),
+      ),
+    );
+  }
+
+  List<Widget> _frasesPorCategoria(
+    Map<String, double> actual,
+    Map<String, double> anterior,
+    ThemeData theme,
+  ) {
+    const umbralMinimo = 1000.0;
+
+    final categorias = actual.keys.toList()..sort();
+    final frases = <Widget>[];
+
+    for (final cat in categorias) {
+      final montoActual = actual[cat] ?? 0.0;
+      final montoAnterior = anterior[cat] ?? 0.0;
+      final diferencia = montoActual - montoAnterior;
+
+      if (diferencia.abs() < umbralMinimo) continue;
+
+      final esMas = diferencia > 0;
+      final colorTexto = esMas ? AppColors.alerta : AppColors.positivo;
+      final verbo = esMas ? 'más' : 'menos';
+
+      frases.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: RichText(
+            text: TextSpan(
+              style: theme.textTheme.bodyMedium,
+              children: [
+                TextSpan(text: 'En $cat gastaste '),
+                TextSpan(
+                  text: formatCOP(diferencia.abs()),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colorTexto,
+                  ),
+                ),
+                TextSpan(text: ' $verbo que el mes pasado.'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (frases.isEmpty) {
+      frases.add(
+        Text(
+          'Gastaste prácticamente igual que el mes pasado en todas '
+          'las categorías.',
+          style: theme.textTheme.bodyMedium,
+        ),
+      );
+    }
+
+    return frases;
+  }
+}
+
+class _FraseResumen extends StatelessWidget {
+  const _FraseResumen({
+    required this.totalActual,
+    required this.totalAnterior,
+  });
+
+  final double totalActual;
+  final double totalAnterior;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final diferencia = totalActual - totalAnterior;
+    final esMas = diferencia > 0;
+    final color = esMas ? AppColors.alerta : AppColors.positivo;
+    final verbo = esMas ? 'más' : 'menos';
+
+    if (diferencia.abs() < 1) {
+      return Text(
+        'Este mes has gastado prácticamente lo mismo que el mes pasado.',
+        style: theme.textTheme.bodyMedium,
+      );
+    }
+
+    return RichText(
+      text: TextSpan(
+        style: theme.textTheme.bodyMedium,
+        children: [
+          const TextSpan(text: 'Este mes has gastado '),
+          TextSpan(
+            text: formatCOP(diferencia.abs()),
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+          ),
+          TextSpan(text: ' $verbo que el mes pasado.'),
+        ],
       ),
     );
   }
