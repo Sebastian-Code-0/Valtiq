@@ -1,6 +1,6 @@
 # Arquitectura de Valtiq
 
-## Base de datos (SQLite vía drift, schemaVersion 6)
+## Base de datos (SQLite vía drift, schemaVersion 7)
 
 ### Tablas
 
@@ -103,6 +103,17 @@
 | horaAviso          | INTEGER  | default 12                               |
 | minutoAviso        | INTEGER  | default 0                                |
 
+**GastosVariables**
+| Columna     | Tipo     | Notas            |
+|-------------|----------|------------------|
+| id          | INTEGER  | PK autoincrement |
+| descripcion | TEXT     |                  |
+| monto       | REAL     |                  |
+| categoria   | TEXT     |                  |
+| fecha       | DATETIME |                  |
+| notas       | TEXT     | nullable         |
+| creadoEn    | DATETIME | default now      |
+
 **ConfigSmtps** — fila única (id = 1)
 | Columna              | Tipo     | Notas              |
 |----------------------|----------|--------------------|
@@ -125,6 +136,7 @@
 - v4 → v5: agregar Recordatorios.frecuenciaAviso,
            ultimaNotificacion, ultimoEnvioCorreo
 - v5 → v6: agregar Recordatorios.horaAviso, minutoAviso
+- v6 → v7: crear GastosVariables
 
 ## Pantallas
 
@@ -133,7 +145,7 @@
 | Dashboard     | dashboard_screen.dart     | Resumen financiero con saldos reales  |
 | Deudas        | deudas_screen.dart        | Lista con saldo pendiente por deuda   |
 | Préstamos     | prestamos_screen.dart     | Lista con saldo pendiente por préstamo|
-| Finanzas      | finanzas_screen.dart      | Ingresos y gastos fijos activos       |
+| Finanzas      | finanzas_screen.dart      | Ingresos, gastos fijos y variables    |
 | Recordatorios | recordatorios_screen.dart | Lista y gestión de recordatorios      |
 | Ajustes       | settings_screen.dart      | Navegación a sub-pantallas            |
 | Apariencia    | apariencia_screen.dart    | Tema claro/oscuro y color de acento   |
@@ -177,3 +189,13 @@ pantallas acceden a AppDatabase vía constructor.
 Los streams de drift (watchAll, watchActivos) mantienen las
 listas reactivas: cualquier insert/update/delete reconstruye
 automáticamente los widgets suscritos.
+
+### Comparativo mensual de gastos variables
+
+La card `_ComparativoCategorias` del Dashboard compara el mes actual
+contra el mes anterior usando dos streams de `watchTotalPorCategoria`.
+Genera una frase resumen del total (más/menos que el mes pasado) y una
+línea por cada categoría donde la diferencia sea distinta de cero.
+Si no hay datos del mes actual muestra un mensaje invitando a registrar
+gastos; si no hay datos del mes anterior avisa que aún no hay histórico
+para comparar.

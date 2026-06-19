@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../theme/theme.dart';
@@ -42,11 +43,17 @@ class AcercaDeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Versión 1.0.0',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorSec,
-                    ),
+                  FutureBuilder<PackageInfo>(
+                    future: PackageInfo.fromPlatform(),
+                    builder: (context, snapshot) {
+                      final version = snapshot.data?.version ?? '...';
+                      return Text(
+                        'Versión $version',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorSec,
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(

@@ -53,8 +53,8 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
           ..addColumns([sumMonto])
           ..where(gastosVariables.fecha.isBiggerOrEqualValue(inicio) &
               gastosVariables.fecha.isSmallerThanValue(fin)))
-        .watchSingle()
-        .map((row) => row.read(sumMonto) ?? 0.0);
+        .watch()
+        .map((rows) => rows.isEmpty ? 0.0 : (rows.first.read(sumMonto) ?? 0.0));
   }
 
   Future<int> insertGastoVariable(GastosVariablesCompanion gasto) =>

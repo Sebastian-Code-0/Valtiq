@@ -1,5 +1,26 @@
 # Changelog
 
+## Fase 7 — Gastos variables e inteligencia financiera (2026-06)
+
+- Nueva tabla GastosVariables (schemaVersion 6 → 7): id, descripcion,
+  monto, categoria, fecha, notas (nullable), creadoEn
+- GastosVariablesDao: watchGastosVariables, watchGastosPorMes,
+  watchTotalPorCategoria, watchTotalMes, insert/update/delete
+- Fix bug: watchTotalMes usaba watchSingle() que lanzaba excepción
+  cuando no había filas; reemplazado por watch() con fallback a 0.0
+- Nueva sección "Variables" en Finanzas con SegmentedButton de tres
+  pestañas (Ingresos, Gastos Fijos, Variables); formulario de alta
+  y edición con campo descripcion, monto, categoria (8 opciones) y fecha
+- Dashboard ampliado: quinta card "Gastos variables (mes)"
+- Balance mensual ahora descuenta también gastos variables al disponible
+- Nueva card "Comparación con el mes pasado": frase resumen en lenguaje
+  natural del total, desglose por categoría de diferencias > 0;
+  muestra mensaje vacío si no hay datos del mes actual o del anterior
+- Versión dinámica en Acerca de: FutureBuilder con PackageInfo.fromPlatform()
+  muestra la version del APK en lugar de texto estático
+- package_info_plus añadido a dependencias
+- Bump de versión: 1.0.0+1 → 1.1.0+2
+
 ## Fase 6 — Saldos reales, personalización y limpieza (2026-06)
 
 - Dashboard: saldo de deudas y préstamos calculado con

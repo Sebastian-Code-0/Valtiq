@@ -522,8 +522,6 @@ class _ComparativoCategorias extends StatelessWidget {
     Map<String, double> anterior,
     ThemeData theme,
   ) {
-    const umbralMinimo = 1000.0;
-
     final categorias = actual.keys.toList()..sort();
     final frases = <Widget>[];
 
@@ -532,7 +530,7 @@ class _ComparativoCategorias extends StatelessWidget {
       final montoAnterior = anterior[cat] ?? 0.0;
       final diferencia = montoActual - montoAnterior;
 
-      if (diferencia.abs() < umbralMinimo) continue;
+      if (diferencia == 0) continue;
 
       final esMas = diferencia > 0;
       final colorTexto = esMas ? AppColors.alerta : AppColors.positivo;
