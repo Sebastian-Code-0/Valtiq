@@ -80,4 +80,20 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
             ultimaNotificacion: const Value(null),
             ultimoEnvioCorreo: const Value(null),
           ));
+
+  Future<int> desactivarRecordatoriosPorReferencia(
+    String tabla,
+    int refId,
+  ) {
+    return (update(recordatorios)
+          ..where(
+            (r) =>
+                r.referenciaTabla.equals(tabla) &
+                r.referenciaId.equals(refId) &
+                r.activo.equals(true),
+          ))
+        .write(
+          const RecordatoriosCompanion(activo: Value(false)),
+        );
+  }
 }

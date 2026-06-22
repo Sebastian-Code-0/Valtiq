@@ -69,6 +69,8 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
     );
     if (ok != true) return;
     await widget.db.prestamosDao.marcarComoPagado(widget.prestamoId);
+    await widget.db.recordatoriosDao
+        .desactivarRecordatoriosPorReferencia('prestamo', widget.prestamoId);
     if (mounted) Navigator.pop(context);
   }
 

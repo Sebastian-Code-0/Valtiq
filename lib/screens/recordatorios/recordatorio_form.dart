@@ -89,7 +89,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     final f = await showDatePicker(
       context: context,
       initialDate: _fechaAlerta,
-      firstDate: DateTime(2000),
+      firstDate: DateTime.now(),
       lastDate: DateTime(2100),
       locale: const Locale('es', 'CO'),
     );

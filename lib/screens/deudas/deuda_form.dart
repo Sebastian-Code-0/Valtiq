@@ -219,6 +219,13 @@ class _DeudaFormState extends State<DeudaForm> {
                   onChanged: (_) => setState(() {
                     if (!_tieneInteres) _tipoInteres = 'ninguno';
                   }),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final tasa = double.tryParse(v.trim().replaceAll(',', '.'));
+                    if (tasa == null) return 'Ingresa un número válido';
+                    if (tasa < 0) return 'La tasa no puede ser negativa';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
@@ -283,6 +290,16 @@ class _DeudaFormState extends State<DeudaForm> {
                     FilteringTextInputFormatter.digitsOnly,
                     CopInputFormatter(),
                   ],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final cuota = parseCOP(v);
+                    if (cuota == null) return 'Monto inválido';
+                    final monto = parseCOP(_montoCtrl.text) ?? 0;
+                    if (monto > 0 && cuota > monto) {
+                      return 'La cuota no puede superar el monto total';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(

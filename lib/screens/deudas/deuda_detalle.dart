@@ -62,6 +62,8 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
     );
     if (ok != true) return;
     await widget.db.deudasDao.marcarComoPagada(widget.deudaId, DateTime.now());
+    await widget.db.recordatoriosDao
+        .desactivarRecordatoriosPorReferencia('deuda', widget.deudaId);
     if (mounted) Navigator.pop(context);
   }
 
