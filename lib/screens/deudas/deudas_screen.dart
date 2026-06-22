@@ -194,6 +194,14 @@ class _DeudasScreenState extends State<DeudasScreen> {
               child: StreamBuilder<List<_DeudaConAbonos>>(
                 stream: _stream(),
                 builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error al cargar los datos.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    );
+                  }
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }

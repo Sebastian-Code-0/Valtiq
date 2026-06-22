@@ -14,8 +14,8 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
     return (select(recordatorios)..where((t) => t.activo.equals(true))).get();
   }
 
-  Future<Recordatorio> getRecordatorioById(int id) {
-    return (select(recordatorios)..where((t) => t.id.equals(id))).getSingle();
+  Future<Recordatorio?> getRecordatorioById(int id) {
+    return (select(recordatorios)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<List<Recordatorio>> getRecordatoriosPorReferencia(

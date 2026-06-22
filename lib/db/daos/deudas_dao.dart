@@ -23,8 +23,8 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
     return (select(deudas)..where((t) => t.estado.equals('pagada'))).get();
   }
 
-  Future<Deuda> getDeudaById(int id) {
-    return (select(deudas)..where((t) => t.id.equals(id))).getSingle();
+  Future<Deuda?> getDeudaById(int id) {
+    return (select(deudas)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> insertDeuda(DeudasCompanion deuda) {

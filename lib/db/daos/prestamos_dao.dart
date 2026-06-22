@@ -20,8 +20,8 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     return (select(prestamos)..where((t) => t.estado.equals('activo'))).get();
   }
 
-  Future<Prestamo> getPrestamoById(int id) {
-    return (select(prestamos)..where((t) => t.id.equals(id))).getSingle();
+  Future<Prestamo?> getPrestamoById(int id) {
+    return (select(prestamos)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> insertPrestamo(PrestamosCompanion prestamo) {
@@ -92,6 +92,7 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
 
   Future<double> getSaldoPendiente(int prestamoId) async {
     final prestamo = await getPrestamoById(prestamoId);
+    if (prestamo == null) return 0.0;
     final abonado = await getTotalAbonado(prestamoId);
     return prestamo.montoPrestado - abonado;
   }

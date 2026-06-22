@@ -204,6 +204,10 @@ class NotificationService {
     switch (r.referenciaTabla) {
       case 'deuda':
         final deuda = await db.deudasDao.getDeudaById(id);
+        if (deuda == null) {
+          const msg = 'Recordatorio vinculado a una deuda ya eliminada.';
+          return (sistema: msg, email: msg);
+        }
         final monto = '${formatCOP(deuda.montoOriginal)} COP';
         final sistema =
             'Pago a ${deuda.acreedorNombre} — $monto — $estado';
@@ -224,6 +228,10 @@ class NotificationService {
 
       case 'prestamo':
         final prestamo = await db.prestamosDao.getPrestamoById(id);
+        if (prestamo == null) {
+          const msg = 'Recordatorio vinculado a un préstamo ya eliminado.';
+          return (sistema: msg, email: msg);
+        }
         final monto = '${formatCOP(prestamo.montoPrestado)} COP';
         final sistema =
             'Cobro a ${prestamo.deudorNombre} — $monto — $estado';
@@ -246,6 +254,10 @@ class NotificationService {
 
       case 'gasto':
         final gasto = await db.gastosFijosDao.getGastoFijoById(id);
+        if (gasto == null) {
+          const msg = 'Recordatorio vinculado a un gasto fijo ya eliminado.';
+          return (sistema: msg, email: msg);
+        }
         final monto = '${formatCOP(gasto.monto)} COP';
         final sistema = '${gasto.concepto} — $monto — $estado';
 

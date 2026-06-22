@@ -97,7 +97,16 @@ class _DeudaFormState extends State<DeudaForm> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _guardando = true);
 
-    final monto = parseCOP(_montoCtrl.text)!;
+    final monto = parseCOP(_montoCtrl.text);
+    if (monto == null) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+        );
+      }
+      return;
+    }
     final tasa = double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
     final tipo = tasa > 0 ? _tipoInteres : 'ninguno';
     final cuotaText = _cuotaCtrl.text.trim();
@@ -106,36 +115,44 @@ class _DeudaFormState extends State<DeudaForm> {
     final acreedor = _acreedorCtrl.text.trim();
 
     final dao = widget.db.deudasDao;
-    if (widget.deuda == null) {
-      await dao.insertDeuda(
-        DeudasCompanion.insert(
-          acreedorNombre: acreedor,
-          montoOriginal: monto,
-          tasaInteres: Value(tasa),
-          tipoInteres: Value(tipo),
-          fechaPrestamo: _fechaPrestamo,
-          fechaLimite: Value(_fechaLimite),
-          cuotaMensual: Value(cuota),
-          notas: Value(notas),
-        ),
-      );
-    } else {
-      await dao.updateDeuda(
-        widget.deuda!.copyWith(
-          acreedorNombre: acreedor,
-          montoOriginal: monto,
-          tasaInteres: tasa,
-          tipoInteres: tipo,
-          fechaPrestamo: _fechaPrestamo,
-          fechaLimite: Value(_fechaLimite),
-          cuotaMensual: Value(cuota),
-          notas: notas,
-          actualizadoEn: DateTime.now(),
-        ),
-      );
+    try {
+      if (widget.deuda == null) {
+        await dao.insertDeuda(
+          DeudasCompanion.insert(
+            acreedorNombre: acreedor,
+            montoOriginal: monto,
+            tasaInteres: Value(tasa),
+            tipoInteres: Value(tipo),
+            fechaPrestamo: _fechaPrestamo,
+            fechaLimite: Value(_fechaLimite),
+            cuotaMensual: Value(cuota),
+            notas: Value(notas),
+          ),
+        );
+      } else {
+        await dao.updateDeuda(
+          widget.deuda!.copyWith(
+            acreedorNombre: acreedor,
+            montoOriginal: monto,
+            tasaInteres: tasa,
+            tipoInteres: tipo,
+            fechaPrestamo: _fechaPrestamo,
+            fechaLimite: Value(_fechaLimite),
+            cuotaMensual: Value(cuota),
+            notas: notas,
+            actualizadoEn: DateTime.now(),
+          ),
+        );
+      }
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
+      }
     }
-
-    if (mounted) Navigator.pop(context, true);
   }
 
   @override

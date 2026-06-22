@@ -76,33 +76,50 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
     setState(() => _guardando = true);
 
     final descripcion = _descripcionCtrl.text.trim();
-    final monto = parseCOP(_montoCtrl.text)!;
+    final monto = parseCOP(_montoCtrl.text);
+    if (monto == null) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+        );
+      }
+      return;
+    }
     final notas = _notasCtrl.text.trim();
 
     final dao = widget.db.gastosVariablesDao;
-    if (widget.gasto == null) {
-      await dao.insertGastoVariable(
-        GastosVariablesCompanion.insert(
-          descripcion: descripcion,
-          monto: monto,
-          categoria: _categoria!,
-          fecha: _fecha,
-          notas: Value(notas.isEmpty ? null : notas),
-        ),
-      );
-    } else {
-      await dao.updateGastoVariable(
-        widget.gasto!.copyWith(
-          descripcion: descripcion,
-          monto: monto,
-          categoria: _categoria!,
-          fecha: _fecha,
-          notas: Value(notas.isEmpty ? null : notas),
-        ),
-      );
+    try {
+      if (widget.gasto == null) {
+        await dao.insertGastoVariable(
+          GastosVariablesCompanion.insert(
+            descripcion: descripcion,
+            monto: monto,
+            categoria: _categoria!,
+            fecha: _fecha,
+            notas: Value(notas.isEmpty ? null : notas),
+          ),
+        );
+      } else {
+        await dao.updateGastoVariable(
+          widget.gasto!.copyWith(
+            descripcion: descripcion,
+            monto: monto,
+            categoria: _categoria!,
+            fecha: _fecha,
+            notas: Value(notas.isEmpty ? null : notas),
+          ),
+        );
+      }
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
+      }
     }
-
-    if (mounted) Navigator.pop(context, true);
   }
 
   @override

@@ -97,44 +97,61 @@ class _PrestamoFormState extends State<PrestamoForm> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _guardando = true);
 
-    final monto = parseCOP(_montoCtrl.text)!;
+    final monto = parseCOP(_montoCtrl.text);
+    if (monto == null) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+        );
+      }
+      return;
+    }
     final tasa = double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
     final tipo = tasa > 0 ? _tipoInteres : 'ninguno';
     final modalidad = tasa > 0 ? _modalidadCalculo : 'simple';
 
     final dao = widget.db.prestamosDao;
-    if (widget.prestamo == null) {
-      await dao.insertPrestamo(
-        PrestamosCompanion.insert(
-          deudorNombre: _deudorCtrl.text.trim(),
-          deudorContacto: Value(_contactoCtrl.text.trim()),
-          montoPrestado: monto,
-          tasaInteres: Value(tasa),
-          tipoInteres: Value(tipo),
-          modalidadCalculo: Value(modalidad),
-          fechaPrestamo: _fechaPrestamo,
-          fechaPactadaPago: Value(_fechaPactada),
-          notas: Value(_notasCtrl.text.trim()),
-        ),
-      );
-    } else {
-      await dao.updatePrestamo(
-        widget.prestamo!.copyWith(
-          deudorNombre: _deudorCtrl.text.trim(),
-          deudorContacto: _contactoCtrl.text.trim(),
-          montoPrestado: monto,
-          tasaInteres: tasa,
-          tipoInteres: tipo,
-          modalidadCalculo: modalidad,
-          fechaPrestamo: _fechaPrestamo,
-          fechaPactadaPago: Value(_fechaPactada),
-          notas: _notasCtrl.text.trim(),
-          actualizadoEn: DateTime.now(),
-        ),
-      );
+    try {
+      if (widget.prestamo == null) {
+        await dao.insertPrestamo(
+          PrestamosCompanion.insert(
+            deudorNombre: _deudorCtrl.text.trim(),
+            deudorContacto: Value(_contactoCtrl.text.trim()),
+            montoPrestado: monto,
+            tasaInteres: Value(tasa),
+            tipoInteres: Value(tipo),
+            modalidadCalculo: Value(modalidad),
+            fechaPrestamo: _fechaPrestamo,
+            fechaPactadaPago: Value(_fechaPactada),
+            notas: Value(_notasCtrl.text.trim()),
+          ),
+        );
+      } else {
+        await dao.updatePrestamo(
+          widget.prestamo!.copyWith(
+            deudorNombre: _deudorCtrl.text.trim(),
+            deudorContacto: _contactoCtrl.text.trim(),
+            montoPrestado: monto,
+            tasaInteres: tasa,
+            tipoInteres: tipo,
+            modalidadCalculo: modalidad,
+            fechaPrestamo: _fechaPrestamo,
+            fechaPactadaPago: Value(_fechaPactada),
+            notas: _notasCtrl.text.trim(),
+            actualizadoEn: DateTime.now(),
+          ),
+        );
+      }
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
+      }
     }
-
-    if (mounted) Navigator.pop(context, true);
   }
 
   @override

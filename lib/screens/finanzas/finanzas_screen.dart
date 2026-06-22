@@ -237,6 +237,14 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
     return StreamBuilder<List<GastosVariable>>(
       stream: _streamGastosVariables(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error al cargar los datos.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          );
+        }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -316,6 +324,14 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
     return StreamBuilder<List<Ingreso>>(
       stream: _streamIngresos(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error al cargar los datos.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          );
+        }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -368,6 +384,14 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
     return StreamBuilder<List<GastosFijo>>(
       stream: _streamGastos(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error al cargar los datos.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          );
+        }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }

@@ -57,36 +57,53 @@ class _GastoFijoFormState extends State<GastoFijoForm> {
     setState(() => _guardando = true);
 
     final concepto = _conceptoCtrl.text.trim();
-    final monto = parseCOP(_montoCtrl.text)!;
+    final monto = parseCOP(_montoCtrl.text);
+    if (monto == null) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+        );
+      }
+      return;
+    }
     final notas = _notasCtrl.text.trim();
     final diaCobroText = _diaCobroCtrl.text.trim();
     final diaCobro = diaCobroText.isEmpty ? null : int.tryParse(diaCobroText);
 
     final dao = widget.db.gastosFijosDao;
-    if (widget.gasto == null) {
-      await dao.insertGastoFijo(
-        GastosFijosCompanion.insert(
-          concepto: concepto,
-          monto: monto,
-          frecuencia: Value(_frecuencia),
-          diaCobro: Value(diaCobro),
-          notas: Value(notas),
-        ),
-      );
-    } else {
-      await dao.updateGastoFijo(
-        widget.gasto!.copyWith(
-          concepto: concepto,
-          monto: monto,
-          frecuencia: _frecuencia,
-          diaCobro: Value(diaCobro),
-          notas: notas,
-          actualizadoEn: DateTime.now(),
-        ),
-      );
+    try {
+      if (widget.gasto == null) {
+        await dao.insertGastoFijo(
+          GastosFijosCompanion.insert(
+            concepto: concepto,
+            monto: monto,
+            frecuencia: Value(_frecuencia),
+            diaCobro: Value(diaCobro),
+            notas: Value(notas),
+          ),
+        );
+      } else {
+        await dao.updateGastoFijo(
+          widget.gasto!.copyWith(
+            concepto: concepto,
+            monto: monto,
+            frecuencia: _frecuencia,
+            diaCobro: Value(diaCobro),
+            notas: notas,
+            actualizadoEn: DateTime.now(),
+          ),
+        );
+      }
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
+      }
     }
-
-    if (mounted) Navigator.pop(context, true);
   }
 
   @override

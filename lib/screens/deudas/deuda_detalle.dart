@@ -108,6 +108,16 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
     return StreamBuilder<Deuda?>(
       stream: _deudaStream(),
       builder: (context, deudaSnap) {
+        if (deudaSnap.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Text(
+                'Error al cargar los datos.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          );
+        }
         if (!deudaSnap.hasData &&
             deudaSnap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -147,6 +157,14 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
           body: StreamBuilder<List<PagosDeudaData>>(
             stream: _abonosStream(),
             builder: (context, abonosSnap) {
+              if (abonosSnap.hasError) {
+                return Center(
+                  child: Text(
+                    'Error al cargar los datos.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                );
+              }
               final abonos = abonosSnap.data ?? const <PagosDeudaData>[];
               final totalAbonado = abonos.fold<double>(
                 0,
@@ -543,16 +561,34 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _guardando = true);
-    final monto = parseCOP(_montoCtrl.text)!;
-    await widget.db.pagosDeudaDao.insertPago(
-      PagosDeudaCompanion.insert(
-        deudaId: widget.deudaId,
-        montoAbonado: monto,
-        fechaPago: _fecha,
-        notas: Value(_notasCtrl.text.trim()),
-      ),
-    );
-    if (mounted) Navigator.pop(context, true);
+    final monto = parseCOP(_montoCtrl.text);
+    if (monto == null) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+        );
+      }
+      return;
+    }
+    try {
+      await widget.db.pagosDeudaDao.insertPago(
+        PagosDeudaCompanion.insert(
+          deudaId: widget.deudaId,
+          montoAbonado: monto,
+          fechaPago: _fecha,
+          notas: Value(_notasCtrl.text.trim()),
+        ),
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
+      }
+    }
   }
 
   @override

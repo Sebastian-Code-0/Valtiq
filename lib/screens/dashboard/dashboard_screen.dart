@@ -233,6 +233,14 @@ class _ResumenCard extends StatelessWidget {
             StreamBuilder<double>(
               stream: stream,
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error al cargar los datos.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  );
+                }
                 final valor = snapshot.data ?? 0.0;
                 return FittedBox(
                   fit: BoxFit.scaleDown,
@@ -275,12 +283,36 @@ class _BalanceMensualCard extends StatelessWidget {
         child: StreamBuilder<double>(
           stream: streamIngresos,
           builder: (context, snapIng) {
+            if (snapIng.hasError) {
+              return Center(
+                child: Text(
+                  'Error al cargar los datos.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              );
+            }
             return StreamBuilder<double>(
               stream: streamGastos,
               builder: (context, snapGas) {
+                if (snapGas.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error al cargar los datos.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  );
+                }
                 return StreamBuilder<double>(
                   stream: streamGastosVariables,
                   builder: (context, snapVar) {
+                    if (snapVar.hasError) {
+                      return Center(
+                        child: Text(
+                          'Error al cargar los datos.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      );
+                    }
                     final ingresos = snapIng.data ?? 0.0;
                     final gastos = snapGas.data ?? 0.0;
                     final gastosVariables = snapVar.data ?? 0.0;
@@ -371,9 +403,25 @@ class _PosicionPrestamosCard extends StatelessWidget {
         child: StreamBuilder<double>(
           stream: streamPrestamos,
           builder: (context, snapPres) {
+            if (snapPres.hasError) {
+              return Center(
+                child: Text(
+                  'Error al cargar los datos.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              );
+            }
             return StreamBuilder<double>(
               stream: streamDeudas,
               builder: (context, snapDeu) {
+                if (snapDeu.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error al cargar los datos.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  );
+                }
                 final prestado = snapPres.data ?? 0.0;
                 final deudas = snapDeu.data ?? 0.0;
                 final neto = prestado - deudas;
@@ -458,12 +506,28 @@ class _ComparativoCategorias extends StatelessWidget {
             now.month,
           ),
           builder: (context, snapActual) {
+            if (snapActual.hasError) {
+              return Center(
+                child: Text(
+                  'Error al cargar los datos.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              );
+            }
             return StreamBuilder<Map<String, double>>(
               stream: db.gastosVariablesDao.watchTotalPorCategoria(
                 anioAnterior,
                 mesAnterior,
               ),
               builder: (context, snapAnterior) {
+                if (snapAnterior.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error al cargar los datos.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  );
+                }
                 final actual = snapActual.data ?? {};
                 final anterior = snapAnterior.data ?? {};
 

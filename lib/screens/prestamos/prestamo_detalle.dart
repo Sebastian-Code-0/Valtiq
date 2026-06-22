@@ -115,6 +115,16 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
     return StreamBuilder<Prestamo?>(
       stream: _prestamoStream(),
       builder: (context, prestamoSnap) {
+        if (prestamoSnap.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Text(
+                'Error al cargar los datos.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          );
+        }
         if (!prestamoSnap.hasData && prestamoSnap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -152,6 +162,14 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
           body: StreamBuilder<List<PagosRecibido>>(
             stream: _pagosStream(),
             builder: (context, pagosSnap) {
+              if (pagosSnap.hasError) {
+                return Center(
+                  child: Text(
+                    'Error al cargar los datos.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                );
+              }
               final pagos = pagosSnap.data ?? const <PagosRecibido>[];
               final totalAbonado = pagos.fold<double>(
                 0,
@@ -568,16 +586,34 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _guardando = true);
-    final monto = parseCOP(_montoCtrl.text)!;
-    await widget.db.prestamosDao.insertPago(
-      PagosRecibidosCompanion.insert(
-        prestamoId: widget.prestamoId,
-        montoAbonado: monto,
-        fechaPago: _fecha,
-        notas: Value(_notasCtrl.text.trim()),
-      ),
-    );
-    if (mounted) Navigator.pop(context, true);
+    final monto = parseCOP(_montoCtrl.text);
+    if (monto == null) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+        );
+      }
+      return;
+    }
+    try {
+      await widget.db.prestamosDao.insertPago(
+        PagosRecibidosCompanion.insert(
+          prestamoId: widget.prestamoId,
+          montoAbonado: monto,
+          fechaPago: _fecha,
+          notas: Value(_notasCtrl.text.trim()),
+        ),
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
+      }
+    }
   }
 
   @override

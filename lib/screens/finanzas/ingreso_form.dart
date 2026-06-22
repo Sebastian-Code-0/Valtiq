@@ -65,34 +65,51 @@ class _IngresoFormState extends State<IngresoForm> {
     setState(() => _guardando = true);
 
     final concepto = _conceptoCtrl.text.trim();
-    final monto = parseCOP(_montoCtrl.text)!;
+    final monto = parseCOP(_montoCtrl.text);
+    if (monto == null) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+        );
+      }
+      return;
+    }
     final notas = _notasCtrl.text.trim();
 
     final dao = widget.db.ingresosDao;
-    if (widget.ingreso == null) {
-      await dao.insertIngreso(
-        IngresosCompanion.insert(
-          concepto: concepto,
-          monto: monto,
-          frecuencia: Value(_frecuencia),
-          fecha: _fecha,
-          notas: Value(notas),
-        ),
-      );
-    } else {
-      await dao.updateIngreso(
-        widget.ingreso!.copyWith(
-          concepto: concepto,
-          monto: monto,
-          frecuencia: _frecuencia,
-          fecha: _fecha,
-          notas: notas,
-          actualizadoEn: DateTime.now(),
-        ),
-      );
+    try {
+      if (widget.ingreso == null) {
+        await dao.insertIngreso(
+          IngresosCompanion.insert(
+            concepto: concepto,
+            monto: monto,
+            frecuencia: Value(_frecuencia),
+            fecha: _fecha,
+            notas: Value(notas),
+          ),
+        );
+      } else {
+        await dao.updateIngreso(
+          widget.ingreso!.copyWith(
+            concepto: concepto,
+            monto: monto,
+            frecuencia: _frecuencia,
+            fecha: _fecha,
+            notas: notas,
+            actualizadoEn: DateTime.now(),
+          ),
+        );
+      }
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
+      }
     }
-
-    if (mounted) Navigator.pop(context, true);
   }
 
   @override

@@ -19,8 +19,8 @@ class IngresosDao extends DatabaseAccessor<AppDatabase>
     return (select(ingresos)..where((t) => t.activo.equals(true))).get();
   }
 
-  Future<Ingreso> getIngresoById(int id) {
-    return (select(ingresos)..where((t) => t.id.equals(id))).getSingle();
+  Future<Ingreso?> getIngresoById(int id) {
+    return (select(ingresos)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> insertIngreso(IngresosCompanion ingreso) {
