@@ -40,6 +40,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
   bool _guardando = false;
   bool _probando = false;
   bool _cargando = true;
+  bool _tieneContrasena = false;
 
   @override
   void initState() {
@@ -61,17 +62,16 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
   Future<void> _cargarConfig() async {
     try {
       final config = await widget.db.configSmtpDao.getConfig();
-      final password = await widget.db.configSmtpDao.getPassword();
       if (!mounted) return;
       setState(() {
         _servidorCtrl.text = config.servidor;
         _puertoCtrl.text = config.puerto.toString();
         _usuarioCtrl.text = config.usuario;
-        _passCtrl.text = password ?? '';
         _destinoCtrl.text = config.correoDestino;
         _remitenteCtrl.text = config.nombreRemitente;
         _ssl = config.ssl;
         _habilitado = config.habilitado;
+        _tieneContrasena = config.tieneContrasena;
         _cargando = false;
       });
     } catch (_) {
@@ -109,11 +109,13 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
       return;
     }
     setState(() => _guardando = true);
+    final passTexto = _passCtrl.text;
+    final contrasena = (passTexto.isEmpty && _tieneContrasena) ? null : passTexto;
     await widget.db.configSmtpDao.guardarConfig(
       servidor: _servidorCtrl.text.trim(),
       puerto: int.tryParse(_puertoCtrl.text.trim()) ?? 587,
       usuario: _usuarioCtrl.text.trim(),
-      contrasena: _passCtrl.text,
+      contrasena: contrasena,
       correoDestino: _destinoCtrl.text.trim(),
       nombreRemitente: _remitenteCtrl.text.trim().isEmpty
           ? 'Valtiq'
@@ -122,7 +124,10 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
       habilitado: _habilitado,
     );
     if (!mounted) return;
-    setState(() => _guardando = false);
+    setState(() {
+      _guardando = false;
+      if (passTexto.isNotEmpty) _tieneContrasena = true;
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Configuración guardada')),
     );
@@ -132,12 +137,18 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _probando = true);
 
+    final password = _passCtrl.text.isNotEmpty
+        ? _passCtrl.text
+        : (_tieneContrasena
+            ? await widget.db.configSmtpDao.getPassword() ?? ''
+            : '');
+
     final config = ConfigSmtp(
       id: 1,
       servidor: _servidorCtrl.text.trim(),
       puerto: int.tryParse(_puertoCtrl.text.trim()) ?? 587,
       usuario: _usuarioCtrl.text.trim(),
-      tieneContrasena: _passCtrl.text.isNotEmpty,
+      tieneContrasena: password.isNotEmpty,
       correoDestino: _destinoCtrl.text.trim(),
       nombreRemitente: _remitenteCtrl.text.trim().isEmpty
           ? 'Valtiq'
@@ -149,7 +160,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
 
     final result = await SmtpService.probarConfiguracion(
       config: config,
-      password: _passCtrl.text,
+      password: password,
     );
     if (!mounted) return;
     setState(() => _probando = false);
@@ -357,6 +368,9 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
                   controller: _passCtrl,
                   decoration: InputDecoration(
                     labelText: 'Contraseña / token',
+                    hintText: _tieneContrasena
+                        ? 'Ingresa nueva contraseña (dejar vacío para conservar la actual)'
+                        : null,
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -371,7 +385,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
                   obscureText: !_mostrarPassword,
                   validator: (v) {
                     if (!_habilitado) return null;
-                    if (v == null || v.isEmpty) {
+                    if ((v == null || v.isEmpty) && !_tieneContrasena) {
                       return 'Requerido si SMTP está habilitado';
                     }
                     return null;
