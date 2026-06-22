@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' hide Column, Table;
 import 'package:flutter/material.dart';
 
@@ -22,6 +24,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late final Stream<double> _streamIngresos;
   late final Stream<double> _streamGastos;
   late final Stream<double> _streamGastosVariables;
+
+  late final StreamController<({double ingresos, double gastos, double variables})>
+      _balanceCtrl;
+  late final Stream<({double ingresos, double gastos, double variables})>
+      _streamBalance;
+  StreamSubscription<double>? _subIng, _subGas, _subVar;
+  double _bIng = 0, _bGas = 0, _bVar = 0;
 
   @override
   void initState() {
@@ -100,6 +109,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final now = DateTime.now();
     _streamGastosVariables =
         widget.db.gastosVariablesDao.watchTotalMes(now.year, now.month);
+
+    _balanceCtrl = StreamController.broadcast();
+    _streamBalance = _balanceCtrl.stream;
+    _subIng = _streamIngresos.listen(
+      (v) { _bIng = v; _emitBalance(); },
+      onError: (_) {},
+    );
+    _subGas = _streamGastos.listen(
+      (v) { _bGas = v; _emitBalance(); },
+      onError: (_) {},
+    );
+    _subVar = _streamGastosVariables.listen(
+      (v) { _bVar = v; _emitBalance(); },
+      onError: (_) {},
+    );
+  }
+
+  void _emitBalance() {
+    if (!_balanceCtrl.isClosed) {
+      _balanceCtrl.add((ingresos: _bIng, gastos: _bGas, variables: _bVar));
+    }
+  }
+
+  @override
+  void dispose() {
+    _subIng?.cancel();
+    _subGas?.cancel();
+    _subVar?.cancel();
+    _balanceCtrl.close();
+    super.dispose();
   }
 
   @override
@@ -174,11 +213,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
-              _BalanceMensualCard(
-                streamIngresos: _streamIngresos,
-                streamGastos: _streamGastos,
-                streamGastosVariables: _streamGastosVariables,
-              ),
+              _BalanceMensualCard(streamBalance: _streamBalance),
               const SizedBox(height: AppSpacing.md),
               _ComparativoCategorias(db: widget.db),
               const SizedBox(height: AppSpacing.md),
@@ -264,15 +299,9 @@ class _ResumenCard extends StatelessWidget {
 }
 
 class _BalanceMensualCard extends StatelessWidget {
-  const _BalanceMensualCard({
-    required this.streamIngresos,
-    required this.streamGastos,
-    required this.streamGastosVariables,
-  });
+  const _BalanceMensualCard({required this.streamBalance});
 
-  final Stream<double> streamIngresos;
-  final Stream<double> streamGastos;
-  final Stream<double> streamGastosVariables;
+  final Stream<({double ingresos, double gastos, double variables})> streamBalance;
 
   @override
   Widget build(BuildContext context) {
@@ -280,10 +309,10 @@ class _BalanceMensualCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: StreamBuilder<double>(
-          stream: streamIngresos,
-          builder: (context, snapIng) {
-            if (snapIng.hasError) {
+        child: StreamBuilder<({double ingresos, double gastos, double variables})>(
+          stream: streamBalance,
+          builder: (context, snap) {
+            if (snap.hasError) {
               return Center(
                 child: Text(
                   'Error al cargar los datos.',
@@ -291,92 +320,66 @@ class _BalanceMensualCard extends StatelessWidget {
                 ),
               );
             }
-            return StreamBuilder<double>(
-              stream: streamGastos,
-              builder: (context, snapGas) {
-                if (snapGas.hasError) {
-                  return Center(
-                    child: Text(
-                      'Error al cargar los datos.',
-                      style: Theme.of(context).textTheme.bodyMedium,
+            final ingresos = snap.data?.ingresos ?? 0.0;
+            final gastos = snap.data?.gastos ?? 0.0;
+            final gastosVariables = snap.data?.variables ?? 0.0;
+            final disponible = ingresos - gastos - gastosVariables;
+            final disponibleColor =
+                disponible >= 0 ? AppColors.positivo : AppColors.alerta;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Balance mensual',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _FilaMonto(
+                  label: 'Ingresos',
+                  valor: formatCOP(ingresos),
+                  color: AppColors.positivo,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _FilaMonto(
+                  label: 'Gastos fijos',
+                  valor: '-${formatCOP(gastos)}',
+                  color: AppColors.alerta,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _FilaMonto(
+                  label: 'Gastos variables',
+                  valor: '-${formatCOP(gastosVariables)}',
+                  color: AppColors.alerta,
+                ),
+                const Divider(height: AppSpacing.lg),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Disponible',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  );
-                }
-                return StreamBuilder<double>(
-                  stream: streamGastosVariables,
-                  builder: (context, snapVar) {
-                    if (snapVar.hasError) {
-                      return Center(
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
                         child: Text(
-                          'Error al cargar los datos.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      );
-                    }
-                    final ingresos = snapIng.data ?? 0.0;
-                    final gastos = snapGas.data ?? 0.0;
-                    final gastosVariables = snapVar.data ?? 0.0;
-                    final disponible = ingresos - gastos - gastosVariables;
-                    final disponibleColor =
-                        disponible >= 0 ? AppColors.positivo : AppColors.alerta;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Balance mensual',
-                          style: theme.textTheme.titleMedium?.copyWith(
+                          formatCOP(disponible),
+                          style: monoStyle(
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
+                            color: disponibleColor,
                           ),
+                          maxLines: 1,
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        _FilaMonto(
-                          label: 'Ingresos',
-                          valor: formatCOP(ingresos),
-                          color: AppColors.positivo,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        _FilaMonto(
-                          label: 'Gastos fijos',
-                          valor: '-${formatCOP(gastos)}',
-                          color: AppColors.alerta,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        _FilaMonto(
-                          label: 'Gastos variables',
-                          valor: '-${formatCOP(gastosVariables)}',
-                          color: AppColors.alerta,
-                        ),
-                        const Divider(height: AppSpacing.lg),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Disponible',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Flexible(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  formatCOP(disponible),
-                                  style: monoStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: disponibleColor,
-                                  ),
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             );
           },
         ),

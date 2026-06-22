@@ -34,6 +34,7 @@ class Prestamos extends Table {
 
 class PagosRecibidos extends Table {
   IntColumn get id => integer().autoIncrement()();
+  // TODO: añadir índice en prestamo_id en la próxima migración (schemaVersion 8)
   IntColumn get prestamoId => integer().references(Prestamos, #id)();
   RealColumn get montoAbonado => real()();
   DateTimeColumn get fechaPago => dateTime()();
@@ -43,6 +44,7 @@ class PagosRecibidos extends Table {
 
 class PagosDeuda extends Table {
   IntColumn get id => integer().autoIncrement()();
+  // TODO: añadir índice en deuda_id en la próxima migración (schemaVersion 8)
   IntColumn get deudaId => integer().references(Deudas, #id)();
   RealColumn get montoAbonado => real()();
   DateTimeColumn get fechaPago => dateTime()();

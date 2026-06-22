@@ -21,22 +21,23 @@ class FinanzasScreen extends StatefulWidget {
 class _FinanzasScreenState extends State<FinanzasScreen> {
   String _modo = 'ingresos';
 
+  late final Stream<List<Ingreso>> _streamIngresos;
+  late final Stream<List<GastosVariable>> _streamGastosVariables;
+  late final Stream<List<GastosFijo>> _streamGastos;
+
   String _capitalizar(String s) =>
       s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
 
-  Stream<List<Ingreso>> _streamIngresos() {
-    return (widget.db.select(widget.db.ingresos)
+  @override
+  void initState() {
+    super.initState();
+    _streamIngresos = (widget.db.select(widget.db.ingresos)
           ..orderBy([(i) => OrderingTerm.desc(i.fecha)]))
         .watch();
-  }
-
-  Stream<List<GastosVariable>> _streamGastosVariables() {
     final now = DateTime.now();
-    return widget.db.gastosVariablesDao.watchGastosPorMes(now.year, now.month);
-  }
-
-  Stream<List<GastosFijo>> _streamGastos() {
-    return (widget.db.select(widget.db.gastosFijos)
+    _streamGastosVariables =
+        widget.db.gastosVariablesDao.watchGastosPorMes(now.year, now.month);
+    _streamGastos = (widget.db.select(widget.db.gastosFijos)
           ..orderBy([(g) => OrderingTerm.asc(g.concepto)]))
         .watch();
   }
@@ -235,7 +236,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
 
   Widget _listaGastosVariables(ThemeData theme, Color colorSec) {
     return StreamBuilder<List<GastosVariable>>(
-      stream: _streamGastosVariables(),
+      stream: _streamGastosVariables,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(
@@ -322,7 +323,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
 
   Widget _listaIngresos(ThemeData theme, Color colorSec) {
     return StreamBuilder<List<Ingreso>>(
-      stream: _streamIngresos(),
+      stream: _streamIngresos,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(
@@ -382,7 +383,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
 
   Widget _listaGastos(ThemeData theme, Color colorSec) {
     return StreamBuilder<List<GastosFijo>>(
-      stream: _streamGastos(),
+      stream: _streamGastos,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(
