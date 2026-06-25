@@ -1,6 +1,6 @@
 # Arquitectura de Valtiq
 
-## Base de datos (SQLite vía drift, schemaVersion 7)
+## Base de datos (SQLite vía drift, schemaVersion 8)
 
 ### Tablas
 
@@ -11,7 +11,8 @@
 | acreedorNombre | TEXT     |                                 |
 | montoOriginal  | REAL     |                                 |
 | tasaInteres    | REAL     | default 0                       |
-| tipoInteres    | TEXT     | 'ninguno' / 'mensual' / 'anual' |
+| tipoInteres      | TEXT     | 'ninguno' / 'mensual' / 'anual'          |
+| modalidadCalculo | TEXT     | 'simple' / 'compuesto', default 'simple' |
 | fechaPrestamo  | DATETIME |                                 |
 | fechaLimite    | DATETIME | nullable                        |
 | cuotaMensual   | REAL     | nullable                        |
@@ -137,6 +138,7 @@
            ultimaNotificacion, ultimoEnvioCorreo
 - v5 → v6: agregar Recordatorios.horaAviso, minutoAviso
 - v6 → v7: crear GastosVariables
+- v7 → v8: añadir Deudas.modalidadCalculo (default 'simple')
 
 ## Pantallas
 
@@ -158,8 +160,11 @@
 Cálculo de interés simple y compuesto por meses calendario.
 La unidad base es el mes contado por límites reales del calendario,
 no días fijos. Los días parciales del mes en curso se prorratean
-sobre 30 días. Usado en dashboard, listas y detalles de préstamos
-y deudas.
+sobre 30 días. Aplica convención bancaria colombiana para préstamos
+que inician los días 29, 30 o 31: si el mes destino tiene menos
+días, el aniversario cae en el último día de ese mes (no se
+desborda al mes siguiente). Usado en dashboard, listas y detalles
+de préstamos y deudas.
 
 **NotificationService** (`services/notification_service.dart`)
 Inicializa flutter_local_notifications en Linux, Android y Windows.

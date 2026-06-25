@@ -1,5 +1,73 @@
 # Changelog
 
+## Ciclo de estabilización post-Fase 7 (2026-06) — v1.2.0
+
+### Correcciones críticas (Tanda A)
+- getSingle() → getSingleOrNull() en todos los DAOs de detalle
+  (Deudas, Prestamos, GastosFijos, Ingresos, Recordatorios);
+  getSaldoPendiente() en PrestamosDao actualizado con null-guard
+- Recordatorios con referencia a deuda/préstamo/gasto eliminado
+  ya no crashean: null-guard en notification_service.dart por cada
+  case del switch de referenciaTabla
+- parseCOP() force-unwrap eliminado en 7 formularios y diálogos;
+  reemplazado por guard con SnackBar de error
+- try-catch añadido en todos los métodos _guardar() de formularios
+  y diálogos de abono/pago (7 archivos)
+- snapshot.hasError añadido en los 18 StreamBuilder de la app
+
+### Validaciones UX y lógica de negocio (Tanda B)
+- Tasa de interés negativa rechazada en validadores de deuda_form
+  y prestamo_form
+- Cuota mensual no puede superar el monto original (validador en
+  deuda_form)
+- Fecha de alerta de recordatorio no puede ser en el pasado
+  (firstDate: DateTime.now() en recordatorio_form)
+- Marcar deuda/préstamo como pagado desactiva automáticamente sus
+  recordatorios vinculados (nuevo método
+  desactivarRecordatoriosPorReferencia en RecordatoriosDao)
+- _referenciaId se limpia al cambiar tipo de referencia a 'ninguna'
+  en recordatorio_form
+
+### Seguridad (Tanda C)
+- Contraseña SMTP ya no se precarga descifrada al abrir la pantalla;
+  campo inicia vacío con hint text; al guardar con campo vacío
+  conserva la contraseña cifrada existente
+- _escapeHtml() completada con &quot; y &#x27; (antes solo escapaba
+  &, < y >)
+
+### Optimizaciones internas (Tanda D)
+- 3 streams en finanzas_screen.dart convertidos de métodos a campos
+  late final inicializados en initState
+- _BalanceMensualCard simplificada de 3 StreamBuilder anidados a 1,
+  usando StreamController.broadcast() con 3 StreamSubscription en
+  _DashboardScreenState
+- TODO comments añadidos en tables.dart para índices en
+  PagosRecibidos.prestamoId y PagosDeuda.deudaId (schemaVersion 9)
+
+### Tests unitarios (Tanda E — 60 tests en total)
+- test/services/interes_calculator_test.dart: 13 tests de interés
+  simple, compuesto, edge cases y convención bancaria días 29-31
+- test/services/crypto_service_test.dart: 9 tests de roundtrip,
+  IV aleatorio, manejo de errores
+- test/utils/currency_input_test.dart: 17 tests de parseCOP,
+  formatCOPInput y roundtrip
+- test/db/gastos_variables_dao_test.dart: 10 tests de insert,
+  filtro por mes, totalMes con BD vacía (fix del bug crítico),
+  y delete
+
+### Lógica bancaria y schemaVersion 8
+- InteresCalculator: convención bancaria colombiana para días 29-31;
+  función _aniversario() que usa el último día del mes cuando el día
+  de inicio no existe en el mes destino
+- Deudas propias: nueva opción de interés compuesto (campo
+  modalidadCalculo añadido a la tabla Deudas con default 'simple');
+  migración schemaVersion 7 → 8
+- deuda_detalle.dart: cálculo de saldo usa resumenPrestamo() en lugar
+  de calcularInteresSimple(), respetando modalidadCalculo de cada deuda
+- Fecha de abono/pago no puede ser en el futuro (lastDate: DateTime.now()
+  en diálogos de deuda_detalle y prestamo_detalle)
+- Bump de versión: 1.1.0+2 → 1.2.0+3
+
 ## Fase 7 — Gastos variables e inteligencia financiera (2026-06)
 
 - Nueva tabla GastosVariables (schemaVersion 6 → 7): id, descripcion,
