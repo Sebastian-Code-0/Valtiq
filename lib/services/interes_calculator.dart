@@ -3,6 +3,16 @@ import 'dart:math' as math;
 abstract class InteresCalculator {
   static const double _diasPorMes = 30;
 
+  /// Devuelve la fecha de aniversario aplicando convención bancaria:
+  /// si el día no existe en el mes destino, usa el último día de ese mes.
+  static DateTime _aniversario(int anio, int mes, int dia) {
+    // DateTime normaliza meses fuera de rango (13 → enero siguiente),
+    // así que podemos calcular el último día del mes destino así:
+    final ultimoDia = DateTime(anio, mes + 1, 0).day;
+    final diaReal = dia > ultimoDia ? ultimoDia : dia;
+    return DateTime(anio, mes, diaReal);
+  }
+
   static double _mesesTranscurridos(DateTime inicio, DateTime fin) {
     final inicioNorm = DateTime(inicio.year, inicio.month, inicio.day);
     final finNorm = DateTime(fin.year, fin.month, fin.day);
@@ -10,7 +20,7 @@ abstract class InteresCalculator {
 
     int mesesCompletos = 0;
     while (true) {
-      final siguiente = DateTime(
+      final siguiente = _aniversario(
         inicioNorm.year,
         inicioNorm.month + mesesCompletos + 1,
         inicioNorm.day,
@@ -19,13 +29,13 @@ abstract class InteresCalculator {
       mesesCompletos++;
     }
 
-    final ultimoCumplimiento = DateTime(
+    final ultimoCumplimiento = _aniversario(
       inicioNorm.year,
       inicioNorm.month + mesesCompletos,
       inicioNorm.day,
     );
     final diasDiferencia = finNorm.difference(ultimoCumplimiento).inDays;
-    int diasParciales = diasDiferencia > 0 ? diasDiferencia + 1 : 0;
+    int diasParciales = diasDiferencia;
 
     if (diasParciales >= _diasPorMes) {
       mesesCompletos += 1;
