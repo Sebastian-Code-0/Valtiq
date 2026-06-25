@@ -579,7 +579,7 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
       context: context,
       initialDate: _fecha,
       firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      lastDate: DateTime.now(),
       locale: const Locale('es', 'CO'),
     );
     if (f != null) setState(() => _fecha = f);

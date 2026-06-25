@@ -27,6 +27,7 @@ class _DeudaFormState extends State<DeudaForm> {
   late final TextEditingController _notasCtrl;
 
   late String _tipoInteres;
+  late String _modalidadCalculo;
   late DateTime _fechaPrestamo;
   DateTime? _fechaLimite;
   bool _guardando = false;
@@ -47,6 +48,7 @@ class _DeudaFormState extends State<DeudaForm> {
     );
     _notasCtrl = TextEditingController(text: d?.notas ?? '');
     _tipoInteres = d?.tipoInteres ?? 'ninguno';
+    _modalidadCalculo = d?.modalidadCalculo ?? 'simple';
     _fechaPrestamo = d?.fechaPrestamo ?? DateTime.now();
     _fechaLimite = d?.fechaLimite;
   }
@@ -109,6 +111,7 @@ class _DeudaFormState extends State<DeudaForm> {
     }
     final tasa = double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
     final tipo = tasa > 0 ? _tipoInteres : 'ninguno';
+    final modalidad = tasa > 0 ? _modalidadCalculo : 'simple';
     final cuotaText = _cuotaCtrl.text.trim();
     final cuota = cuotaText.isEmpty ? null : parseCOP(cuotaText);
     final notas = _notasCtrl.text.trim();
@@ -123,6 +126,7 @@ class _DeudaFormState extends State<DeudaForm> {
             montoOriginal: monto,
             tasaInteres: Value(tasa),
             tipoInteres: Value(tipo),
+            modalidadCalculo: Value(modalidad),
             fechaPrestamo: _fechaPrestamo,
             fechaLimite: Value(_fechaLimite),
             cuotaMensual: Value(cuota),
@@ -136,6 +140,7 @@ class _DeudaFormState extends State<DeudaForm> {
             montoOriginal: monto,
             tasaInteres: tasa,
             tipoInteres: tipo,
+            modalidadCalculo: modalidad,
             fechaPrestamo: _fechaPrestamo,
             fechaLimite: Value(_fechaLimite),
             cuotaMensual: Value(cuota),
@@ -217,7 +222,10 @@ class _DeudaFormState extends State<DeudaForm> {
                     decimal: true,
                   ),
                   onChanged: (_) => setState(() {
-                    if (!_tieneInteres) _tipoInteres = 'ninguno';
+                    if (!_tieneInteres) {
+                      _tipoInteres = 'ninguno';
+                      _modalidadCalculo = 'simple';
+                    }
                   }),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return null;
@@ -247,6 +255,25 @@ class _DeudaFormState extends State<DeudaForm> {
                   ],
                   onChanged: tieneInteres
                       ? (v) => setState(() => _tipoInteres = v ?? 'ninguno')
+                      : null,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                DropdownButtonFormField<String>(
+                  value: _modalidadCalculo,
+                  decoration: const InputDecoration(
+                    labelText: 'Modalidad de cálculo',
+                    prefixIcon: Icon(Icons.calculate_outlined),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'simple', child: Text('Simple')),
+                    DropdownMenuItem(
+                      value: 'compuesto',
+                      child: Text('Compuesto'),
+                    ),
+                  ],
+                  onChanged: tieneInteres
+                      ? (v) =>
+                          setState(() => _modalidadCalculo = v ?? 'simple')
                       : null,
                 ),
               ],

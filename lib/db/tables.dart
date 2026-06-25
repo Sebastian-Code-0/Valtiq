@@ -6,6 +6,8 @@ class Deudas extends Table {
   RealColumn get montoOriginal => real()();
   RealColumn get tasaInteres => real().withDefault(const Constant(0))();
   TextColumn get tipoInteres => text().withDefault(const Constant('ninguno'))();
+  TextColumn get modalidadCalculo =>
+      text().withDefault(const Constant('simple'))();
   DateTimeColumn get fechaPrestamo => dateTime()();
   DateTimeColumn get fechaLimite => dateTime().nullable()();
   RealColumn get cuotaMensual => real().nullable()();

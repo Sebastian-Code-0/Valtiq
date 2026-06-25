@@ -211,15 +211,17 @@ class _ResumenCard extends StatelessWidget {
         ? AppColors.textoSecundarioOscuro
         : AppColors.textoSecundarioClaro;
 
-    final interes = InteresCalculator.calcularInteresSimple(
-      monto: deuda.montoOriginal,
+    final resumen = InteresCalculator.resumenPrestamo(
+      montoPrestado: deuda.montoOriginal,
       tasaInteres: deuda.tasaInteres,
       tipoInteres: deuda.tipoInteres,
-      fechaInicio: deuda.fechaPrestamo,
+      modalidadCalculo: deuda.modalidadCalculo,
+      fechaPrestamo: deuda.fechaPrestamo,
+      totalAbonado: totalAbonado,
     );
-    final totalConInteres = deuda.montoOriginal + interes;
-    final saldo = totalConInteres - totalAbonado;
-    final saldoReal = saldo < 0 ? 0.0 : saldo;
+    final interes = resumen['interesAcumulado']!;
+    final totalConInteres = resumen['totalConInteres']!;
+    final saldoReal = resumen['saldoPendiente']!;
     final colorSaldo = saldoReal > 0 ? AppColors.alerta : AppColors.positivo;
 
     return Card(
@@ -354,6 +356,7 @@ class _InfoCard extends StatelessWidget {
               theme,
             ),
             _fila('Tipo:', deuda.tipoInteres, colorSec, theme),
+            _fila('Modalidad:', deuda.modalidadCalculo, colorSec, theme),
             _fila(
               'Fecha préstamo:',
               formatFecha(deuda.fechaPrestamo),
@@ -554,7 +557,7 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
       context: context,
       initialDate: _fecha,
       firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      lastDate: DateTime.now(),
       locale: const Locale('es', 'CO'),
     );
     if (f != null) setState(() => _fecha = f);
