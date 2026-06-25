@@ -52,14 +52,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       for (final row in rows) {
         final deuda = row.readTable(d);
         final abonado = row.read(sumPagosDeuda) ?? 0.0;
-        final interes = InteresCalculator.calcularInteresSimple(
-          monto: deuda.montoOriginal,
+        final saldo = InteresCalculator.calcularDeudaTotal(
+          montoPrestado: deuda.montoOriginal,
           tasaInteres: deuda.tasaInteres,
           tipoInteres: deuda.tipoInteres,
-          fechaInicio: deuda.fechaPrestamo,
+          modalidadCalculo: deuda.modalidadCalculo,
+          fechaPrestamo: deuda.fechaPrestamo,
+          totalAbonado: abonado,
         );
-        final saldo = deuda.montoOriginal + interes - abonado;
-        total += saldo < 0 ? 0 : saldo;
+        total += saldo;
       }
       return total;
     });

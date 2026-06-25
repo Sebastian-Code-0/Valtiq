@@ -296,14 +296,14 @@ class _DeudaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final interes = InteresCalculator.calcularInteresSimple(
-      monto: deuda.montoOriginal,
+    final saldo = InteresCalculator.calcularDeudaTotal(
+      montoPrestado: deuda.montoOriginal,
       tasaInteres: deuda.tasaInteres,
       tipoInteres: deuda.tipoInteres,
-      fechaInicio: deuda.fechaPrestamo,
+      modalidadCalculo: deuda.modalidadCalculo,
+      fechaPrestamo: deuda.fechaPrestamo,
+      totalAbonado: abonado,
     );
-    final saldo =
-        (deuda.montoOriginal + interes - abonado).clamp(0.0, double.infinity);
     final vencida =
         deuda.fechaLimite != null &&
         deuda.fechaLimite!.isBefore(DateTime.now());
