@@ -52,6 +52,11 @@ flutter build linux          # Linux
 flutter build windows        # Windows (requiere Visual Studio)
 ```
 
+## Privacidad
+
+Valtiq no recolecta ni transmite datos. Ver la
+[política de privacidad](docs/PRIVACY.md) completa.
+
 ## Licencia
 
 GNU General Public License v3.0. Ver [LICENSE](LICENSE).
