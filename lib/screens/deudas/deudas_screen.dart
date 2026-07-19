@@ -65,7 +65,10 @@ class _DeudasScreenState extends State<DeudasScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar deuda'),
-        content: Text('¿Eliminar la deuda con ${deuda.acreedorNombre}?'),
+        content: Text(
+          '¿Eliminar la deuda con ${deuda.acreedorNombre}? '
+          'También se eliminarán sus pagos registrados.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -82,7 +85,15 @@ class _DeudasScreenState extends State<DeudasScreen> {
       ),
     );
     if (ok == true) {
-      await widget.db.deudasDao.deleteDeuda(deuda.id);
+      try {
+        await widget.db.deudasDao.deleteDeudaConPagos(deuda.id);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No se pudo eliminar la deuda.')),
+          );
+        }
+      }
     }
   }
 

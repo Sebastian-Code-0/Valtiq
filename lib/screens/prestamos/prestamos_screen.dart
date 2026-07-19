@@ -150,10 +150,15 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
       ),
     );
     if (ok == true) {
-      await (widget.db.delete(widget.db.pagosRecibidos)
-            ..where((t) => t.prestamoId.equals(prestamo.id)))
-          .go();
-      await widget.db.prestamosDao.deletePrestamo(prestamo.id);
+      try {
+        await widget.db.prestamosDao.deletePrestamoConPagos(prestamo.id);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No se pudo eliminar el préstamo.')),
+          );
+        }
+      }
     }
   }
 

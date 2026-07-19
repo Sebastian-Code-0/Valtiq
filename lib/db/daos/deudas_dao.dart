@@ -61,4 +61,12 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
     return (delete(deudas)..where((t) => t.id.equals(id))).go();
   }
 
+  Future<void> deleteDeudaConPagos(int id) {
+    return transaction(() async {
+      await (delete(attachedDatabase.pagosDeuda)
+            ..where((t) => t.deudaId.equals(id)))
+          .go();
+      await (delete(deudas)..where((t) => t.id.equals(id))).go();
+    });
+  }
 }

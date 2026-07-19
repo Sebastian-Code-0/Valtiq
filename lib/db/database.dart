@@ -93,5 +93,8 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(deudas, deudas.modalidadCalculo);
       }
     },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
   );
 }

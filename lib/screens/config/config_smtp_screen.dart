@@ -111,66 +111,83 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     setState(() => _guardando = true);
     final passTexto = _passCtrl.text;
     final contrasena = (passTexto.isEmpty && _tieneContrasena) ? null : passTexto;
-    await widget.db.configSmtpDao.guardarConfig(
-      servidor: _servidorCtrl.text.trim(),
-      puerto: int.tryParse(_puertoCtrl.text.trim()) ?? 587,
-      usuario: _usuarioCtrl.text.trim(),
-      contrasena: contrasena,
-      correoDestino: _destinoCtrl.text.trim(),
-      nombreRemitente: _remitenteCtrl.text.trim().isEmpty
-          ? 'Valtiq'
-          : _remitenteCtrl.text.trim(),
-      ssl: _ssl,
-      habilitado: _habilitado,
-    );
-    if (!mounted) return;
-    setState(() {
-      _guardando = false;
-      if (passTexto.isNotEmpty) _tieneContrasena = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Configuración guardada')),
-    );
+    try {
+      await widget.db.configSmtpDao.guardarConfig(
+        servidor: _servidorCtrl.text.trim(),
+        puerto: int.tryParse(_puertoCtrl.text.trim()) ?? 587,
+        usuario: _usuarioCtrl.text.trim(),
+        contrasena: contrasena,
+        correoDestino: _destinoCtrl.text.trim(),
+        nombreRemitente: _remitenteCtrl.text.trim().isEmpty
+            ? 'Valtiq'
+            : _remitenteCtrl.text.trim(),
+        ssl: _ssl,
+        habilitado: _habilitado,
+      );
+      if (!mounted) return;
+      setState(() {
+        if (passTexto.isNotEmpty) _tieneContrasena = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Configuración guardada')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al guardar: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
   }
 
   Future<void> _probar() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _probando = true);
 
-    final password = _passCtrl.text.isNotEmpty
-        ? _passCtrl.text
-        : (_tieneContrasena
-            ? await widget.db.configSmtpDao.getPassword() ?? ''
-            : '');
+    try {
+      final password = _passCtrl.text.isNotEmpty
+          ? _passCtrl.text
+          : (_tieneContrasena
+              ? await widget.db.configSmtpDao.getPassword() ?? ''
+              : '');
 
-    final config = ConfigSmtp(
-      id: 1,
-      servidor: _servidorCtrl.text.trim(),
-      puerto: int.tryParse(_puertoCtrl.text.trim()) ?? 587,
-      usuario: _usuarioCtrl.text.trim(),
-      tieneContrasena: password.isNotEmpty,
-      correoDestino: _destinoCtrl.text.trim(),
-      nombreRemitente: _remitenteCtrl.text.trim().isEmpty
-          ? 'Valtiq'
-          : _remitenteCtrl.text.trim(),
-      ssl: _ssl,
-      habilitado: true,
-      actualizadoEn: DateTime.now(),
-    );
+      final config = ConfigSmtp(
+        id: 1,
+        servidor: _servidorCtrl.text.trim(),
+        puerto: int.tryParse(_puertoCtrl.text.trim()) ?? 587,
+        usuario: _usuarioCtrl.text.trim(),
+        tieneContrasena: password.isNotEmpty,
+        correoDestino: _destinoCtrl.text.trim(),
+        nombreRemitente: _remitenteCtrl.text.trim().isEmpty
+            ? 'Valtiq'
+            : _remitenteCtrl.text.trim(),
+        ssl: _ssl,
+        habilitado: true,
+        actualizadoEn: DateTime.now(),
+      );
 
-    final result = await SmtpService.probarConfiguracion(
-      config: config,
-      password: password,
-    );
-    if (!mounted) return;
-    setState(() => _probando = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result.mensaje ?? (result.exito ? 'OK' : 'Falló')),
-        backgroundColor: result.exito ? AppColors.positivo : AppColors.alerta,
-        duration: const Duration(seconds: 6),
-      ),
-    );
+      final result = await SmtpService.probarConfiguracion(
+        config: config,
+        password: password,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.mensaje ?? (result.exito ? 'OK' : 'Falló')),
+          backgroundColor:
+              result.exito ? AppColors.positivo : AppColors.alerta,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al probar: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _probando = false);
+    }
   }
 
   Future<void> _abrirAppPasswords() async {

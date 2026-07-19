@@ -36,6 +36,13 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     return (delete(prestamos)..where((t) => t.id.equals(id))).go();
   }
 
+  Future<void> deletePrestamoConPagos(int id) {
+    return transaction(() async {
+      await (delete(pagosRecibidos)..where((t) => t.prestamoId.equals(id))).go();
+      await (delete(prestamos)..where((t) => t.id.equals(id))).go();
+    });
+  }
+
   Future<bool> marcarComoPagado(int id) async {
     final count =
         await (update(prestamos)..where((t) => t.id.equals(id))).write(

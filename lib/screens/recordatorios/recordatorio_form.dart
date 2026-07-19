@@ -123,42 +123,50 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     final refId = _tipoReferencia == 'ninguna' ? null : _referenciaId;
 
     final dao = widget.db.recordatoriosDao;
-    if (widget.recordatorio == null) {
-      await dao.insertRecordatorio(
-        RecordatoriosCompanion.insert(
-          titulo: titulo,
-          fechaAlerta: _fechaAlerta,
-          diasAnticipacion: Value(dias),
-          tipoNotificacion: Value(_tipoNotificacion),
-          repetir: Value(_repetir),
-          referenciaTabla: Value(refTabla),
-          referenciaId: Value(refId),
-          horaAviso: Value(_horaAviso),
-          minutoAviso: Value(_minutoAviso),
-          frecuenciaAviso: Value(_frecuenciaAviso),
-        ),
-      );
-    } else {
-      await dao.updateRecordatorio(
-        widget.recordatorio!.copyWith(
-          titulo: titulo,
-          fechaAlerta: _fechaAlerta,
-          diasAnticipacion: dias,
-          tipoNotificacion: _tipoNotificacion,
-          repetir: _repetir,
-          referenciaTabla: Value(refTabla),
-          referenciaId: Value(refId),
-          horaAviso: _horaAviso,
-          minutoAviso: _minutoAviso,
-          frecuenciaAviso: _frecuenciaAviso,
-        ),
-      );
-      if (widget.recordatorio!.fechaAlerta != _fechaAlerta) {
-        await dao.resetearDeduplicacion(widget.recordatorio!.id);
+    try {
+      if (widget.recordatorio == null) {
+        await dao.insertRecordatorio(
+          RecordatoriosCompanion.insert(
+            titulo: titulo,
+            fechaAlerta: _fechaAlerta,
+            diasAnticipacion: Value(dias),
+            tipoNotificacion: Value(_tipoNotificacion),
+            repetir: Value(_repetir),
+            referenciaTabla: Value(refTabla),
+            referenciaId: Value(refId),
+            horaAviso: Value(_horaAviso),
+            minutoAviso: Value(_minutoAviso),
+            frecuenciaAviso: Value(_frecuenciaAviso),
+          ),
+        );
+      } else {
+        await dao.updateRecordatorio(
+          widget.recordatorio!.copyWith(
+            titulo: titulo,
+            fechaAlerta: _fechaAlerta,
+            diasAnticipacion: dias,
+            tipoNotificacion: _tipoNotificacion,
+            repetir: _repetir,
+            referenciaTabla: Value(refTabla),
+            referenciaId: Value(refId),
+            horaAviso: _horaAviso,
+            minutoAviso: _minutoAviso,
+            frecuenciaAviso: _frecuenciaAviso,
+          ),
+        );
+        if (widget.recordatorio!.fechaAlerta != _fechaAlerta) {
+          await dao.resetearDeduplicacion(widget.recordatorio!.id);
+        }
+      }
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _guardando = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al guardar: $e')),
+        );
       }
     }
-
-    if (mounted) Navigator.pop(context, true);
   }
 
   Widget? _buildReferenciaSelector() {
