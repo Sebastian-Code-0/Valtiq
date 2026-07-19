@@ -67,6 +67,8 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
             ..where((t) => t.deudaId.equals(id)))
           .go();
       await (delete(deudas)..where((t) => t.id.equals(id))).go();
+      await attachedDatabase.recordatoriosDao
+          .desactivarRecordatoriosPorReferencia('deuda', id);
     });
   }
 }

@@ -143,7 +143,17 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
       ),
     );
     if (ok == true) {
-      await widget.db.gastosFijosDao.deleteGastoFijo(gasto.id);
+      try {
+        await widget.db.gastosFijosDao.deleteGastoFijoConRecordatorios(
+          gasto.id,
+        );
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No se pudo eliminar el gasto.')),
+          );
+        }
+      }
     }
   }
 

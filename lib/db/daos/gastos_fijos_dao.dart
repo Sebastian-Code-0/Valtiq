@@ -30,6 +30,14 @@ class GastosFijosDao extends DatabaseAccessor<AppDatabase>
     return (delete(gastosFijos)..where((t) => t.id.equals(id))).go();
   }
 
+  Future<void> deleteGastoFijoConRecordatorios(int id) {
+    return transaction(() async {
+      await (delete(gastosFijos)..where((t) => t.id.equals(id))).go();
+      await attachedDatabase.recordatoriosDao
+          .desactivarRecordatoriosPorReferencia('gasto', id);
+    });
+  }
+
   Future<void> setActivo(int id, {required bool activo}) async {
     await (update(gastosFijos)..where((t) => t.id.equals(id))).write(
       GastosFijosCompanion(

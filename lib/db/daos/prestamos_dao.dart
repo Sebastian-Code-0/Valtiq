@@ -40,6 +40,8 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     return transaction(() async {
       await (delete(pagosRecibidos)..where((t) => t.prestamoId.equals(id))).go();
       await (delete(prestamos)..where((t) => t.id.equals(id))).go();
+      await attachedDatabase.recordatoriosDao
+          .desactivarRecordatoriosPorReferencia('prestamo', id);
     });
   }
 
