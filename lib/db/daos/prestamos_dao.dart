@@ -45,15 +45,19 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     });
   }
 
-  Future<bool> marcarComoPagado(int id) async {
-    final count =
-        await (update(prestamos)..where((t) => t.id.equals(id))).write(
-      PrestamosCompanion(
-        estado: const Value('pagado'),
-        actualizadoEn: Value(DateTime.now()),
-      ),
-    );
-    return count > 0;
+  Future<bool> marcarComoPagado(int id) {
+    return transaction(() async {
+      final count =
+          await (update(prestamos)..where((t) => t.id.equals(id))).write(
+        PrestamosCompanion(
+          estado: const Value('pagado'),
+          actualizadoEn: Value(DateTime.now()),
+        ),
+      );
+      await attachedDatabase.recordatoriosDao
+          .desactivarRecordatoriosPorReferencia('prestamo', id);
+      return count > 0;
+    });
   }
 
   Future<bool> marcarComoVencido(int id) async {
@@ -67,13 +71,18 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     return count > 0;
   }
 
-  Future<void> reactivarPrestamo(int id) =>
-      (update(prestamos)..where((p) => p.id.equals(id))).write(
+  Future<void> reactivarPrestamo(int id) {
+    return transaction(() async {
+      await (update(prestamos)..where((p) => p.id.equals(id))).write(
         PrestamosCompanion(
           estado: const Value('activo'),
           actualizadoEn: Value(DateTime.now()),
         ),
       );
+      await attachedDatabase.recordatoriosDao
+          .reactivarRecordatoriosPorReferencia('prestamo', id);
+    });
+  }
 
   Future<List<PagosRecibido>> getPagosDelPrestamo(int prestamoId) {
     return (select(pagosRecibidos)

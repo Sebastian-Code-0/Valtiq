@@ -81,6 +81,46 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
     }
   }
 
+  Future<void> _vaciarInactivos() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Vaciar recordatorios inactivos'),
+        content: const Text(
+          '¿Eliminar permanentemente todos los recordatorios inactivos? '
+          'Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Eliminar todos',
+              style: TextStyle(color: AppColors.alerta),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final eliminados = await widget.db.recordatoriosDao
+        .eliminarRecordatoriosInactivos();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            eliminados > 0
+                ? 'Se eliminaron $eliminados recordatorios inactivos'
+                : 'No hay recordatorios inactivos para eliminar',
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _probarNotificacion(Recordatorio r) async {
     await NotificationService.showNotification(
       id: r.id,
@@ -122,7 +162,14 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
                     ),
                   ),
                   const Spacer(),
-                  if (!_mostrarInactivos)
+                  if (_mostrarInactivos)
+                    IconButton(
+                      onPressed: _vaciarInactivos,
+                      icon: const Icon(Icons.delete_sweep_outlined),
+                      tooltip: 'Vaciar recordatorios inactivos',
+                      color: AppColors.alerta,
+                    )
+                  else
                     FloatingActionButton.small(
                       heroTag: 'fab_recordatorios',
                       onPressed: () => _abrirForm(),

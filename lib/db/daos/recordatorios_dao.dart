@@ -96,4 +96,28 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
           const RecordatoriosCompanion(activo: Value(false)),
         );
   }
+
+  Future<int> reactivarRecordatoriosPorReferencia(
+    String tabla,
+    int refId,
+  ) {
+    return (update(recordatorios)
+          ..where(
+            (r) =>
+                r.referenciaTabla.equals(tabla) &
+                r.referenciaId.equals(refId) &
+                r.activo.equals(false),
+          ))
+        .write(
+          const RecordatoriosCompanion(
+            activo: Value(true),
+            ultimaNotificacion: Value(null),
+            ultimoEnvioCorreo: Value(null),
+          ),
+        );
+  }
+
+  Future<int> eliminarRecordatoriosInactivos() {
+    return (delete(recordatorios)..where((r) => r.activo.equals(false))).go();
+  }
 }

@@ -38,13 +38,22 @@ class GastosFijosDao extends DatabaseAccessor<AppDatabase>
     });
   }
 
-  Future<void> setActivo(int id, {required bool activo}) async {
-    await (update(gastosFijos)..where((t) => t.id.equals(id))).write(
-      GastosFijosCompanion(
-        activo: Value(activo),
-        actualizadoEn: Value(DateTime.now()),
-      ),
-    );
+  Future<void> setActivo(int id, {required bool activo}) {
+    return transaction(() async {
+      await (update(gastosFijos)..where((t) => t.id.equals(id))).write(
+        GastosFijosCompanion(
+          activo: Value(activo),
+          actualizadoEn: Value(DateTime.now()),
+        ),
+      );
+      if (activo) {
+        await attachedDatabase.recordatoriosDao
+            .reactivarRecordatoriosPorReferencia('gasto', id);
+      } else {
+        await attachedDatabase.recordatoriosDao
+            .desactivarRecordatoriosPorReferencia('gasto', id);
+      }
+    });
   }
 
 }

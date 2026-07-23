@@ -35,26 +35,36 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
     return update(deudas).replace(deuda);
   }
 
-  Future<bool> marcarComoPagada(int id, DateTime fechaPago) async {
-    final count = await (update(deudas)..where((t) => t.id.equals(id))).write(
-      DeudasCompanion(
-        estado: const Value('pagada'),
-        fechaPagoReal: Value(fechaPago),
-        actualizadoEn: Value(DateTime.now()),
-      ),
-    );
-    return count > 0;
+  Future<bool> marcarComoPagada(int id, DateTime fechaPago) {
+    return transaction(() async {
+      final count =
+          await (update(deudas)..where((t) => t.id.equals(id))).write(
+        DeudasCompanion(
+          estado: const Value('pagada'),
+          fechaPagoReal: Value(fechaPago),
+          actualizadoEn: Value(DateTime.now()),
+        ),
+      );
+      await attachedDatabase.recordatoriosDao
+          .desactivarRecordatoriosPorReferencia('deuda', id);
+      return count > 0;
+    });
   }
 
-  Future<bool> marcarComoActiva(int id) async {
-    final count = await (update(deudas)..where((t) => t.id.equals(id))).write(
-      DeudasCompanion(
-        estado: const Value('activa'),
-        fechaPagoReal: const Value(null),
-        actualizadoEn: Value(DateTime.now()),
-      ),
-    );
-    return count > 0;
+  Future<bool> marcarComoActiva(int id) {
+    return transaction(() async {
+      final count =
+          await (update(deudas)..where((t) => t.id.equals(id))).write(
+        DeudasCompanion(
+          estado: const Value('activa'),
+          fechaPagoReal: const Value(null),
+          actualizadoEn: Value(DateTime.now()),
+        ),
+      );
+      await attachedDatabase.recordatoriosDao
+          .reactivarRecordatoriosPorReferencia('deuda', id);
+      return count > 0;
+    });
   }
 
   Future<int> deleteDeuda(int id) {
