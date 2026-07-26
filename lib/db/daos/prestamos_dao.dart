@@ -60,17 +60,6 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     });
   }
 
-  Future<bool> marcarComoVencido(int id) async {
-    final count =
-        await (update(prestamos)..where((t) => t.id.equals(id))).write(
-      PrestamosCompanion(
-        estado: const Value('vencido'),
-        actualizadoEn: Value(DateTime.now()),
-      ),
-    );
-    return count > 0;
-  }
-
   Future<void> reactivarPrestamo(int id) {
     return transaction(() async {
       await (update(prestamos)..where((p) => p.id.equals(id))).write(
