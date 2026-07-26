@@ -37,7 +37,16 @@ class ConfigSmtpDao extends DatabaseAccessor<AppDatabase>
     final enc = config.contrasenaEncriptada;
     if (enc == null || enc.isEmpty) return null;
     final decrypted = CryptoService.decrypt(enc);
-    return decrypted.isEmpty ? null : decrypted;
+    if (decrypted.isEmpty) {
+      await (update(configSmtps)..where((t) => t.id.equals(_configId))).write(
+        const ConfigSmtpsCompanion(
+          contrasenaEncriptada: Value(null),
+          tieneContrasena: Value(false),
+        ),
+      );
+      return null;
+    }
+    return decrypted;
   }
 
   Future<void> guardarConfig({

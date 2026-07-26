@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valtiq/services/crypto_service.dart';
@@ -93,6 +95,41 @@ void main() {
         // El código atrapa la excepción y retorna ''
         expect(resultado, isA<String>());
       });
+    });
+
+    group('modo GCM', () {
+      test('roundtrip completo bajo GCM: el IV generado tiene 12 bytes', () {
+        const texto = 'contraseña_smtp_prueba_gcm';
+        final cifrado = CryptoService.encrypt(texto);
+        final ivBase64 = cifrado.split(':').first;
+        final ivBytes = base64.decode(ivBase64);
+
+        expect(ivBytes.length, 12);
+        expect(CryptoService.decrypt(cifrado), texto);
+      });
+
+      test(
+        'migración: ciphertext cifrado con el modo AES anterior (sin GCM) '
+        'falla de forma segura, sin devolver contenido corrupto',
+        () async {
+          final keyFile = File('${tempDir.path}/valtiq_key.bin');
+          final keyBytes = await keyFile.readAsBytes();
+
+          // Encrypter con el modo por defecto anterior a este cambio (sin
+          // especificar `mode`, es decir AESMode.sic), misma clave que usa
+          // CryptoService internamente.
+          final oldEncrypter = enc.Encrypter(enc.AES(enc.Key(keyBytes)));
+          final oldIv = enc.IV.fromSecureRandom(16);
+          const texto = 'contraseña_cifrada_antes_de_migrar_a_gcm';
+          final cifradoViejo = oldEncrypter.encrypt(texto, iv: oldIv);
+          final ciphertext =
+              '${base64.encode(oldIv.bytes)}:${cifradoViejo.base64}';
+
+          final resultado = CryptoService.decrypt(ciphertext);
+
+          expect(resultado, '');
+        },
+      );
     });
   });
 }
