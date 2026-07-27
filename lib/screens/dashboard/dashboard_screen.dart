@@ -25,10 +25,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late final Stream<double> _streamGastos;
   late final Stream<double> _streamGastosVariables;
 
-  late final StreamController<({double ingresos, double gastos, double variables})>
-      _balanceCtrl;
+  late final StreamController<
+    ({double ingresos, double gastos, double variables})
+  >
+  _balanceCtrl;
   late final Stream<({double ingresos, double gastos, double variables})>
-      _streamBalance;
+  _streamBalance;
   StreamSubscription<double>? _subIng, _subGas, _subVar;
   double _bIng = 0, _bGas = 0, _bVar = 0;
 
@@ -40,12 +42,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final d = db.deudas;
     final pd = db.pagosDeuda;
     final sumPagosDeuda = pd.montoAbonado.sum();
-    final queryDeudas = db.select(d).join([
-      leftOuterJoin(pd, pd.deudaId.equalsExp(d.id)),
-    ])
-      ..where(d.estado.equals('activa'))
-      ..groupBy([d.id])
-      ..addColumns([sumPagosDeuda]);
+    final queryDeudas =
+        db.select(d).join([leftOuterJoin(pd, pd.deudaId.equalsExp(d.id))])
+          ..where(d.estado.equals('activa'))
+          ..groupBy([d.id])
+          ..addColumns([sumPagosDeuda]);
 
     _streamDeudas = queryDeudas.watch().map((rows) {
       double total = 0;
@@ -68,12 +69,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final p = db.prestamos;
     final pr = db.pagosRecibidos;
     final sumAbonosPrestamos = pr.montoAbonado.sum();
-    final queryPrestamos = db.select(p).join([
-      leftOuterJoin(pr, pr.prestamoId.equalsExp(p.id)),
-    ])
-      ..where(p.estado.equals('activo'))
-      ..groupBy([p.id])
-      ..addColumns([sumAbonosPrestamos]);
+    final queryPrestamos =
+        db.select(p).join([leftOuterJoin(pr, pr.prestamoId.equalsExp(p.id))])
+          ..where(p.estado.equals('activo'))
+          ..groupBy([p.id])
+          ..addColumns([sumAbonosPrestamos]);
 
     _streamPrestamos = queryPrestamos.watch().map((rows) {
       double total = 0;
@@ -94,37 +94,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     final sumIngresos = db.ingresos.monto.sum();
-    _streamIngresos = (db.selectOnly(db.ingresos)
-          ..addColumns([sumIngresos])
-          ..where(db.ingresos.activo.equals(true)))
-        .watchSingle()
-        .map((row) => row.read(sumIngresos) ?? 0.0);
+    _streamIngresos =
+        (db.selectOnly(db.ingresos)
+              ..addColumns([sumIngresos])
+              ..where(db.ingresos.activo.equals(true)))
+            .watchSingle()
+            .map((row) => row.read(sumIngresos) ?? 0.0);
 
     final sumGastos = db.gastosFijos.monto.sum();
-    _streamGastos = (db.selectOnly(db.gastosFijos)
-          ..addColumns([sumGastos])
-          ..where(db.gastosFijos.activo.equals(true)))
-        .watchSingle()
-        .map((row) => row.read(sumGastos) ?? 0.0);
+    _streamGastos =
+        (db.selectOnly(db.gastosFijos)
+              ..addColumns([sumGastos])
+              ..where(db.gastosFijos.activo.equals(true)))
+            .watchSingle()
+            .map((row) => row.read(sumGastos) ?? 0.0);
 
     final now = DateTime.now();
-    _streamGastosVariables =
-        widget.db.gastosVariablesDao.watchTotalMes(now.year, now.month);
+    _streamGastosVariables = widget.db.gastosVariablesDao.watchTotalMes(
+      now.year,
+      now.month,
+    );
 
     _balanceCtrl = StreamController.broadcast();
     _streamBalance = _balanceCtrl.stream;
-    _subIng = _streamIngresos.listen(
-      (v) { _bIng = v; _emitBalance(); },
-      onError: (_) {},
-    );
-    _subGas = _streamGastos.listen(
-      (v) { _bGas = v; _emitBalance(); },
-      onError: (_) {},
-    );
-    _subVar = _streamGastosVariables.listen(
-      (v) { _bVar = v; _emitBalance(); },
-      onError: (_) {},
-    );
+    _subIng = _streamIngresos.listen((v) {
+      _bIng = v;
+      _emitBalance();
+    }, onError: (_) {});
+    _subGas = _streamGastos.listen((v) {
+      _bGas = v;
+      _emitBalance();
+    }, onError: (_) {});
+    _subVar = _streamGastosVariables.listen((v) {
+      _bVar = v;
+      _emitBalance();
+    }, onError: (_) {});
   }
 
   void _emitBalance() {
@@ -283,10 +287,7 @@ class _ResumenCard extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     formatCOP(valor),
-                    style: monoStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: monoStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     maxLines: 1,
                   ),
                 );
@@ -302,7 +303,8 @@ class _ResumenCard extends StatelessWidget {
 class _BalanceMensualCard extends StatelessWidget {
   const _BalanceMensualCard({required this.streamBalance});
 
-  final Stream<({double ingresos, double gastos, double variables})> streamBalance;
+  final Stream<({double ingresos, double gastos, double variables})>
+  streamBalance;
 
   @override
   Widget build(BuildContext context) {
@@ -310,80 +312,82 @@ class _BalanceMensualCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: StreamBuilder<({double ingresos, double gastos, double variables})>(
-          stream: streamBalance,
-          builder: (context, snap) {
-            if (snap.hasError) {
-              return Center(
-                child: Text(
-                  'Error al cargar los datos.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              );
-            }
-            final ingresos = snap.data?.ingresos ?? 0.0;
-            final gastos = snap.data?.gastos ?? 0.0;
-            final gastosVariables = snap.data?.variables ?? 0.0;
-            final disponible = ingresos - gastos - gastosVariables;
-            final disponibleColor =
-                disponible >= 0 ? AppColors.positivo : AppColors.alerta;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Balance mensual',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _FilaMonto(
-                  label: 'Ingresos',
-                  valor: formatCOP(ingresos),
-                  color: AppColors.positivo,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _FilaMonto(
-                  label: 'Gastos fijos',
-                  valor: '-${formatCOP(gastos)}',
-                  color: AppColors.alerta,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _FilaMonto(
-                  label: 'Gastos variables',
-                  valor: '-${formatCOP(gastosVariables)}',
-                  color: AppColors.alerta,
-                ),
-                const Divider(height: AppSpacing.lg),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child:
+            StreamBuilder<({double ingresos, double gastos, double variables})>(
+              stream: streamBalance,
+              builder: (context, snap) {
+                if (snap.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error al cargar los datos.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  );
+                }
+                final ingresos = snap.data?.ingresos ?? 0.0;
+                final gastos = snap.data?.gastos ?? 0.0;
+                final gastosVariables = snap.data?.variables ?? 0.0;
+                final disponible = ingresos - gastos - gastosVariables;
+                final disponibleColor = disponible >= 0
+                    ? AppColors.positivo
+                    : AppColors.alerta;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Disponible',
+                      'Balance mensual',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          formatCOP(disponible),
-                          style: monoStyle(
-                            fontSize: 24,
+                    const SizedBox(height: AppSpacing.md),
+                    _FilaMonto(
+                      label: 'Ingresos',
+                      valor: formatCOP(ingresos),
+                      color: AppColors.positivo,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _FilaMonto(
+                      label: 'Gastos fijos',
+                      valor: '-${formatCOP(gastos)}',
+                      color: AppColors.alerta,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _FilaMonto(
+                      label: 'Gastos variables',
+                      valor: '-${formatCOP(gastosVariables)}',
+                      color: AppColors.alerta,
+                    ),
+                    const Divider(height: AppSpacing.lg),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Disponible',
+                          style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: disponibleColor,
                           ),
-                          maxLines: 1,
                         ),
-                      ),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              formatCOP(disponible),
+                              style: monoStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: disponibleColor,
+                              ),
+                              maxLines: 1,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
-            );
-          },
-        ),
+                );
+              },
+            ),
       ),
     );
   }
@@ -429,8 +433,9 @@ class _PosicionPrestamosCard extends StatelessWidget {
                 final prestado = snapPres.data ?? 0.0;
                 final deudas = snapDeu.data ?? 0.0;
                 final neto = prestado - deudas;
-                final netoColor =
-                    neto >= 0 ? AppColors.positivo : AppColors.alerta;
+                final netoColor = neto >= 0
+                    ? AppColors.positivo
+                    : AppColors.alerta;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -535,10 +540,14 @@ class _ComparativoCategorias extends StatelessWidget {
                 final actual = snapActual.data ?? {};
                 final anterior = snapAnterior.data ?? {};
 
-                final totalActual =
-                    actual.values.fold<double>(0, (s, v) => s + v);
-                final totalAnterior =
-                    anterior.values.fold<double>(0, (s, v) => s + v);
+                final totalActual = actual.values.fold<double>(
+                  0,
+                  (s, v) => s + v,
+                );
+                final totalAnterior = anterior.values.fold<double>(
+                  0,
+                  (s, v) => s + v,
+                );
 
                 final hayMesAnterior = anterior.isNotEmpty;
                 final hayMesActual = actual.isNotEmpty;
@@ -642,10 +651,7 @@ class _ComparativoCategorias extends StatelessWidget {
 }
 
 class _FraseResumen extends StatelessWidget {
-  const _FraseResumen({
-    required this.totalActual,
-    required this.totalAnterior,
-  });
+  const _FraseResumen({required this.totalActual, required this.totalAnterior});
 
   final double totalActual;
   final double totalAnterior;

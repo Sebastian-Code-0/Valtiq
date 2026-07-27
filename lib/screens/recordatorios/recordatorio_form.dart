@@ -162,9 +162,9 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     } catch (e) {
       setState(() => _guardando = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
       }
     }
   }
@@ -304,7 +304,9 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
                   ],
                   validator: (v) {
                     final n = int.tryParse(v ?? '');
-                    if (n == null || n < 1) return 'Mínimo 1 día de anticipación';
+                    if (n == null || n < 1) {
+                      return 'Mínimo 1 día de anticipación';
+                    }
                     return null;
                   },
                 ),
@@ -322,10 +324,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
                     prefixIcon: Icon(Icons.send_outlined),
                   ),
                   items: const [
-                    DropdownMenuItem(
-                      value: 'sistema',
-                      child: Text('Sistema'),
-                    ),
+                    DropdownMenuItem(value: 'sistema', child: Text('Sistema')),
                     DropdownMenuItem(value: 'correo', child: Text('Correo')),
                     DropdownMenuItem(value: 'ambos', child: Text('Ambos')),
                   ],
@@ -361,8 +360,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
                 SwitchTile(
                   icon: Icons.repeat,
                   title: '¿Se repite cada mes?',
-                  subtitle:
-                      'Si está activo, se reprogramará automáticamente',
+                  subtitle: 'Si está activo, se reprogramará automáticamente',
                   value: _repetir,
                   onChanged: (v) => setState(() => _repetir = v),
                 ),

@@ -32,10 +32,8 @@ class _ShellScreenState extends State<ShellScreen> {
     return Scaffold(
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 220),
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: child,
-        ),
+        transitionBuilder: (child, animation) =>
+            FadeTransition(opacity: animation, child: child),
         child: IndexedStack(
           key: ValueKey(_index),
           index: _index,

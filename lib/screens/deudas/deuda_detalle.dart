@@ -22,9 +22,9 @@ class DeudaDetalle extends StatefulWidget {
 
 class _DeudaDetalleState extends State<DeudaDetalle> {
   Stream<Deuda?> _deudaStream() {
-    return (widget.db.select(widget.db.deudas)
-          ..where((d) => d.id.equals(widget.deudaId)))
-        .watchSingleOrNull();
+    return (widget.db.select(
+      widget.db.deudas,
+    )..where((d) => d.id.equals(widget.deudaId))).watchSingleOrNull();
   }
 
   Stream<List<PagosDeudaData>> _abonosStream() {
@@ -68,10 +68,8 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
   Future<void> _registrarAbono() async {
     await showDialog<bool>(
       context: context,
-      builder: (_) => _RegistrarAbonoDialog(
-        db: widget.db,
-        deudaId: widget.deudaId,
-      ),
+      builder: (_) =>
+          _RegistrarAbonoDialog(db: widget.db, deudaId: widget.deudaId),
     );
   }
 
@@ -259,8 +257,7 @@ class _ResumenCard extends StatelessWidget {
               children: [
                 Text(
                   'Saldo pendiente:',
-                  style:
-                      theme.textTheme.titleSmall?.copyWith(color: colorSec),
+                  style: theme.textTheme.titleSmall?.copyWith(color: colorSec),
                 ),
                 Flexible(
                   child: Text(
@@ -341,15 +338,14 @@ class _InfoCard extends StatelessWidget {
           children: [
             Text(
               'Información',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             _fila(
               'Tasa:',
-              tieneInteres
-                  ? '${_fmtTasa(deuda.tasaInteres)}%'
-                  : 'Sin interés',
+              tieneInteres ? '${_fmtTasa(deuda.tasaInteres)}%' : 'Sin interés',
               colorSec,
               theme,
             ),
@@ -439,8 +435,9 @@ class _AbonosSection extends StatelessWidget {
               children: [
                 Text(
                   'Abonos realizados',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Spacer(),
                 IconButton(
@@ -453,13 +450,13 @@ class _AbonosSection extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             if (abonos.isEmpty)
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: Center(
                   child: Text(
                     'Sin abonos registrados',
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: colorSec),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorSec,
+                    ),
                   ),
                 ),
               )
@@ -469,8 +466,7 @@ class _AbonosSection extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: InkWell(
                     onLongPress: () => onEliminar(p),
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.radiusSm),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         vertical: AppSpacing.sm,
@@ -495,8 +491,9 @@ class _AbonosSection extends StatelessWidget {
                                 if (p.notas.isNotEmpty)
                                   Text(
                                     p.notas,
-                                    style: theme.textTheme.bodySmall
-                                        ?.copyWith(color: colorSec),
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorSec,
+                                    ),
                                   ),
                               ],
                             ),
@@ -569,7 +566,9 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
       setState(() => _guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+          const SnackBar(
+            content: Text('Monto inválido. Verifica el valor ingresado.'),
+          ),
         );
       }
       return;
@@ -587,9 +586,9 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
     } catch (e) {
       setState(() => _guardando = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
       }
     }
   }
@@ -634,8 +633,9 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
               const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _notasCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Notas (opcional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Notas (opcional)',
+                ),
                 maxLines: 2,
               ),
             ],

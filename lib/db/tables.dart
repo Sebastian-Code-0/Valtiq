@@ -15,7 +15,8 @@ class Deudas extends Table {
   TextColumn get estado => text().withDefault(const Constant('activa'))();
   DateTimeColumn get fechaPagoReal => dateTime().nullable()();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
-  DateTimeColumn get actualizadoEn => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get actualizadoEn =>
+      dateTime().withDefault(currentDateAndTime)();
 }
 
 class Prestamos extends Table {
@@ -25,13 +26,15 @@ class Prestamos extends Table {
   RealColumn get montoPrestado => real()();
   RealColumn get tasaInteres => real().withDefault(const Constant(0))();
   TextColumn get tipoInteres => text().withDefault(const Constant('ninguno'))();
-  TextColumn get modalidadCalculo => text().withDefault(const Constant('simple'))();
+  TextColumn get modalidadCalculo =>
+      text().withDefault(const Constant('simple'))();
   DateTimeColumn get fechaPrestamo => dateTime()();
   DateTimeColumn get fechaPactadaPago => dateTime().nullable()();
   TextColumn get estado => text().withDefault(const Constant('activo'))();
   TextColumn get notas => text().withDefault(const Constant(''))();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
-  DateTimeColumn get actualizadoEn => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get actualizadoEn =>
+      dateTime().withDefault(currentDateAndTime)();
 }
 
 class PagosRecibidos extends Table {
@@ -63,7 +66,8 @@ class Ingresos extends Table {
   TextColumn get notas => text().withDefault(const Constant(''))();
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
-  DateTimeColumn get actualizadoEn => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get actualizadoEn =>
+      dateTime().withDefault(currentDateAndTime)();
 }
 
 class GastosFijos extends Table {
@@ -75,7 +79,8 @@ class GastosFijos extends Table {
   TextColumn get notas => text().withDefault(const Constant(''))();
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
-  DateTimeColumn get actualizadoEn => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get actualizadoEn =>
+      dateTime().withDefault(currentDateAndTime)();
 }
 
 class Recordatorios extends Table {
@@ -85,12 +90,14 @@ class Recordatorios extends Table {
   IntColumn get referenciaId => integer().nullable()();
   DateTimeColumn get fechaAlerta => dateTime()();
   IntColumn get diasAnticipacion => integer().withDefault(const Constant(3))();
-  TextColumn get tipoNotificacion => text().withDefault(const Constant('sistema'))();
+  TextColumn get tipoNotificacion =>
+      text().withDefault(const Constant('sistema'))();
   BoolColumn get repetir => boolean().withDefault(const Constant(false))();
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
   // 'unica': avisa una sola vez al entrar en ventana | 'diaria': re-avisa una vez al día
-  TextColumn get frecuenciaAviso => text().withDefault(const Constant('unica'))();
+  TextColumn get frecuenciaAviso =>
+      text().withDefault(const Constant('unica'))();
   DateTimeColumn get ultimaNotificacion => dateTime().nullable()();
   DateTimeColumn get ultimoEnvioCorreo => dateTime().nullable()();
   IntColumn get horaAviso => integer().withDefault(const Constant(12))();
@@ -103,7 +110,8 @@ class ConfigSmtps extends Table {
   IntColumn get puerto => integer().withDefault(const Constant(587))();
   TextColumn get usuario => text().withDefault(const Constant(''))();
   TextColumn get contrasenaEncriptada => text().nullable()();
-  BoolColumn get tieneContrasena => boolean().withDefault(const Constant(false))();
+  BoolColumn get tieneContrasena =>
+      boolean().withDefault(const Constant(false))();
   TextColumn get correoDestino => text().withDefault(const Constant(''))();
   TextColumn get nombreRemitente =>
       text().withDefault(const Constant('Valtiq'))();

@@ -75,9 +75,8 @@ class AcercaDeScreen extends StatelessWidget {
                   title: const Text('Licencia'),
                   subtitle: const Text('GNU General Public License v3.0'),
                   trailing: Icon(Icons.chevron_right, color: colorSec),
-                  onTap: () => _abrirUrl(
-                    'https://www.gnu.org/licenses/gpl-3.0.html',
-                  ),
+                  onTap: () =>
+                      _abrirUrl('https://www.gnu.org/licenses/gpl-3.0.html'),
                 ),
                 const Divider(height: 1, indent: AppSpacing.lg),
                 ListTile(
@@ -85,9 +84,8 @@ class AcercaDeScreen extends StatelessWidget {
                   title: const Text('Código fuente'),
                   subtitle: const Text('github.com/Sebastian-Code-0/Valtiq'),
                   trailing: Icon(Icons.chevron_right, color: colorSec),
-                  onTap: () => _abrirUrl(
-                    'https://github.com/Sebastian-Code-0/Valtiq',
-                  ),
+                  onTap: () =>
+                      _abrirUrl('https://github.com/Sebastian-Code-0/Valtiq'),
                 ),
                 const Divider(height: 1, indent: AppSpacing.lg),
                 ListTile(
@@ -111,7 +109,11 @@ class AcercaDeScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.shield_outlined, size: 18, color: AppColors.acento),
+                      const Icon(
+                        Icons.shield_outlined,
+                        size: 18,
+                        color: AppColors.acento,
+                      ),
                       const SizedBox(width: AppSpacing.sm),
                       Text(
                         'Privacidad',

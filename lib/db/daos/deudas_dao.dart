@@ -10,9 +10,9 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
   DeudasDao(super.db);
 
   Future<List<Deuda>> getAllDeudas() {
-    return (select(deudas)
-          ..orderBy([(t) => OrderingTerm.desc(t.fechaPrestamo)]))
-        .get();
+    return (select(
+      deudas,
+    )..orderBy([(t) => OrderingTerm.desc(t.fechaPrestamo)])).get();
   }
 
   Future<List<Deuda>> getDeudasActivas() {
@@ -42,8 +42,7 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
 
   Future<bool> marcarComoPagada(int id, DateTime fechaPago) {
     return transaction(() async {
-      final count =
-          await (update(deudas)..where((t) => t.id.equals(id))).write(
+      final count = await (update(deudas)..where((t) => t.id.equals(id))).write(
         DeudasCompanion(
           estado: const Value('pagada'),
           fechaPagoReal: Value(fechaPago),
@@ -58,8 +57,7 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
 
   Future<bool> marcarComoActiva(int id) {
     return transaction(() async {
-      final count =
-          await (update(deudas)..where((t) => t.id.equals(id))).write(
+      final count = await (update(deudas)..where((t) => t.id.equals(id))).write(
         DeudasCompanion(
           estado: const Value('activa'),
           fechaPagoReal: const Value(null),
@@ -78,9 +76,9 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
 
   Future<void> deleteDeudaConPagos(int id) {
     return transaction(() async {
-      await (delete(attachedDatabase.pagosDeuda)
-            ..where((t) => t.deudaId.equals(id)))
-          .go();
+      await (delete(
+        attachedDatabase.pagosDeuda,
+      )..where((t) => t.deudaId.equals(id))).go();
       await (delete(deudas)..where((t) => t.id.equals(id))).go();
       await attachedDatabase.recordatoriosDao
           .desactivarRecordatoriosPorReferencia('deuda', id);

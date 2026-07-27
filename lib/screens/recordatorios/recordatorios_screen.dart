@@ -128,9 +128,9 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
       body: '🔔 Prueba — ${fechaRelativa(r.fechaAlerta)}',
     );
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notificación enviada')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Notificación enviada')));
     }
   }
 
@@ -237,7 +237,9 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
                         onTap: () => _abrirForm(recordatorio: r),
                         onLongPress: () => _confirmarEliminar(r),
                         onProbarNotificacion: () => _probarNotificacion(r),
-                        onInactivar: _mostrarInactivos ? null : () => _inactivar(r),
+                        onInactivar: _mostrarInactivos
+                            ? null
+                            : () => _inactivar(r),
                         onActivar: _mostrarInactivos ? () => _activar(r) : null,
                         onEliminar: () => _confirmarEliminar(r),
                       );
@@ -376,10 +378,7 @@ class _RecordatorioCard extends StatelessWidget {
                           value: 'inactivar',
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.pause_circle_outline,
-                                size: 18,
-                              ),
+                              Icon(Icons.pause_circle_outline, size: 18),
                               SizedBox(width: AppSpacing.sm),
                               Text('Inactivar'),
                             ],

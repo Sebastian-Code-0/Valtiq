@@ -22,14 +22,7 @@ class FormSection extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       child: Padding(
-        padding:
-            padding ??
-            const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-            ),
+        padding: padding ?? const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -94,10 +87,7 @@ class DatePickerField extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
-          border: Border.all(
-            color: theme.dividerColor,
-            width: 1,
-          ),
+          border: Border.all(color: theme.dividerColor, width: 1),
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         ),
         child: Row(
@@ -110,9 +100,7 @@ class DatePickerField extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorSec,
-                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -170,10 +158,7 @@ class FormSaveButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         icon: loading
             ? const SizedBox(

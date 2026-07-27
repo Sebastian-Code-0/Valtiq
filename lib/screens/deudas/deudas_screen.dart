@@ -33,20 +33,21 @@ class _DeudasScreenState extends State<DeudasScreen> {
     final pd = widget.db.pagosDeuda;
     final sumExpr = pd.montoAbonado.sum();
 
-    final query = widget.db.select(d).join([
-      leftOuterJoin(pd, pd.deudaId.equalsExp(d.id)),
-    ])
-      ..where(d.estado.equals(estado))
-      ..groupBy([d.id])
-      ..orderBy([OrderingTerm.desc(d.fechaPrestamo)])
-      ..addColumns([sumExpr]);
+    final query =
+        widget.db.select(d).join([
+            leftOuterJoin(pd, pd.deudaId.equalsExp(d.id)),
+          ])
+          ..where(d.estado.equals(estado))
+          ..groupBy([d.id])
+          ..orderBy([OrderingTerm.desc(d.fechaPrestamo)])
+          ..addColumns([sumExpr]);
 
     return query.watch().map(
       (rows) => rows
-          .map((row) => _DeudaConAbonos(
-                row.readTable(d),
-                row.read(sumExpr) ?? 0.0,
-              ))
+          .map(
+            (row) =>
+                _DeudaConAbonos(row.readTable(d), row.read(sumExpr) ?? 0.0),
+          )
           .toList(),
     );
   }
@@ -189,15 +190,12 @@ class _DeudasScreenState extends State<DeudasScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: () => setState(
-                    () => _mostrarPagadas = !_mostrarPagadas,
-                  ),
+                  onPressed: () =>
+                      setState(() => _mostrarPagadas = !_mostrarPagadas),
                   icon: Icon(
                     _mostrarPagadas ? Icons.visibility : Icons.history,
                   ),
-                  label: Text(
-                    _mostrarPagadas ? 'Ver activas' : 'Ver pagadas',
-                  ),
+                  label: Text(_mostrarPagadas ? 'Ver activas' : 'Ver pagadas'),
                 ),
               ),
             ),
@@ -448,7 +446,9 @@ class _DeudaCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(
                             AppSpacing.radiusSm,
                           ),
@@ -492,7 +492,9 @@ class _DeudaCard extends StatelessWidget {
                       style: monoStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: saldo > 0 ? AppColors.alerta : AppColors.positivo,
+                        color: saldo > 0
+                            ? AppColors.alerta
+                            : AppColors.positivo,
                       ),
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,

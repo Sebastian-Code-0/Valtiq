@@ -5,6 +5,22 @@ import 'app_spacing.dart';
 import 'app_typography.dart';
 
 abstract class AppTheme {
+  static ElevatedButtonThemeData _elevatedButtonTheme() {
+    return ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primario,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(
+          vertical: 14,
+          horizontal: AppSpacing.lg,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        ),
+      ),
+    );
+  }
+
   static ThemeData light([Color acento = AppColors.acento]) {
     return ThemeData(
       useMaterial3: true,
@@ -38,19 +54,7 @@ abstract class AppTheme {
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primario,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            vertical: 14,
-            horizontal: AppSpacing.lg,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-          ),
-        ),
-      ),
+      elevatedButtonTheme: _elevatedButtonTheme(),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.superficieClaro,
@@ -83,6 +87,7 @@ abstract class AppTheme {
         error: AppColors.alerta,
         surface: AppColors.superficieOscuro,
         onSurface: AppColors.textoOscuro,
+        onPrimary: Colors.white,
       ),
       scaffoldBackgroundColor: AppColors.fondoOscuro,
       textTheme: textTheme().apply(
@@ -102,19 +107,7 @@ abstract class AppTheme {
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primario,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            vertical: 14,
-            horizontal: AppSpacing.lg,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-          ),
-        ),
-      ),
+      elevatedButtonTheme: _elevatedButtonTheme(),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.superficieOscuro,

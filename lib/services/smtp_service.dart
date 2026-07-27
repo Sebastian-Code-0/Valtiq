@@ -104,8 +104,9 @@ class SmtpService {
     required String cuerpo,
   }) async {
     try {
-      final remitente =
-          config.nombreRemitente.isEmpty ? 'Valtiq' : config.nombreRemitente;
+      final remitente = config.nombreRemitente.isEmpty
+          ? 'Valtiq'
+          : config.nombreRemitente;
       final mensaje = Message()
         ..from = Address(config.usuario, remitente)
         ..recipients.add(config.correoDestino)
@@ -133,8 +134,9 @@ class SmtpService {
   }) async {
     try {
       final server = _build(config, password);
-      final remitente =
-          config.nombreRemitente.isEmpty ? 'Valtiq' : config.nombreRemitente;
+      final remitente = config.nombreRemitente.isEmpty
+          ? 'Valtiq'
+          : config.nombreRemitente;
       final mensaje = Message()
         ..from = Address(config.usuario, remitente)
         ..recipients.add(config.correoDestino)
@@ -156,11 +158,15 @@ class SmtpService {
 
   static String _mensajeAmigable(String errorTecnico) {
     final e = errorTecnico.toLowerCase();
-    if (e.contains('535') || e.contains('authentication') ||
-        e.contains('password not accepted') || e.contains('badcredentials')) {
+    if (e.contains('535') ||
+        e.contains('authentication') ||
+        e.contains('password not accepted') ||
+        e.contains('badcredentials')) {
       return 'Credenciales incorrectas. Si usas Gmail, necesitas una Contraseña de Aplicación (no tu contraseña normal). Ve a myaccount.google.com → Seguridad → Verificación en dos pasos → Contraseñas de aplicación.';
     }
-    if (e.contains('connection') || e.contains('timeout') || e.contains('connect')) {
+    if (e.contains('connection') ||
+        e.contains('timeout') ||
+        e.contains('connect')) {
       return 'No se pudo conectar al servidor de correo. Verifica tu conexión a internet y los datos del servidor SMTP.';
     }
     if (e.contains('550') || e.contains('recipient')) {

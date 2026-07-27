@@ -56,9 +56,7 @@ abstract class InteresCalculator {
     final fin = fechaFin ?? DateTime.now();
     final meses = _mesesTranscurridos(fechaInicio, fin);
     if (meses <= 0) return 0;
-    final tasaMensual = tipoInteres == 'anual'
-        ? tasaInteres / 12
-        : tasaInteres;
+    final tasaMensual = tipoInteres == 'anual' ? tasaInteres / 12 : tasaInteres;
     return monto * (tasaMensual / 100) * meses;
   }
 

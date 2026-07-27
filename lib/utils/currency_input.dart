@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 
+import 'numero_utils.dart';
+
 double? parseCOP(String input) {
   var s = input.trim();
   if (s.isEmpty) return null;
@@ -12,31 +14,23 @@ double? parseCOP(String input) {
 
 String formatCOPInput(double value) {
   final entero = value.abs().round();
-  final str = entero.toString();
-  final buffer = StringBuffer();
-  for (var i = 0; i < str.length; i++) {
-    if (i > 0 && (str.length - i) % 3 == 0) buffer.write('.');
-    buffer.write(str[i]);
-  }
-  return value < 0 ? '-$buffer' : buffer.toString();
+  final agrupado = agruparMiles(entero.toString());
+  return value < 0 ? '-$agrupado' : agrupado;
 }
 
 class CopInputFormatter extends TextInputFormatter {
+  static final RegExp _noDigitos = RegExp(r'[^0-9]');
+
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final digits = newValue.text.replaceAll(_noDigitos, '');
     if (digits.isEmpty) {
       return const TextEditingValue();
     }
-    final buffer = StringBuffer();
-    for (var i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) buffer.write('.');
-      buffer.write(digits[i]);
-    }
-    final formatted = buffer.toString();
+    final formatted = agruparMiles(digits);
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),

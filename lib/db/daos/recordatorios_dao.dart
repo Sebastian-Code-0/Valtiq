@@ -15,18 +15,18 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<Recordatorio?> getRecordatorioById(int id) {
-    return (select(recordatorios)..where((t) => t.id.equals(id))).getSingleOrNull();
+    return (select(
+      recordatorios,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<List<Recordatorio>> getRecordatoriosPorReferencia(
     String tabla,
     int refId,
   ) {
-    return (select(recordatorios)
-          ..where(
-            (t) =>
-                t.referenciaTabla.equals(tabla) & t.referenciaId.equals(refId),
-          ))
+    return (select(recordatorios)..where(
+          (t) => t.referenciaTabla.equals(tabla) & t.referenciaId.equals(refId),
+        ))
         .get();
   }
 
@@ -43,71 +43,61 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<bool> desactivarRecordatorio(int id) async {
-    final count =
-        await (update(recordatorios)..where((t) => t.id.equals(id))).write(
-      const RecordatoriosCompanion(activo: Value(false)),
-    );
+    final count = await (update(recordatorios)..where((t) => t.id.equals(id)))
+        .write(const RecordatoriosCompanion(activo: Value(false)));
     return count > 0;
   }
 
   Future<bool> activarRecordatorio(int id) async {
-    final count =
-        await (update(recordatorios)..where((t) => t.id.equals(id))).write(
-      const RecordatoriosCompanion(activo: Value(true)),
-    );
+    final count = await (update(recordatorios)..where((t) => t.id.equals(id)))
+        .write(const RecordatoriosCompanion(activo: Value(true)));
     return count > 0;
   }
 
   Future<int> marcarNotificado(int id, DateTime cuando) =>
-      (update(recordatorios)..where((t) => t.id.equals(id)))
-          .write(RecordatoriosCompanion(ultimaNotificacion: Value(cuando)));
+      (update(recordatorios)..where((t) => t.id.equals(id))).write(
+        RecordatoriosCompanion(ultimaNotificacion: Value(cuando)),
+      );
 
   Future<int> marcarEnvioCorreo(int id, DateTime cuando) =>
-      (update(recordatorios)..where((t) => t.id.equals(id)))
-          .write(RecordatoriosCompanion(ultimoEnvioCorreo: Value(cuando)));
+      (update(recordatorios)..where((t) => t.id.equals(id))).write(
+        RecordatoriosCompanion(ultimoEnvioCorreo: Value(cuando)),
+      );
 
   Future<int> resetearDeduplicacion(int id) =>
-      (update(recordatorios)..where((t) => t.id.equals(id)))
-          .write(const RecordatoriosCompanion(
-            ultimaNotificacion: Value(null),
-            ultimoEnvioCorreo: Value(null),
-          ));
+      (update(recordatorios)..where((t) => t.id.equals(id))).write(
+        const RecordatoriosCompanion(
+          ultimaNotificacion: Value(null),
+          ultimoEnvioCorreo: Value(null),
+        ),
+      );
 
   Future<int> reprogramarMensual(int id, DateTime nuevaFecha) =>
-      (update(recordatorios)..where((t) => t.id.equals(id)))
-          .write(RecordatoriosCompanion(
-            fechaAlerta: Value(nuevaFecha),
-            ultimaNotificacion: const Value(null),
-            ultimoEnvioCorreo: const Value(null),
-          ));
+      (update(recordatorios)..where((t) => t.id.equals(id))).write(
+        RecordatoriosCompanion(
+          fechaAlerta: Value(nuevaFecha),
+          ultimaNotificacion: const Value(null),
+          ultimoEnvioCorreo: const Value(null),
+        ),
+      );
 
-  Future<int> desactivarRecordatoriosPorReferencia(
-    String tabla,
-    int refId,
-  ) {
-    return (update(recordatorios)
-          ..where(
-            (r) =>
-                r.referenciaTabla.equals(tabla) &
-                r.referenciaId.equals(refId) &
-                r.activo.equals(true),
-          ))
-        .write(
-          const RecordatoriosCompanion(activo: Value(false)),
-        );
+  Future<int> desactivarRecordatoriosPorReferencia(String tabla, int refId) {
+    return (update(recordatorios)..where(
+          (r) =>
+              r.referenciaTabla.equals(tabla) &
+              r.referenciaId.equals(refId) &
+              r.activo.equals(true),
+        ))
+        .write(const RecordatoriosCompanion(activo: Value(false)));
   }
 
-  Future<int> reactivarRecordatoriosPorReferencia(
-    String tabla,
-    int refId,
-  ) {
-    return (update(recordatorios)
-          ..where(
-            (r) =>
-                r.referenciaTabla.equals(tabla) &
-                r.referenciaId.equals(refId) &
-                r.activo.equals(false),
-          ))
+  Future<int> reactivarRecordatoriosPorReferencia(String tabla, int refId) {
+    return (update(recordatorios)..where(
+          (r) =>
+              r.referenciaTabla.equals(tabla) &
+              r.referenciaId.equals(refId) &
+              r.activo.equals(false),
+        ))
         .write(
           const RecordatoriosCompanion(
             activo: Value(true),

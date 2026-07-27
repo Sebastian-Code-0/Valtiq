@@ -31,15 +31,17 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
   @override
   void initState() {
     super.initState();
-    _streamIngresos = (widget.db.select(widget.db.ingresos)
-          ..orderBy([(i) => OrderingTerm.desc(i.fecha)]))
-        .watch();
+    _streamIngresos = (widget.db.select(
+      widget.db.ingresos,
+    )..orderBy([(i) => OrderingTerm.desc(i.fecha)])).watch();
     final now = DateTime.now();
-    _streamGastosVariables =
-        widget.db.gastosVariablesDao.watchGastosPorMes(now.year, now.month);
-    _streamGastos = (widget.db.select(widget.db.gastosFijos)
-          ..orderBy([(g) => OrderingTerm.asc(g.concepto)]))
-        .watch();
+    _streamGastosVariables = widget.db.gastosVariablesDao.watchGastosPorMes(
+      now.year,
+      now.month,
+    );
+    _streamGastos = (widget.db.select(
+      widget.db.gastosFijos,
+    )..orderBy([(g) => OrderingTerm.asc(g.concepto)])).watch();
   }
 
   Future<void> _abrirIngresoForm({Ingreso? ingreso}) async {
@@ -176,20 +178,20 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
     return Scaffold(
       floatingActionButton: switch (_modo) {
         'ingresos' => FloatingActionButton(
-            heroTag: 'fab_ingresos',
-            onPressed: () => _abrirIngresoForm(),
-            child: const Icon(Icons.add),
-          ),
+          heroTag: 'fab_ingresos',
+          onPressed: () => _abrirIngresoForm(),
+          child: const Icon(Icons.add),
+        ),
         'variables' => FloatingActionButton(
-            heroTag: 'fab_variables',
-            onPressed: () => _abrirGastoVariableForm(),
-            child: const Icon(Icons.add),
-          ),
+          heroTag: 'fab_variables',
+          onPressed: () => _abrirGastoVariableForm(),
+          child: const Icon(Icons.add),
+        ),
         _ => FloatingActionButton(
-            heroTag: 'fab_gastos',
-            onPressed: () => _abrirGastoForm(),
-            child: const Icon(Icons.add),
-          ),
+          heroTag: 'fab_gastos',
+          onPressed: () => _abrirGastoForm(),
+          child: const Icon(Icons.add),
+        ),
       },
       body: SafeArea(
         child: Padding(
@@ -212,20 +214,18 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                 child: SegmentedButton<String>(
                   segments: const [
                     ButtonSegment(value: 'ingresos', label: Text('Ingresos')),
-                    ButtonSegment(
-                      value: 'gastos',
-                      label: Text('Gastos Fijos'),
-                    ),
-                    ButtonSegment(
-                      value: 'variables',
-                      label: Text('Variables'),
-                    ),
+                    ButtonSegment(value: 'gastos', label: Text('Gastos Fijos')),
+                    ButtonSegment(value: 'variables', label: Text('Variables')),
                   ],
                   selected: {_modo},
                   onSelectionChanged: (s) => setState(() => _modo = s.first),
                   style: SegmentedButton.styleFrom(
-                    selectedBackgroundColor: Theme.of(context).colorScheme.primary,
-                    selectedForegroundColor: Theme.of(context).colorScheme.onPrimary,
+                    selectedBackgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary,
+                    selectedForegroundColor: Theme.of(
+                      context,
+                    ).colorScheme.onPrimary,
                   ),
                 ),
               ),
@@ -234,8 +234,8 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                 child: _modo == 'variables'
                     ? _listaGastosVariables(theme, colorSec)
                     : (_modo == 'ingresos'
-                        ? _listaIngresos(theme, colorSec)
-                        : _listaGastos(theme, colorSec)),
+                          ? _listaIngresos(theme, colorSec)
+                          : _listaGastos(theme, colorSec)),
               ),
             ],
           ),
@@ -287,11 +287,9 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                           gasto: g,
                           colorSec: colorSec,
                           onTap: () => _abrirGastoVariableForm(gasto: g),
-                          onLongPress: () =>
-                              _confirmarEliminarGastoVariable(g),
+                          onLongPress: () => _confirmarEliminarGastoVariable(g),
                           onEditar: () => _abrirGastoVariableForm(gasto: g),
-                          onEliminar: () =>
-                              _confirmarEliminarGastoVariable(g),
+                          onEliminar: () => _confirmarEliminarGastoVariable(g),
                         );
                       },
                     ),

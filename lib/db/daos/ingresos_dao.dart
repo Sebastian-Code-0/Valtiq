@@ -11,8 +11,9 @@ class IngresosDao extends DatabaseAccessor<AppDatabase>
   IngresosDao(super.db);
 
   Future<List<Ingreso>> getAllIngresos() {
-    return (select(ingresos)..orderBy([(t) => OrderingTerm.desc(t.fecha)]))
-        .get();
+    return (select(
+      ingresos,
+    )..orderBy([(t) => OrderingTerm.desc(t.fecha)])).get();
   }
 
   Future<List<Ingreso>> getIngresosActivos() {

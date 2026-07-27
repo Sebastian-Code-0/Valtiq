@@ -26,9 +26,9 @@ class PrestamoDetalle extends StatefulWidget {
 
 class _PrestamoDetalleState extends State<PrestamoDetalle> {
   Stream<Prestamo?> _prestamoStream() {
-    return (widget.db.select(widget.db.prestamos)
-          ..where((p) => p.id.equals(widget.prestamoId)))
-        .watchSingleOrNull();
+    return (widget.db.select(
+      widget.db.prestamos,
+    )..where((p) => p.id.equals(widget.prestamoId))).watchSingleOrNull();
   }
 
   Stream<List<PagosRecibido>> _pagosStream() {
@@ -75,10 +75,8 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
   Future<void> _registrarPago() async {
     await showDialog<bool>(
       context: context,
-      builder: (_) => _RegistrarPagoDialog(
-        db: widget.db,
-        prestamoId: widget.prestamoId,
-      ),
+      builder: (_) =>
+          _RegistrarPagoDialog(db: widget.db, prestamoId: widget.prestamoId),
     );
   }
 
@@ -125,7 +123,8 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
             ),
           );
         }
-        if (!prestamoSnap.hasData && prestamoSnap.connectionState == ConnectionState.waiting) {
+        if (!prestamoSnap.hasData &&
+            prestamoSnap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -321,8 +320,11 @@ class _ResumenCard extends StatelessWidget {
           children: [
             Text(
               label,
-              style: (chico ? theme.textTheme.bodySmall : theme.textTheme.bodyMedium)
-                  ?.copyWith(color: colorSec),
+              style:
+                  (chico
+                          ? theme.textTheme.bodySmall
+                          : theme.textTheme.bodyMedium)
+                      ?.copyWith(color: colorSec),
             ),
             Flexible(
               child: Text(
@@ -376,7 +378,14 @@ class _InfoCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            _fila('Tasa:', tieneInteres ? '${_fmtTasa(prestamo.tasaInteres)}%' : 'Sin interés', colorSec, theme),
+            _fila(
+              'Tasa:',
+              tieneInteres
+                  ? '${_fmtTasa(prestamo.tasaInteres)}%'
+                  : 'Sin interés',
+              colorSec,
+              theme,
+            ),
             _fila('Tipo:', prestamo.tipoInteres, colorSec, theme),
             _fila('Modalidad:', prestamo.modalidadCalculo, colorSec, theme),
             _fila(
@@ -422,9 +431,7 @@ class _InfoCard extends StatelessWidget {
               style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
             ),
           ),
-          Expanded(
-            child: Text(valor, style: theme.textTheme.bodyMedium),
-          ),
+          Expanded(child: Text(valor, style: theme.textTheme.bodyMedium)),
         ],
       ),
     );
@@ -591,7 +598,9 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
       setState(() => _guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+          const SnackBar(
+            content: Text('Monto inválido. Verifica el valor ingresado.'),
+          ),
         );
       }
       return;
@@ -609,9 +618,9 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
     } catch (e) {
       setState(() => _guardando = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
       }
     }
   }
@@ -656,8 +665,9 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
               const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _notasCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Notas (opcional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Notas (opcional)',
+                ),
                 maxLines: 2,
               ),
             ],
@@ -666,9 +676,7 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _guardando
-              ? null
-              : () => Navigator.pop(context, false),
+          onPressed: _guardando ? null : () => Navigator.pop(context, false),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(

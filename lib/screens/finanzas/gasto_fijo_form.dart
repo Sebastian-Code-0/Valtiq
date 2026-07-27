@@ -36,9 +36,7 @@ class _GastoFijoFormState extends State<GastoFijoForm> {
     _montoCtrl = TextEditingController(
       text: g != null ? formatCOPInput(g.monto) : '',
     );
-    _diaCobroCtrl = TextEditingController(
-      text: g?.diaCobro?.toString() ?? '',
-    );
+    _diaCobroCtrl = TextEditingController(text: g?.diaCobro?.toString() ?? '');
     _notasCtrl = TextEditingController(text: g?.notas ?? '');
     _frecuencia = g?.frecuencia ?? 'mensual';
   }
@@ -62,7 +60,9 @@ class _GastoFijoFormState extends State<GastoFijoForm> {
       setState(() => _guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+          const SnackBar(
+            content: Text('Monto inválido. Verifica el valor ingresado.'),
+          ),
         );
       }
       return;
@@ -99,9 +99,9 @@ class _GastoFijoFormState extends State<GastoFijoForm> {
     } catch (e) {
       setState(() => _guardando = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
       }
     }
   }
@@ -166,18 +166,12 @@ class _GastoFijoFormState extends State<GastoFijoForm> {
                     prefixIcon: Icon(Icons.repeat),
                   ),
                   items: const [
-                    DropdownMenuItem(
-                      value: 'mensual',
-                      child: Text('Mensual'),
-                    ),
+                    DropdownMenuItem(value: 'mensual', child: Text('Mensual')),
                     DropdownMenuItem(
                       value: 'quincenal',
                       child: Text('Quincenal'),
                     ),
-                    DropdownMenuItem(
-                      value: 'semanal',
-                      child: Text('Semanal'),
-                    ),
+                    DropdownMenuItem(value: 'semanal', child: Text('Semanal')),
                   ],
                   onChanged: (v) =>
                       setState(() => _frecuencia = v ?? 'mensual'),

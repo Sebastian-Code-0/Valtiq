@@ -104,7 +104,9 @@ class _DeudaFormState extends State<DeudaForm> {
       setState(() => _guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+          const SnackBar(
+            content: Text('Monto inválido. Verifica el valor ingresado.'),
+          ),
         );
       }
       return;
@@ -153,9 +155,9 @@ class _DeudaFormState extends State<DeudaForm> {
     } catch (e) {
       setState(() => _guardando = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
       }
     }
   }
@@ -243,14 +245,8 @@ class _DeudaFormState extends State<DeudaForm> {
                     prefixIcon: Icon(Icons.swap_horiz),
                   ),
                   items: const [
-                    DropdownMenuItem(
-                      value: 'ninguno',
-                      child: Text('Ninguno'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'mensual',
-                      child: Text('Mensual'),
-                    ),
+                    DropdownMenuItem(value: 'ninguno', child: Text('Ninguno')),
+                    DropdownMenuItem(value: 'mensual', child: Text('Mensual')),
                     DropdownMenuItem(value: 'anual', child: Text('Anual')),
                   ],
                   onChanged: tieneInteres
@@ -272,8 +268,7 @@ class _DeudaFormState extends State<DeudaForm> {
                     ),
                   ],
                   onChanged: tieneInteres
-                      ? (v) =>
-                          setState(() => _modalidadCalculo = v ?? 'simple')
+                      ? (v) => setState(() => _modalidadCalculo = v ?? 'simple')
                       : null,
                 ),
               ],

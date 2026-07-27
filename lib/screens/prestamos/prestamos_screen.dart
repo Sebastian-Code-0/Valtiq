@@ -45,10 +45,8 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
     return query.watch().map(
       (rows) => rows
           .map(
-            (row) => _PrestamoConAbonos(
-              row.readTable(p),
-              row.read(sumExpr) ?? 0.0,
-            ),
+            (row) =>
+                _PrestamoConAbonos(row.readTable(p), row.read(sumExpr) ?? 0.0),
           )
           .toList(),
     );
@@ -67,10 +65,7 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PrestamoDetalle(
-          db: widget.db,
-          prestamoId: prestamoId,
-        ),
+        builder: (_) => PrestamoDetalle(db: widget.db, prestamoId: prestamoId),
       ),
     );
   }
@@ -204,15 +199,12 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: () => setState(
-                    () => _mostrarPagados = !_mostrarPagados,
-                  ),
+                  onPressed: () =>
+                      setState(() => _mostrarPagados = !_mostrarPagados),
                   icon: Icon(
                     _mostrarPagados ? Icons.visibility : Icons.history,
                   ),
-                  label: Text(
-                    _mostrarPagados ? 'Ver activos' : 'Ver pagados',
-                  ),
+                  label: Text(_mostrarPagados ? 'Ver activos' : 'Ver pagados'),
                 ),
               ),
             ),
@@ -317,7 +309,8 @@ class _PrestamoCard extends StatelessWidget {
       fechaPrestamo: prestamo.fechaPrestamo,
       totalAbonado: abonado,
     );
-    final vencido = prestamo.fechaPactadaPago != null &&
+    final vencido =
+        prestamo.fechaPactadaPago != null &&
         prestamo.fechaPactadaPago!.isBefore(DateTime.now()) &&
         prestamo.estado == 'activo';
 
@@ -450,7 +443,9 @@ class _PrestamoCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(
                           AppSpacing.radiusSm,
                         ),
@@ -492,9 +487,7 @@ class _PrestamoCard extends StatelessWidget {
                 children: [
                   Text(
                     'Saldo pendiente',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorSec,
-                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
                   ),
                   Flexible(
                     child: Text(

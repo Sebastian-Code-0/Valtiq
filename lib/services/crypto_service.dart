@@ -48,7 +48,10 @@ abstract class CryptoService {
   }
 
   static String encrypt(String plaintext) {
-    assert(_encrypter != null, 'CryptoService.init() must be called before encrypt()');
+    assert(
+      _encrypter != null,
+      'CryptoService.init() must be called before encrypt()',
+    );
     if (plaintext.isEmpty) return '';
     final iv = enc.IV.fromSecureRandom(12);
     final encrypted = _encrypter!.encrypt(plaintext, iv: iv);

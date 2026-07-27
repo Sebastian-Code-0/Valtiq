@@ -50,7 +50,8 @@ class NotificationService {
     if (Platform.isAndroid) {
       final androidImpl = _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       const canal = AndroidNotificationChannel(
         'valtiq_recordatorios',
         'Recordatorios',
@@ -92,7 +93,9 @@ class NotificationService {
       details = const NotificationDetails(android: androidDetails);
     } else {
       // Windows: basic toast notification; no extra details needed.
-      details = const NotificationDetails(windows: WindowsNotificationDetails());
+      details = const NotificationDetails(
+        windows: WindowsNotificationDetails(),
+      );
     }
 
     await _plugin.show(
@@ -144,7 +147,11 @@ class NotificationService {
     // notificar hoy.
     final accionables = <(Recordatorio, int)>[];
     for (final r in lista) {
-      final diaAlerta = DateTime(r.fechaAlerta.year, r.fechaAlerta.month, r.fechaAlerta.day);
+      final diaAlerta = DateTime(
+        r.fechaAlerta.year,
+        r.fechaAlerta.month,
+        r.fechaAlerta.day,
+      );
       final diasFaltantes = diaAlerta.difference(hoy).inDays;
 
       // Si pasó la ventana de gracia y tiene repetir, reprogramar al mes siguiente.
@@ -152,8 +159,16 @@ class NotificationService {
         // Avanza mes a mes hasta que la fecha quede en ventana o futuro.
         DateTime nuevaFecha = r.fechaAlerta;
         while (true) {
-          nuevaFecha = DateTime(nuevaFecha.year, nuevaFecha.month + 1, nuevaFecha.day);
-          final diaNuevo = DateTime(nuevaFecha.year, nuevaFecha.month, nuevaFecha.day);
+          nuevaFecha = DateTime(
+            nuevaFecha.year,
+            nuevaFecha.month + 1,
+            nuevaFecha.day,
+          );
+          final diaNuevo = DateTime(
+            nuevaFecha.year,
+            nuevaFecha.month,
+            nuevaFecha.day,
+          );
           final diff = diaNuevo.difference(hoy).inDays;
           if (diff >= -7) break;
         }
@@ -161,7 +176,8 @@ class NotificationService {
         continue;
       }
 
-      final dentroDeVentana = diasFaltantes <= r.diasAnticipacion && diasFaltantes >= -7;
+      final dentroDeVentana =
+          diasFaltantes <= r.diasAnticipacion && diasFaltantes >= -7;
       if (!dentroDeVentana) continue;
 
       accionables.add((r, diasFaltantes));
@@ -171,8 +187,13 @@ class NotificationService {
     // se vaya a enviar en esta corrida.
     final necesitaSmtp = accionables.any((item) {
       final r = item.$1;
-      return (r.tipoNotificacion == 'correo' || r.tipoNotificacion == 'ambos') &&
-          _debeAvisar(frecuencia: r.frecuenciaAviso, ultimoAviso: r.ultimoEnvioCorreo, hoy: hoy);
+      return (r.tipoNotificacion == 'correo' ||
+              r.tipoNotificacion == 'ambos') &&
+          _debeAvisar(
+            frecuencia: r.frecuenciaAviso,
+            ultimoAviso: r.ultimoEnvioCorreo,
+            hoy: hoy,
+          );
     });
 
     ConfigSmtp? smtpConfig;
@@ -180,7 +201,8 @@ class NotificationService {
 
     if (necesitaSmtp) {
       final config = await db.configSmtpDao.getConfig();
-      final configCompleta = config.habilitado &&
+      final configCompleta =
+          config.habilitado &&
           config.servidor.isNotEmpty &&
           config.usuario.isNotEmpty &&
           config.correoDestino.isNotEmpty;
@@ -202,12 +224,25 @@ class NotificationService {
         final r = item.$1;
         final diasFaltantes = item.$2;
         final tipo = r.tipoNotificacion;
-        final contenido =
-            _buildContenido(r, deudasPorId, prestamosPorId, gastosPorId, diasFaltantes);
+        final contenido = _buildContenido(
+          r,
+          deudasPorId,
+          prestamosPorId,
+          gastosPorId,
+          diasFaltantes,
+        );
 
         if (tipo == 'sistema' || tipo == 'ambos') {
-          if (_debeAvisar(frecuencia: r.frecuenciaAviso, ultimoAviso: r.ultimaNotificacion, hoy: hoy)) {
-            await showNotification(id: r.id, title: r.titulo, body: contenido.sistema);
+          if (_debeAvisar(
+            frecuencia: r.frecuenciaAviso,
+            ultimoAviso: r.ultimaNotificacion,
+            hoy: hoy,
+          )) {
+            await showNotification(
+              id: r.id,
+              title: r.titulo,
+              body: contenido.sistema,
+            );
             await db.recordatoriosDao.marcarNotificado(r.id, ahora);
             notificados++;
           }
@@ -216,7 +251,11 @@ class NotificationService {
         if (tipo == 'correo' || tipo == 'ambos') {
           if (conexion != null &&
               smtpConfig != null &&
-              _debeAvisar(frecuencia: r.frecuenciaAviso, ultimoAviso: r.ultimoEnvioCorreo, hoy: hoy)) {
+              _debeAvisar(
+                frecuencia: r.frecuenciaAviso,
+                ultimoAviso: r.ultimoEnvioCorreo,
+                hoy: hoy,
+              )) {
             try {
               final res = await SmtpService.enviarConConexion(
                 connection: conexion,
@@ -224,7 +263,9 @@ class NotificationService {
                 asunto: 'Recordatorio: ${r.titulo}',
                 cuerpo: contenido.email,
               );
-              if (res.exito) await db.recordatoriosDao.marcarEnvioCorreo(r.id, ahora);
+              if (res.exito) {
+                await db.recordatoriosDao.marcarEnvioCorreo(r.id, ahora);
+              }
             } catch (_) {
               // Un envío fallido no debe impedir que se intenten los siguientes.
             }
@@ -250,7 +291,11 @@ class NotificationService {
     if (ultimoAviso == null) return true;
     if (frecuencia == 'unica') return false;
     // 'diaria': un aviso por día calendario
-    final ultimoDia = DateTime(ultimoAviso.year, ultimoAviso.month, ultimoAviso.day);
+    final ultimoDia = DateTime(
+      ultimoAviso.year,
+      ultimoAviso.month,
+      ultimoAviso.day,
+    );
     return hoy.isAfter(ultimoDia);
   }
 
@@ -308,15 +353,16 @@ class NotificationService {
           return (sistema: msg, email: msg);
         }
         final monto = '${formatCOP(deuda.montoOriginal)} COP';
-        final sistema =
-            'Pago a ${deuda.acreedorNombre} — $monto — $estado';
+        final sistema = 'Pago a ${deuda.acreedorNombre} — $monto — $estado';
 
         final buf = StringBuffer()
           ..writeln('📋 Recordatorio: ${r.titulo}')
           ..writeln()
           ..writeln('💰 Monto original: $monto');
         if (deuda.fechaLimite != null) {
-          buf.writeln('📅 Fecha límite: ${formatFechaLegible(deuda.fechaLimite!)}');
+          buf.writeln(
+            '📅 Fecha límite: ${formatFechaLegible(deuda.fechaLimite!)}',
+          );
         }
         buf.writeln('⏰ Estado: $estado');
         if (deuda.cuotaMensual != null) {
@@ -332,8 +378,7 @@ class NotificationService {
           return (sistema: msg, email: msg);
         }
         final monto = '${formatCOP(prestamo.montoPrestado)} COP';
-        final sistema =
-            'Cobro a ${prestamo.deudorNombre} — $monto — $estado';
+        final sistema = 'Cobro a ${prestamo.deudorNombre} — $monto — $estado';
 
         final buf = StringBuffer()
           ..writeln('📋 Recordatorio: ${r.titulo}')

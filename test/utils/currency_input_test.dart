@@ -31,10 +31,13 @@ void main() {
       expect(parseCOP(r'  $1.000  '), 1000.0);
     });
 
-    test('valor con coma decimal (formato europeo) → interpretado como decimal', () {
-      // La función reemplaza ',' por '.' → '1000,50' se convierte a 1000.5
-      expect(parseCOP('1000,50'), closeTo(1000.5, 0.001));
-    });
+    test(
+      'valor con coma decimal (formato europeo) → interpretado como decimal',
+      () {
+        // La función reemplaza ',' por '.' → '1000,50' se convierte a 1000.5
+        expect(parseCOP('1000,50'), closeTo(1000.5, 0.001));
+      },
+    );
 
     test(r'$100.000.000 (cien millones) → 100000000.0', () {
       expect(parseCOP(r'$100.000.000'), 100000000.0);

@@ -81,7 +81,9 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
       setState(() => _guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+          const SnackBar(
+            content: Text('Monto inválido. Verifica el valor ingresado.'),
+          ),
         );
       }
       return;
@@ -115,9 +117,9 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
     } catch (e) {
       setState(() => _guardando = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
       }
     }
   }
@@ -128,7 +130,9 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(esEdicion ? 'Editar gasto variable' : 'Nuevo gasto variable'),
+        title: Text(
+          esEdicion ? 'Editar gasto variable' : 'Nuevo gasto variable',
+        ),
       ),
       body: Form(
         key: _formKey,
@@ -176,9 +180,7 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
                     prefixIcon: Icon(Icons.category_outlined),
                   ),
                   items: kCategoriasGasto
-                      .map(
-                        (c) => DropdownMenuItem(value: c, child: Text(c)),
-                      )
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (v) => setState(() => _categoria = v),
                   validator: (v) =>

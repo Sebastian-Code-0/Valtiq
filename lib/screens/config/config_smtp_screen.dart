@@ -110,7 +110,9 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     }
     setState(() => _guardando = true);
     final passTexto = _passCtrl.text;
-    final contrasena = (passTexto.isEmpty && _tieneContrasena) ? null : passTexto;
+    final contrasena = (passTexto.isEmpty && _tieneContrasena)
+        ? null
+        : passTexto;
     try {
       await widget.db.configSmtpDao.guardarConfig(
         servidor: _servidorCtrl.text.trim(),
@@ -128,14 +130,14 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
       setState(() {
         if (passTexto.isNotEmpty) _tieneContrasena = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Configuración guardada')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Configuración guardada')));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -149,8 +151,8 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
       final password = _passCtrl.text.isNotEmpty
           ? _passCtrl.text
           : (_tieneContrasena
-              ? await widget.db.configSmtpDao.getPassword() ?? ''
-              : '');
+                ? await widget.db.configSmtpDao.getPassword() ?? ''
+                : '');
 
       final config = ConfigSmtp(
         id: 1,
@@ -175,16 +177,15 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.mensaje ?? (result.exito ? 'OK' : 'Falló')),
-          backgroundColor:
-              result.exito ? AppColors.positivo : AppColors.alerta,
+          backgroundColor: result.exito ? AppColors.positivo : AppColors.alerta,
           duration: const Duration(seconds: 6),
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al probar: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al probar: $e')));
     } finally {
       if (mounted) setState(() => _probando = false);
     }
@@ -257,9 +258,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
   @override
   Widget build(BuildContext context) {
     if (_cargando) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final esGmail = _servidorCtrl.text.trim() == 'smtp.gmail.com';

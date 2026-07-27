@@ -10,13 +10,12 @@ GastosVariablesCompanion _gasto({
   required DateTime fecha,
   String descripcion = 'Test',
   String categoria = 'General',
-}) =>
-    GastosVariablesCompanion(
-      descripcion: Value(descripcion),
-      monto: Value(monto),
-      categoria: Value(categoria),
-      fecha: Value(fecha),
-    );
+}) => GastosVariablesCompanion(
+  descripcion: Value(descripcion),
+  monto: Value(monto),
+  categoria: Value(categoria),
+  fecha: Value(fecha),
+);
 
 void main() {
   late AppDatabase db;
@@ -36,30 +35,40 @@ void main() {
           _gasto(monto: 50000, fecha: DateTime(2026, 6, 15)),
         );
 
-        final gastos =
-            await db.gastosVariablesDao.watchGastosVariables().first;
+        final gastos = await db.gastosVariablesDao.watchGastosVariables().first;
 
         expect(gastos.length, 1);
         expect(gastos.first.monto, 50000.0);
         expect(gastos.first.descripcion, 'Test');
       });
 
-      test('insertar dos gastos → ambos aparecen ordenados por fecha desc',
-          () async {
-        await db.gastosVariablesDao.insertGastoVariable(
-          _gasto(monto: 10000, fecha: DateTime(2026, 6, 10), descripcion: 'A'),
-        );
-        await db.gastosVariablesDao.insertGastoVariable(
-          _gasto(monto: 20000, fecha: DateTime(2026, 6, 15), descripcion: 'B'),
-        );
+      test(
+        'insertar dos gastos → ambos aparecen ordenados por fecha desc',
+        () async {
+          await db.gastosVariablesDao.insertGastoVariable(
+            _gasto(
+              monto: 10000,
+              fecha: DateTime(2026, 6, 10),
+              descripcion: 'A',
+            ),
+          );
+          await db.gastosVariablesDao.insertGastoVariable(
+            _gasto(
+              monto: 20000,
+              fecha: DateTime(2026, 6, 15),
+              descripcion: 'B',
+            ),
+          );
 
-        final gastos =
-            await db.gastosVariablesDao.watchGastosVariables().first;
+          final gastos = await db.gastosVariablesDao
+              .watchGastosVariables()
+              .first;
 
-        expect(gastos.length, 2);
-        expect(gastos[0].monto, 20000.0); // fecha más reciente primero
-        expect(gastos[1].monto, 10000.0);
-      });
+          expect(gastos.length, 2);
+          expect(gastos[0].monto, 20000.0); // fecha más reciente primero
+          expect(gastos[1].monto, 10000.0);
+        },
+      );
     });
 
     group('watchGastosPorMes', () {
@@ -71,8 +80,9 @@ void main() {
           _gasto(monto: 80000, fecha: DateTime(2026, 5, 15)),
         );
 
-        final junio =
-            await db.gastosVariablesDao.watchGastosPorMes(2026, 6).first;
+        final junio = await db.gastosVariablesDao
+            .watchGastosPorMes(2026, 6)
+            .first;
 
         expect(junio.length, 1);
         expect(junio.first.monto, 50000.0);
@@ -86,15 +96,17 @@ void main() {
           _gasto(monto: 70000, fecha: DateTime(2026, 6, 25)),
         );
 
-        final junio =
-            await db.gastosVariablesDao.watchGastosPorMes(2026, 6).first;
+        final junio = await db.gastosVariablesDao
+            .watchGastosPorMes(2026, 6)
+            .first;
 
         expect(junio.length, 2);
       });
 
       test('mes sin gastos → lista vacía', () async {
-        final julio =
-            await db.gastosVariablesDao.watchGastosPorMes(2026, 7).first;
+        final julio = await db.gastosVariablesDao
+            .watchGastosPorMes(2026, 7)
+            .first;
 
         expect(julio, isEmpty);
       });
@@ -102,8 +114,7 @@ void main() {
 
     group('watchTotalMes', () {
       test('BD vacía → emite 0.0 (fix del bug crítico)', () async {
-        final total =
-            await db.gastosVariablesDao.watchTotalMes(2026, 6).first;
+        final total = await db.gastosVariablesDao.watchTotalMes(2026, 6).first;
 
         expect(total, 0.0);
       });
@@ -116,8 +127,7 @@ void main() {
           _gasto(monto: 30000, fecha: DateTime(2026, 6, 20)),
         );
 
-        final total =
-            await db.gastosVariablesDao.watchTotalMes(2026, 6).first;
+        final total = await db.gastosVariablesDao.watchTotalMes(2026, 6).first;
 
         expect(total, closeTo(80000.0, 0.01));
       });
@@ -127,8 +137,9 @@ void main() {
           _gasto(monto: 100000, fecha: DateTime(2026, 5, 15)), // mayo
         );
 
-        final totalJunio =
-            await db.gastosVariablesDao.watchTotalMes(2026, 6).first;
+        final totalJunio = await db.gastosVariablesDao
+            .watchTotalMes(2026, 6)
+            .first;
 
         expect(totalJunio, 0.0);
       });
@@ -141,8 +152,7 @@ void main() {
         );
         await db.gastosVariablesDao.deleteGastoVariable(id);
 
-        final gastos =
-            await db.gastosVariablesDao.watchGastosVariables().first;
+        final gastos = await db.gastosVariablesDao.watchGastosVariables().first;
 
         expect(gastos, isEmpty);
       });
@@ -156,8 +166,7 @@ void main() {
         );
         await db.gastosVariablesDao.deleteGastoVariable(id1);
 
-        final gastos =
-            await db.gastosVariablesDao.watchGastosVariables().first;
+        final gastos = await db.gastosVariablesDao.watchGastosVariables().first;
 
         expect(gastos.length, 1);
         expect(gastos.first.monto, 20000.0);

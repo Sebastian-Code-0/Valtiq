@@ -66,6 +66,12 @@ class AppDatabase extends _$AppDatabase {
           TableMigration(
             configSmtps,
             columnTransformer: {
+              // Este es el único lugar del proyecto con SQL en texto plano
+              // dentro de una migración. El valor de abajo es estático y
+              // fijo para esta migración puntual. No interpolar nunca una
+              // variable externa aquí sin parametrizarla: esto no pasa por
+              // el query builder de drift, así que cualquier interpolación
+              // directa de un valor externo sería una inyección SQL.
               configSmtps.tieneContrasena: const CustomExpression(
                 "CASE WHEN contrasena != '' THEN 1 ELSE 0 END",
               ),

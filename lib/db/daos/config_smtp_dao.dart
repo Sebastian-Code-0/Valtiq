@@ -14,22 +14,24 @@ class ConfigSmtpDao extends DatabaseAccessor<AppDatabase>
   static const int _configId = 1;
 
   Future<ConfigSmtp> getConfig() async {
-    final existing = await (select(configSmtps)
-          ..where((t) => t.id.equals(_configId)))
-        .getSingleOrNull();
+    final existing = await (select(
+      configSmtps,
+    )..where((t) => t.id.equals(_configId))).getSingleOrNull();
     if (existing != null) return existing;
 
     await into(configSmtps).insert(
       const ConfigSmtpsCompanion(id: Value(_configId)),
       mode: InsertMode.insertOrIgnore,
     );
-    return (select(configSmtps)..where((t) => t.id.equals(_configId)))
-        .getSingle();
+    return (select(
+      configSmtps,
+    )..where((t) => t.id.equals(_configId))).getSingle();
   }
 
   Stream<ConfigSmtp> watchConfig() {
-    return (select(configSmtps)..where((t) => t.id.equals(_configId)))
-        .watchSingle();
+    return (select(
+      configSmtps,
+    )..where((t) => t.id.equals(_configId))).watchSingle();
   }
 
   Future<String?> getPassword() async {

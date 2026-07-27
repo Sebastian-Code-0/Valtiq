@@ -19,10 +19,7 @@ void main() {
     // recientes; si falla aquí es que la plataforma lo resuelve directamente.
     const channel = MethodChannel('plugins.flutter.io/path_provider');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      channel,
-      (_) async => tempDir.path,
-    );
+        .setMockMethodCallHandler(channel, (_) async => tempDir.path);
 
     await CryptoService.init();
   });
@@ -54,12 +51,15 @@ void main() {
     });
 
     group('propiedades de cifrado', () {
-      test('cifrar el mismo texto dos veces → resultados distintos (IV aleatorio)', () {
-        const texto = 'mismo texto de prueba';
-        final cifrado1 = CryptoService.encrypt(texto);
-        final cifrado2 = CryptoService.encrypt(texto);
-        expect(cifrado1, isNot(equals(cifrado2)));
-      });
+      test(
+        'cifrar el mismo texto dos veces → resultados distintos (IV aleatorio)',
+        () {
+          const texto = 'mismo texto de prueba';
+          final cifrado1 = CryptoService.encrypt(texto);
+          final cifrado2 = CryptoService.encrypt(texto);
+          expect(cifrado1, isNot(equals(cifrado2)));
+        },
+      );
 
       test('texto cifrado no contiene el texto plano', () {
         const texto = 'texto_muy_secreto_abc123';
@@ -82,10 +82,15 @@ void main() {
         expect(resultado, '');
       });
 
-      test('string con formato correcto pero base64 inválido → retorna vacío', () {
-        final resultado = CryptoService.decrypt('esto_invalido:tambien_invalido');
-        expect(resultado, '');
-      });
+      test(
+        'string con formato correcto pero base64 inválido → retorna vacío',
+        () {
+          final resultado = CryptoService.decrypt(
+            'esto_invalido:tambien_invalido',
+          );
+          expect(resultado, '');
+        },
+      );
 
       test('string descifrado con clave incorrecta → retorna vacío', () {
         // Formato válido (iv:datos) pero cifrado con otra clave: decrypt falla silencioso
@@ -108,28 +113,25 @@ void main() {
         expect(CryptoService.decrypt(cifrado), texto);
       });
 
-      test(
-        'migración: ciphertext cifrado con el modo AES anterior (sin GCM) '
-        'falla de forma segura, sin devolver contenido corrupto',
-        () async {
-          final keyFile = File('${tempDir.path}/valtiq_key.bin');
-          final keyBytes = await keyFile.readAsBytes();
+      test('migración: ciphertext cifrado con el modo AES anterior (sin GCM) '
+          'falla de forma segura, sin devolver contenido corrupto', () async {
+        final keyFile = File('${tempDir.path}/valtiq_key.bin');
+        final keyBytes = await keyFile.readAsBytes();
 
-          // Encrypter con el modo por defecto anterior a este cambio (sin
-          // especificar `mode`, es decir AESMode.sic), misma clave que usa
-          // CryptoService internamente.
-          final oldEncrypter = enc.Encrypter(enc.AES(enc.Key(keyBytes)));
-          final oldIv = enc.IV.fromSecureRandom(16);
-          const texto = 'contraseña_cifrada_antes_de_migrar_a_gcm';
-          final cifradoViejo = oldEncrypter.encrypt(texto, iv: oldIv);
-          final ciphertext =
-              '${base64.encode(oldIv.bytes)}:${cifradoViejo.base64}';
+        // Encrypter con el modo por defecto anterior a este cambio (sin
+        // especificar `mode`, es decir AESMode.sic), misma clave que usa
+        // CryptoService internamente.
+        final oldEncrypter = enc.Encrypter(enc.AES(enc.Key(keyBytes)));
+        final oldIv = enc.IV.fromSecureRandom(16);
+        const texto = 'contraseña_cifrada_antes_de_migrar_a_gcm';
+        final cifradoViejo = oldEncrypter.encrypt(texto, iv: oldIv);
+        final ciphertext =
+            '${base64.encode(oldIv.bytes)}:${cifradoViejo.base64}';
 
-          final resultado = CryptoService.decrypt(ciphertext);
+        final resultado = CryptoService.decrypt(ciphertext);
 
-          expect(resultado, '');
-        },
-      );
+        expect(resultado, '');
+      });
     });
   });
 }

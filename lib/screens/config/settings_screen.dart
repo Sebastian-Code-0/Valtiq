@@ -36,9 +36,7 @@ class SettingsScreen extends StatelessWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const AparienciaScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const AparienciaScreen()),
                   ),
                 ),
               ),
@@ -47,13 +45,13 @@ class SettingsScreen extends StatelessWidget {
                 child: ListTile(
                   leading: const Icon(Icons.email_outlined),
                   title: const Text('Configuración SMTP'),
-                  subtitle: const Text('Servidor, credenciales y notificaciones'),
+                  subtitle: const Text(
+                    'Servidor, credenciales y notificaciones',
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => ConfigSmtpScreen(db: db),
-                    ),
+                    MaterialPageRoute(builder: (_) => ConfigSmtpScreen(db: db)),
                   ),
                 ),
               ),
@@ -66,9 +64,7 @@ class SettingsScreen extends StatelessWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const AcercaDeScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const AcercaDeScreen()),
                   ),
                 ),
               ),

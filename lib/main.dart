@@ -10,11 +10,11 @@ import 'services/crypto_service.dart';
 import 'services/notification_service.dart';
 import 'theme/theme.dart';
 
-final ValueNotifier<ThemeMode> themeModeNotifier =
-    ValueNotifier(ThemeMode.system);
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(
+  ThemeMode.system,
+);
 
-final ValueNotifier<Color> acentoNotifier =
-    ValueNotifier(AppColors.acento);
+final ValueNotifier<Color> acentoNotifier = ValueNotifier(AppColors.acento);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -70,7 +70,9 @@ class _IngresoFormState extends State<IngresoForm> {
       setState(() => _guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Monto inválido. Verifica el valor ingresado.')),
+          const SnackBar(
+            content: Text('Monto inválido. Verifica el valor ingresado.'),
+          ),
         );
       }
       return;
@@ -105,9 +107,9 @@ class _IngresoFormState extends State<IngresoForm> {
     } catch (e) {
       setState(() => _guardando = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
       }
     }
   }
@@ -172,18 +174,12 @@ class _IngresoFormState extends State<IngresoForm> {
                     prefixIcon: Icon(Icons.repeat),
                   ),
                   items: const [
-                    DropdownMenuItem(
-                      value: 'mensual',
-                      child: Text('Mensual'),
-                    ),
+                    DropdownMenuItem(value: 'mensual', child: Text('Mensual')),
                     DropdownMenuItem(
                       value: 'quincenal',
                       child: Text('Quincenal'),
                     ),
-                    DropdownMenuItem(
-                      value: 'semanal',
-                      child: Text('Semanal'),
-                    ),
+                    DropdownMenuItem(value: 'semanal', child: Text('Semanal')),
                     DropdownMenuItem(value: 'unico', child: Text('Único')),
                   ],
                   onChanged: (v) =>

@@ -19,10 +19,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
     setState(() => _acentoActual = color);
     acentoNotifier.value = color;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      'valtiq_acento',
-      color.toARGB32().toRadixString(16),
-    );
+    await prefs.setString('valtiq_acento', color.toARGB32().toRadixString(16));
   }
 
   Future<void> _cambiarTema(ThemeMode modo) async {
@@ -78,7 +75,9 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                     selected: {_modoActual},
                     onSelectionChanged: (s) => _cambiarTema(s.first),
                     style: SegmentedButton.styleFrom(
-                      selectedBackgroundColor: acentoNotifier.value.withValues(alpha: 0.15),
+                      selectedBackgroundColor: acentoNotifier.value.withValues(
+                        alpha: 0.15,
+                      ),
                       selectedForegroundColor: acentoNotifier.value,
                     ),
                   ),
@@ -103,8 +102,8 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: _coloresAcento.map((opcion) {
-                      final seleccionado = _acentoActual.toARGB32() ==
-                          opcion.color.toARGB32();
+                      final seleccionado =
+                          _acentoActual.toARGB32() == opcion.color.toARGB32();
                       return GestureDetector(
                         onTap: () => _cambiarAcento(opcion.color),
                         child: Tooltip(
@@ -118,7 +117,9 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                               shape: BoxShape.circle,
                               border: seleccionado
                                   ? Border.all(
-                                      color: Theme.of(context).colorScheme.onSurface,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
                                       width: 3,
                                     )
                                   : null,
@@ -127,8 +128,10 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                                 ? Icon(
                                     Icons.check,
                                     size: 20,
-                                    color: ThemeData.estimateBrightnessForColor(
-                                                opcion.color) ==
+                                    color:
+                                        ThemeData.estimateBrightnessForColor(
+                                              opcion.color,
+                                            ) ==
                                             Brightness.dark
                                         ? Colors.white
                                         : Colors.black,

@@ -9,17 +9,19 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
     with _$GastosVariablesDaoMixin {
   GastosVariablesDao(super.db);
 
-  Stream<List<GastosVariable>> watchGastosVariables() =>
-      (select(gastosVariables)
-            ..orderBy([(g) => OrderingTerm.desc(g.fecha)]))
-          .watch();
+  Stream<List<GastosVariable>> watchGastosVariables() => (select(
+    gastosVariables,
+  )..orderBy([(g) => OrderingTerm.desc(g.fecha)])).watch();
 
   Stream<List<GastosVariable>> watchGastosPorMes(int anio, int mes) {
     final inicio = DateTime(anio, mes, 1);
     final fin = DateTime(anio, mes + 1, 1);
     return (select(gastosVariables)
-          ..where((g) => g.fecha.isBiggerOrEqualValue(inicio) &
-              g.fecha.isSmallerThanValue(fin))
+          ..where(
+            (g) =>
+                g.fecha.isBiggerOrEqualValue(inicio) &
+                g.fecha.isSmallerThanValue(fin),
+          )
           ..orderBy([(g) => OrderingTerm.desc(g.fecha)]))
         .watch();
   }
@@ -30,19 +32,21 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
     final sumMonto = gastosVariables.monto.sum();
     return (selectOnly(gastosVariables)
           ..addColumns([gastosVariables.categoria, sumMonto])
-          ..where(gastosVariables.fecha.isBiggerOrEqualValue(inicio) &
-              gastosVariables.fecha.isSmallerThanValue(fin))
+          ..where(
+            gastosVariables.fecha.isBiggerOrEqualValue(inicio) &
+                gastosVariables.fecha.isSmallerThanValue(fin),
+          )
           ..groupBy([gastosVariables.categoria]))
         .watch()
         .map((rows) {
-      final mapa = <String, double>{};
-      for (final row in rows) {
-        final cat = row.read(gastosVariables.categoria) ?? '';
-        final total = row.read(sumMonto) ?? 0.0;
-        mapa[cat] = total;
-      }
-      return mapa;
-    });
+          final mapa = <String, double>{};
+          for (final row in rows) {
+            final cat = row.read(gastosVariables.categoria) ?? '';
+            final total = row.read(sumMonto) ?? 0.0;
+            mapa[cat] = total;
+          }
+          return mapa;
+        });
   }
 
   Stream<double> watchTotalMes(int anio, int mes) {
@@ -51,8 +55,10 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
     final sumMonto = gastosVariables.monto.sum();
     return (selectOnly(gastosVariables)
           ..addColumns([sumMonto])
-          ..where(gastosVariables.fecha.isBiggerOrEqualValue(inicio) &
-              gastosVariables.fecha.isSmallerThanValue(fin)))
+          ..where(
+            gastosVariables.fecha.isBiggerOrEqualValue(inicio) &
+                gastosVariables.fecha.isSmallerThanValue(fin),
+          ))
         .watch()
         .map((rows) => rows.isEmpty ? 0.0 : (rows.first.read(sumMonto) ?? 0.0));
   }

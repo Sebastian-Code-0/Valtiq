@@ -15,7 +15,9 @@ class GastosFijosDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<GastosFijo?> getGastoFijoById(int id) {
-    return (select(gastosFijos)..where((t) => t.id.equals(id))).getSingleOrNull();
+    return (select(
+      gastosFijos,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<List<GastosFijo>> getGastosFijosByIds(List<int> ids) {
@@ -60,5 +62,4 @@ class GastosFijosDao extends DatabaseAccessor<AppDatabase>
       }
     });
   }
-
 }
