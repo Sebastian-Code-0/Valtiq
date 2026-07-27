@@ -36,6 +36,11 @@ class SmtpService {
     );
   }
 
+  /// Expone la construcción del [SmtpServer] para reusarlo en una
+  /// [PersistentConnection] (ej. envío en lote de recordatorios).
+  static SmtpServer buildServer(ConfigSmtp config, String password) =>
+      _build(config, password);
+
   static Future<SmtpResult> enviarCorreo({
     required AppDatabase db,
     required String asunto,
@@ -86,6 +91,38 @@ class SmtpService {
       asunto: 'Prueba de configuración Valtiq',
       cuerpo: cuerpo,
     );
+  }
+
+  /// Envía un correo reusando una [PersistentConnection] ya abierta, para
+  /// evitar reconectar por cada recordatorio en una misma corrida por lote.
+  /// No usado por [enviarCorreo] ni [probarConfiguracion] (esos siguen
+  /// abriendo/cerrando una conexión por envío).
+  static Future<SmtpResult> enviarConConexion({
+    required PersistentConnection connection,
+    required ConfigSmtp config,
+    required String asunto,
+    required String cuerpo,
+  }) async {
+    try {
+      final remitente =
+          config.nombreRemitente.isEmpty ? 'Valtiq' : config.nombreRemitente;
+      final mensaje = Message()
+        ..from = Address(config.usuario, remitente)
+        ..recipients.add(config.correoDestino)
+        ..subject = asunto
+        ..text = cuerpo
+        ..html = EmailTemplate.build(asunto, cuerpo);
+
+      await connection.send(mensaje);
+      return const SmtpResult(exito: true, mensaje: 'Correo enviado');
+    } on MailerException catch (e) {
+      final detalle = e.problems.isNotEmpty
+          ? e.problems.map((p) => '${p.code}: ${p.msg}').join('; ')
+          : e.message;
+      return SmtpResult(exito: false, mensaje: _mensajeAmigable(detalle));
+    } catch (e) {
+      return SmtpResult(exito: false, mensaje: _mensajeAmigable(e.toString()));
+    }
   }
 
   static Future<SmtpResult> _enviarCon({

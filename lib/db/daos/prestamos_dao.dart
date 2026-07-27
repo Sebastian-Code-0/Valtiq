@@ -24,6 +24,11 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     return (select(prestamos)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
+  Future<List<Prestamo>> getPrestamosByIds(List<int> ids) {
+    if (ids.isEmpty) return Future.value([]);
+    return (select(prestamos)..where((t) => t.id.isIn(ids))).get();
+  }
+
   Future<int> insertPrestamo(PrestamosCompanion prestamo) {
     return into(prestamos).insert(prestamo);
   }

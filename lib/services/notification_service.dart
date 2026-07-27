@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:mailer/mailer.dart';
 
 import '../db/database.dart';
 import '../utils/date_format.dart';
@@ -109,6 +110,39 @@ class NotificationService {
     final hoy = DateTime(ahora.year, ahora.month, ahora.day);
     int notificados = 0;
 
+    // Carga en lote las referencias (deuda/préstamo/gasto) en vez de una
+    // consulta por recordatorio (evita N+1).
+    final deudaIds = <int>[];
+    final prestamoIds = <int>[];
+    final gastoIds = <int>[];
+    for (final r in lista) {
+      final id = r.referenciaId;
+      if (id == null) continue;
+      switch (r.referenciaTabla) {
+        case 'deuda':
+          deudaIds.add(id);
+        case 'prestamo':
+          prestamoIds.add(id);
+        case 'gasto':
+          gastoIds.add(id);
+      }
+    }
+    final deudasPorId = {
+      for (final d in await db.deudasDao.getDeudasByIds(deudaIds)) d.id: d,
+    };
+    final prestamosPorId = {
+      for (final p in await db.prestamosDao.getPrestamosByIds(prestamoIds))
+        p.id: p,
+    };
+    final gastosPorId = {
+      for (final g in await db.gastosFijosDao.getGastosFijosByIds(gastoIds))
+        g.id: g,
+    };
+
+    // Resuelve ventana/reprogramación una sola vez; solo los recordatorios
+    // "accionables" (dentro de ventana, no reprogramados este ciclo) pueden
+    // notificar hoy.
+    final accionables = <(Recordatorio, int)>[];
     for (final r in lista) {
       final diaAlerta = DateTime(r.fechaAlerta.year, r.fechaAlerta.month, r.fechaAlerta.day);
       final diasFaltantes = diaAlerta.difference(hoy).inDays;
@@ -130,28 +164,81 @@ class NotificationService {
       final dentroDeVentana = diasFaltantes <= r.diasAnticipacion && diasFaltantes >= -7;
       if (!dentroDeVentana) continue;
 
-      final tipo = r.tipoNotificacion;
-      final contenido = await _buildContenido(r, db, diasFaltantes);
+      accionables.add((r, diasFaltantes));
+    }
 
-      if (tipo == 'sistema' || tipo == 'ambos') {
-        if (_debeAvisar(frecuencia: r.frecuenciaAviso, ultimoAviso: r.ultimaNotificacion, hoy: hoy)) {
-          await showNotification(id: r.id, title: r.titulo, body: contenido.sistema);
-          await db.recordatoriosDao.marcarNotificado(r.id, ahora);
-          notificados++;
-        }
-      }
+    // Solo abre conexión SMTP si hay al menos un correo que potencialmente
+    // se vaya a enviar en esta corrida.
+    final necesitaSmtp = accionables.any((item) {
+      final r = item.$1;
+      return (r.tipoNotificacion == 'correo' || r.tipoNotificacion == 'ambos') &&
+          _debeAvisar(frecuencia: r.frecuenciaAviso, ultimoAviso: r.ultimoEnvioCorreo, hoy: hoy);
+    });
 
-      if (tipo == 'correo' || tipo == 'ambos') {
-        if (_debeAvisar(frecuencia: r.frecuenciaAviso, ultimoAviso: r.ultimoEnvioCorreo, hoy: hoy)) {
-          final res = await SmtpService.enviarCorreo(
-            db: db,
-            asunto: 'Recordatorio: ${r.titulo}',
-            cuerpo: contenido.email,
+    ConfigSmtp? smtpConfig;
+    PersistentConnection? conexion;
+
+    if (necesitaSmtp) {
+      final config = await db.configSmtpDao.getConfig();
+      final configCompleta = config.habilitado &&
+          config.servidor.isNotEmpty &&
+          config.usuario.isNotEmpty &&
+          config.correoDestino.isNotEmpty;
+      if (configCompleta) {
+        final password = await db.configSmtpDao.getPassword() ?? '';
+        smtpConfig = config;
+        try {
+          conexion = PersistentConnection(
+            SmtpService.buildServer(config, password),
           );
-          if (res.exito) await db.recordatoriosDao.marcarEnvioCorreo(r.id, ahora);
+        } catch (_) {
+          conexion = null;
         }
       }
     }
+
+    try {
+      for (final item in accionables) {
+        final r = item.$1;
+        final diasFaltantes = item.$2;
+        final tipo = r.tipoNotificacion;
+        final contenido =
+            _buildContenido(r, deudasPorId, prestamosPorId, gastosPorId, diasFaltantes);
+
+        if (tipo == 'sistema' || tipo == 'ambos') {
+          if (_debeAvisar(frecuencia: r.frecuenciaAviso, ultimoAviso: r.ultimaNotificacion, hoy: hoy)) {
+            await showNotification(id: r.id, title: r.titulo, body: contenido.sistema);
+            await db.recordatoriosDao.marcarNotificado(r.id, ahora);
+            notificados++;
+          }
+        }
+
+        if (tipo == 'correo' || tipo == 'ambos') {
+          if (conexion != null &&
+              smtpConfig != null &&
+              _debeAvisar(frecuencia: r.frecuenciaAviso, ultimoAviso: r.ultimoEnvioCorreo, hoy: hoy)) {
+            try {
+              final res = await SmtpService.enviarConConexion(
+                connection: conexion,
+                config: smtpConfig,
+                asunto: 'Recordatorio: ${r.titulo}',
+                cuerpo: contenido.email,
+              );
+              if (res.exito) await db.recordatoriosDao.marcarEnvioCorreo(r.id, ahora);
+            } catch (_) {
+              // Un envío fallido no debe impedir que se intenten los siguientes.
+            }
+          }
+        }
+      }
+    } finally {
+      if (conexion != null) {
+        try {
+          await conexion.close();
+        } catch (_) {}
+      }
+    }
+
     return notificados;
   }
 
@@ -168,12 +255,15 @@ class NotificationService {
   }
 
   // Returns both the short OS notification body and the rich email body.
-  // A single DB lookup serves both to avoid double queries.
-  static Future<({String sistema, String email})> _buildContenido(
+  // Las referencias (deuda/préstamo/gasto) ya vienen precargadas en lote en
+  // los mapas, así que aquí no se consulta la base de datos.
+  static ({String sistema, String email}) _buildContenido(
     Recordatorio r,
-    AppDatabase db,
+    Map<int, Deuda> deudasPorId,
+    Map<int, Prestamo> prestamosPorId,
+    Map<int, GastosFijo> gastosPorId,
     int diasFaltantes,
-  ) async {
+  ) {
     final estado = _bodyParaRecordatorio(diasFaltantes);
 
     if (r.referenciaTabla == null || r.referenciaId == null) {
@@ -184,7 +274,14 @@ class NotificationService {
     }
 
     try {
-      return await _buildCuerpoEnriquecido(r, db, diasFaltantes, estado);
+      return _buildCuerpoEnriquecido(
+        r,
+        deudasPorId,
+        prestamosPorId,
+        gastosPorId,
+        diasFaltantes,
+        estado,
+      );
     } catch (_) {
       return (
         sistema: estado,
@@ -193,17 +290,19 @@ class NotificationService {
     }
   }
 
-  static Future<({String sistema, String email})> _buildCuerpoEnriquecido(
+  static ({String sistema, String email}) _buildCuerpoEnriquecido(
     Recordatorio r,
-    AppDatabase db,
+    Map<int, Deuda> deudasPorId,
+    Map<int, Prestamo> prestamosPorId,
+    Map<int, GastosFijo> gastosPorId,
     int diasFaltantes,
     String estado,
-  ) async {
+  ) {
     final id = r.referenciaId!;
 
     switch (r.referenciaTabla) {
       case 'deuda':
-        final deuda = await db.deudasDao.getDeudaById(id);
+        final deuda = deudasPorId[id];
         if (deuda == null) {
           const msg = 'Recordatorio vinculado a una deuda ya eliminada.';
           return (sistema: msg, email: msg);
@@ -227,7 +326,7 @@ class NotificationService {
         return (sistema: sistema, email: buf.toString().trimRight());
 
       case 'prestamo':
-        final prestamo = await db.prestamosDao.getPrestamoById(id);
+        final prestamo = prestamosPorId[id];
         if (prestamo == null) {
           const msg = 'Recordatorio vinculado a un préstamo ya eliminado.';
           return (sistema: msg, email: msg);
@@ -253,7 +352,7 @@ class NotificationService {
         return (sistema: sistema, email: buf.toString().trimRight());
 
       case 'gasto':
-        final gasto = await db.gastosFijosDao.getGastoFijoById(id);
+        final gasto = gastosPorId[id];
         if (gasto == null) {
           const msg = 'Recordatorio vinculado a un gasto fijo ya eliminado.';
           return (sistema: msg, email: msg);

@@ -59,7 +59,10 @@ class ConfigSmtpDao extends DatabaseAccessor<AppDatabase>
     required bool ssl,
     required bool habilitado,
   }) async {
-    await getConfig();
+    await into(configSmtps).insert(
+      const ConfigSmtpsCompanion(id: Value(_configId)),
+      mode: InsertMode.insertOrIgnore,
+    );
 
     Value<String?> encValue = const Value.absent();
     Value<bool> tienePassValue = const Value.absent();
