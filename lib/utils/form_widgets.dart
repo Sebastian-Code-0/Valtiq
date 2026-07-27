@@ -234,7 +234,7 @@ class SwitchTile extends StatelessWidget {
             Switch(
               value: value,
               onChanged: onChanged,
-              activeColor: AppColors.acento,
+              activeColor: theme.colorScheme.primary,
             ),
           ],
         ),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
+import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 
@@ -164,7 +165,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
       }
     }
   }

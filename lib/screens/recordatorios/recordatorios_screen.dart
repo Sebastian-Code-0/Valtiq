@@ -306,7 +306,7 @@ class _RecordatorioCard extends StatelessWidget {
     final proximo = !vencido && diasFaltantes <= recordatorio.diasAnticipacion;
 
     final card = Card(
-      color: proximo ? AppColors.acento.withValues(alpha: 0.12) : null,
+      color: proximo ? theme.colorScheme.primary.withValues(alpha: 0.12) : null,
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,

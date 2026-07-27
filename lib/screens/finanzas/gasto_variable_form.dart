@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
+import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
 
 const kCategoriasGasto = [
@@ -119,7 +120,7 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
       }
     }
   }

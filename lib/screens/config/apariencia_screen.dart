@@ -74,6 +74,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                     ],
                     selected: {_modoActual},
                     onSelectionChanged: (s) => _cambiarTema(s.first),
+                    showSelectedIcon: false,
                     style: SegmentedButton.styleFrom(
                       selectedBackgroundColor: acentoNotifier.value.withValues(
                         alpha: 0.15,

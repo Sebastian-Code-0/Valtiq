@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../db/database.dart';
 import '../../services/smtp_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
 
 class ConfigSmtpScreen extends StatefulWidget {
@@ -137,7 +138,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+      ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -181,11 +182,15 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
           duration: const Duration(seconds: 6),
         ),
       );
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al probar: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No se pudo probar la configuración. Intenta de nuevo.',
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _probando = false);
     }
@@ -205,7 +210,9 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
   Widget _bannerGmail() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final colorIcono = isDark ? AppColors.acento : AppColors.primario;
+    final colorIcono = isDark
+        ? theme.colorScheme.onSurface
+        : AppColors.primario;
     final colorBorde = theme.colorScheme.outline;
     final colorFondo = theme.colorScheme.surfaceContainerHighest;
 

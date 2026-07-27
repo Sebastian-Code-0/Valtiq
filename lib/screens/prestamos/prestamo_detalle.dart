@@ -7,6 +7,7 @@ import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/date_format.dart';
+import '../../utils/error_messages.dart';
 import '../../utils/format.dart';
 import 'prestamo_form.dart';
 
@@ -425,7 +426,7 @@ class _InfoCard extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 130,
+            width: AppSpacing.labelColumnWidth,
             child: Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
@@ -620,7 +621,7 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
       }
     }
   }
