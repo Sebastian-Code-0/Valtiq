@@ -7,8 +7,9 @@ import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/date_format.dart';
-import '../../utils/error_messages.dart';
+import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../../utils/formulario_guardado_mixin.dart';
 import 'prestamo_form.dart';
 
 class PrestamoDetalle extends StatefulWidget {
@@ -26,17 +27,20 @@ class PrestamoDetalle extends StatefulWidget {
 }
 
 class _PrestamoDetalleState extends State<PrestamoDetalle> {
-  Stream<Prestamo?> _prestamoStream() {
-    return (widget.db.select(
+  late final Stream<Prestamo?> _prestamoStream;
+  late final Stream<List<PagosRecibido>> _pagosStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _prestamoStream = (widget.db.select(
       widget.db.prestamos,
     )..where((p) => p.id.equals(widget.prestamoId))).watchSingleOrNull();
-  }
-
-  Stream<List<PagosRecibido>> _pagosStream() {
-    return (widget.db.select(widget.db.pagosRecibidos)
-          ..where((p) => p.prestamoId.equals(widget.prestamoId))
-          ..orderBy([(p) => OrderingTerm.desc(p.fechaPago)]))
-        .watch();
+    _pagosStream =
+        (widget.db.select(widget.db.pagosRecibidos)
+              ..where((p) => p.prestamoId.equals(widget.prestamoId))
+              ..orderBy([(p) => OrderingTerm.desc(p.fechaPago)]))
+            .watch();
   }
 
   Future<void> _editar(Prestamo prestamo) async {
@@ -112,7 +116,7 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Prestamo?>(
-      stream: _prestamoStream(),
+      stream: _prestamoStream,
       builder: (context, prestamoSnap) {
         if (prestamoSnap.hasError) {
           return Scaffold(
@@ -160,7 +164,7 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
             ],
           ),
           body: StreamBuilder<List<PagosRecibido>>(
-            stream: _pagosStream(),
+            stream: _pagosStream,
             builder: (context, pagosSnap) {
               if (pagosSnap.hasError) {
                 return Center(
@@ -212,10 +216,7 @@ class _ResumenCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = theme.colorSecundario;
 
     final resumen = InteresCalculator.resumenPrestamo(
       montoPrestado: prestamo.montoPrestado,
@@ -359,10 +360,7 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = theme.colorSecundario;
 
     final tieneInteres = prestamo.tasaInteres > 0;
 
@@ -379,32 +377,47 @@ class _InfoCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            _fila(
-              'Tasa:',
-              tieneInteres
+            InfoRow(
+              label: 'Tasa:',
+              valor: tieneInteres
                   ? '${_fmtTasa(prestamo.tasaInteres)}%'
                   : 'Sin interés',
-              colorSec,
-              theme,
+              colorSec: colorSec,
+              theme: theme,
             ),
-            _fila('Tipo:', prestamo.tipoInteres, colorSec, theme),
-            _fila('Modalidad:', prestamo.modalidadCalculo, colorSec, theme),
-            _fila(
-              'Fecha préstamo:',
-              formatFecha(prestamo.fechaPrestamo),
-              colorSec,
-              theme,
+            InfoRow(
+              label: 'Tipo:',
+              valor: prestamo.tipoInteres,
+              colorSec: colorSec,
+              theme: theme,
             ),
-            _fila(
-              'Fecha pactada:',
-              prestamo.fechaPactadaPago != null
+            InfoRow(
+              label: 'Modalidad:',
+              valor: prestamo.modalidadCalculo,
+              colorSec: colorSec,
+              theme: theme,
+            ),
+            InfoRow(
+              label: 'Fecha préstamo:',
+              valor: formatFecha(prestamo.fechaPrestamo),
+              colorSec: colorSec,
+              theme: theme,
+            ),
+            InfoRow(
+              label: 'Fecha pactada:',
+              valor: prestamo.fechaPactadaPago != null
                   ? formatFecha(prestamo.fechaPactadaPago!)
                   : 'Sin fecha',
-              colorSec,
-              theme,
+              colorSec: colorSec,
+              theme: theme,
             ),
             if (prestamo.deudorContacto.isNotEmpty)
-              _fila('Contacto:', prestamo.deudorContacto, colorSec, theme),
+              InfoRow(
+                label: 'Contacto:',
+                valor: prestamo.deudorContacto,
+                colorSec: colorSec,
+                theme: theme,
+              ),
             if (prestamo.notas.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -416,24 +429,6 @@ class _InfoCard extends StatelessWidget {
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _fila(String label, String valor, Color colorSec, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          SizedBox(
-            width: AppSpacing.labelColumnWidth,
-            child: Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
-            ),
-          ),
-          Expanded(child: Text(valor, style: theme.textTheme.bodyMedium)),
-        ],
       ),
     );
   }
@@ -453,10 +448,7 @@ class _PagosSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = theme.colorSecundario;
 
     return Card(
       child: Padding(
@@ -566,12 +558,11 @@ class _RegistrarPagoDialog extends StatefulWidget {
   State<_RegistrarPagoDialog> createState() => _RegistrarPagoDialogState();
 }
 
-class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
-  final _formKey = GlobalKey<FormState>();
+class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog>
+    with FormularioGuardadoMixin<_RegistrarPagoDialog> {
   final _montoCtrl = TextEditingController();
   final _notasCtrl = TextEditingController();
   DateTime _fecha = DateTime.now();
-  bool _guardando = false;
 
   @override
   void dispose() {
@@ -592,11 +583,11 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
   }
 
   Future<void> _guardar() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _guardando = true);
+    if (!formKey.currentState!.validate()) return;
+    setState(() => guardando = true);
     final monto = parseCOP(_montoCtrl.text);
     if (monto == null) {
-      setState(() => _guardando = false);
+      setState(() => guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -606,7 +597,7 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
       }
       return;
     }
-    try {
+    await ejecutarGuardado(() async {
       await widget.db.prestamosDao.insertPago(
         PagosRecibidosCompanion.insert(
           prestamoId: widget.prestamoId,
@@ -615,15 +606,7 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
           notas: Value(_notasCtrl.text.trim()),
         ),
       );
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      setState(() => _guardando = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
-      }
-    }
+    });
   }
 
   @override
@@ -633,7 +616,7 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
       content: SizedBox(
         width: double.maxFinite,
         child: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -677,12 +660,12 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _guardando ? null : () => Navigator.pop(context, false),
+          onPressed: guardando ? null : () => Navigator.pop(context, false),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: _guardando ? null : _guardar,
-          child: Text(_guardando ? 'Guardando...' : 'Guardar'),
+          onPressed: guardando ? null : _guardar,
+          child: Text(guardando ? 'Guardando...' : 'Guardar'),
         ),
       ],
     );

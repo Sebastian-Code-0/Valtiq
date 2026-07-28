@@ -170,10 +170,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = theme.colorSecundario;
 
     return Scaffold(
       floatingActionButton: switch (_modo) {

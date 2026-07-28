@@ -7,8 +7,9 @@ import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/date_format.dart';
-import '../../utils/error_messages.dart';
+import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../../utils/formulario_guardado_mixin.dart';
 import 'deuda_form.dart';
 
 class DeudaDetalle extends StatefulWidget {
@@ -22,14 +23,16 @@ class DeudaDetalle extends StatefulWidget {
 }
 
 class _DeudaDetalleState extends State<DeudaDetalle> {
-  Stream<Deuda?> _deudaStream() {
-    return (widget.db.select(
+  late final Stream<Deuda?> _deudaStream;
+  late final Stream<List<PagosDeudaData>> _abonosStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _deudaStream = (widget.db.select(
       widget.db.deudas,
     )..where((d) => d.id.equals(widget.deudaId))).watchSingleOrNull();
-  }
-
-  Stream<List<PagosDeudaData>> _abonosStream() {
-    return widget.db.pagosDeudaDao.watchPagosDeDeuda(widget.deudaId);
+    _abonosStream = widget.db.pagosDeudaDao.watchPagosDeDeuda(widget.deudaId);
   }
 
   Future<void> _editar(Deuda deuda) async {
@@ -105,7 +108,7 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Deuda?>(
-      stream: _deudaStream(),
+      stream: _deudaStream,
       builder: (context, deudaSnap) {
         if (deudaSnap.hasError) {
           return Scaffold(
@@ -154,7 +157,7 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
             ],
           ),
           body: StreamBuilder<List<PagosDeudaData>>(
-            stream: _abonosStream(),
+            stream: _abonosStream,
             builder: (context, abonosSnap) {
               if (abonosSnap.hasError) {
                 return Center(
@@ -203,10 +206,7 @@ class _ResumenCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = theme.colorSecundario;
 
     final resumen = InteresCalculator.resumenPrestamo(
       montoPrestado: deuda.montoOriginal,
@@ -325,10 +325,7 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = theme.colorSecundario;
     final tieneInteres = deuda.tasaInteres > 0;
 
     return Card(
@@ -344,34 +341,46 @@ class _InfoCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            _fila(
-              'Tasa:',
-              tieneInteres ? '${_fmtTasa(deuda.tasaInteres)}%' : 'Sin interés',
-              colorSec,
-              theme,
+            InfoRow(
+              label: 'Tasa:',
+              valor: tieneInteres
+                  ? '${_fmtTasa(deuda.tasaInteres)}%'
+                  : 'Sin interés',
+              colorSec: colorSec,
+              theme: theme,
             ),
-            _fila('Tipo:', deuda.tipoInteres, colorSec, theme),
-            _fila('Modalidad:', deuda.modalidadCalculo, colorSec, theme),
-            _fila(
-              'Fecha préstamo:',
-              formatFecha(deuda.fechaPrestamo),
-              colorSec,
-              theme,
+            InfoRow(
+              label: 'Tipo:',
+              valor: deuda.tipoInteres,
+              colorSec: colorSec,
+              theme: theme,
             ),
-            _fila(
-              'Fecha límite:',
-              deuda.fechaLimite != null
+            InfoRow(
+              label: 'Modalidad:',
+              valor: deuda.modalidadCalculo,
+              colorSec: colorSec,
+              theme: theme,
+            ),
+            InfoRow(
+              label: 'Fecha préstamo:',
+              valor: formatFecha(deuda.fechaPrestamo),
+              colorSec: colorSec,
+              theme: theme,
+            ),
+            InfoRow(
+              label: 'Fecha límite:',
+              valor: deuda.fechaLimite != null
                   ? formatFecha(deuda.fechaLimite!)
                   : 'Sin fecha',
-              colorSec,
-              theme,
+              colorSec: colorSec,
+              theme: theme,
             ),
             if (deuda.cuotaMensual != null)
-              _fila(
-                'Cuota mensual:',
-                formatCOP(deuda.cuotaMensual!),
-                colorSec,
-                theme,
+              InfoRow(
+                label: 'Cuota mensual:',
+                valor: formatCOP(deuda.cuotaMensual!),
+                colorSec: colorSec,
+                theme: theme,
               ),
             if (deuda.notas.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
@@ -384,24 +393,6 @@ class _InfoCard extends StatelessWidget {
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _fila(String label, String valor, Color colorSec, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          SizedBox(
-            width: AppSpacing.labelColumnWidth,
-            child: Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
-            ),
-          ),
-          Expanded(child: Text(valor, style: theme.textTheme.bodyMedium)),
-        ],
       ),
     );
   }
@@ -421,10 +412,7 @@ class _AbonosSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = theme.colorSecundario;
 
     return Card(
       child: Padding(
@@ -534,12 +522,11 @@ class _RegistrarAbonoDialog extends StatefulWidget {
   State<_RegistrarAbonoDialog> createState() => _RegistrarAbonoDialogState();
 }
 
-class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
-  final _formKey = GlobalKey<FormState>();
+class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog>
+    with FormularioGuardadoMixin<_RegistrarAbonoDialog> {
   final _montoCtrl = TextEditingController();
   final _notasCtrl = TextEditingController();
   DateTime _fecha = DateTime.now();
-  bool _guardando = false;
 
   @override
   void dispose() {
@@ -560,11 +547,11 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
   }
 
   Future<void> _guardar() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _guardando = true);
+    if (!formKey.currentState!.validate()) return;
+    setState(() => guardando = true);
     final monto = parseCOP(_montoCtrl.text);
     if (monto == null) {
-      setState(() => _guardando = false);
+      setState(() => guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -574,7 +561,7 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
       }
       return;
     }
-    try {
+    await ejecutarGuardado(() async {
       await widget.db.pagosDeudaDao.insertPago(
         PagosDeudaCompanion.insert(
           deudaId: widget.deudaId,
@@ -583,15 +570,7 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
           notas: Value(_notasCtrl.text.trim()),
         ),
       );
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      setState(() => _guardando = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
-      }
-    }
+    });
   }
 
   @override
@@ -601,7 +580,7 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
       content: SizedBox(
         width: double.maxFinite,
         child: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -645,12 +624,12 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _guardando ? null : () => Navigator.pop(context, false),
+          onPressed: guardando ? null : () => Navigator.pop(context, false),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: _guardando ? null : _guardar,
-          child: Text(_guardando ? 'Guardando...' : 'Guardar'),
+          onPressed: guardando ? null : _guardar,
+          child: Text(guardando ? 'Guardando...' : 'Guardar'),
         ),
       ],
     );

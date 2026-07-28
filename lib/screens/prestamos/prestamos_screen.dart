@@ -160,10 +160,7 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = theme.colorSecundario;
 
     return Scaffold(
       body: SafeArea(

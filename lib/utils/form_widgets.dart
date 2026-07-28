@@ -176,6 +176,40 @@ class FormSaveButton extends StatelessWidget {
   }
 }
 
+class InfoRow extends StatelessWidget {
+  const InfoRow({
+    super.key,
+    required this.label,
+    required this.valor,
+    required this.colorSec,
+    required this.theme,
+  });
+
+  final String label;
+  final String valor;
+  final Color colorSec;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          SizedBox(
+            width: AppSpacing.labelColumnWidth,
+            child: Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+            ),
+          ),
+          Expanded(child: Text(valor, style: theme.textTheme.bodyMedium)),
+        ],
+      ),
+    );
+  }
+}
+
 class SwitchTile extends StatelessWidget {
   const SwitchTile({
     super.key,

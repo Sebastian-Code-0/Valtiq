@@ -14,10 +14,7 @@ class AcercaDeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = theme.colorSecundario;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Acerca de')),
