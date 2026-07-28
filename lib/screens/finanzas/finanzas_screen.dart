@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
+import '../../utils/categoria_gasto.dart';
 import '../../utils/date_format.dart';
 import '../../utils/format.dart';
 import 'gasto_fijo_form.dart';
@@ -465,27 +466,6 @@ class _GastoVariableCard extends StatelessWidget {
   final VoidCallback onEditar;
   final VoidCallback onEliminar;
 
-  static IconData _iconoCategoria(String cat) {
-    switch (cat) {
-      case 'Alimentación':
-        return Icons.restaurant_outlined;
-      case 'Ropa':
-        return Icons.checkroom_outlined;
-      case 'Transporte':
-        return Icons.directions_bus_outlined;
-      case 'Entretenimiento':
-        return Icons.movie_outlined;
-      case 'Salud':
-        return Icons.health_and_safety_outlined;
-      case 'Educación':
-        return Icons.school_outlined;
-      case 'Hogar':
-        return Icons.home_outlined;
-      default:
-        return Icons.category_outlined;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -507,7 +487,7 @@ class _GastoVariableCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    _iconoCategoria(gasto.categoria),
+                    CategoriaGasto.iconoPara(gasto.categoria),
                     size: 18,
                     color: colorSec,
                   ),
@@ -576,7 +556,7 @@ class _GastoVariableCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
-                  _FrecuenciaChip(label: gasto.categoria),
+                  AppChip(label: gasto.categoria),
                   const SizedBox(width: AppSpacing.sm),
                   Icon(Icons.calendar_today, size: 14, color: colorSec),
                   const SizedBox(width: 4),
@@ -588,34 +568,6 @@ class _GastoVariableCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FrecuenciaChip extends StatelessWidget {
-  const _FrecuenciaChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -752,7 +704,7 @@ class _IngresoCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
-                  _FrecuenciaChip(label: frecuenciaLabel),
+                  AppChip(label: frecuenciaLabel),
                   const SizedBox(width: AppSpacing.sm),
                   Icon(Icons.calendar_today, size: 14, color: colorSec),
                   const SizedBox(width: 4),
@@ -767,7 +719,7 @@ class _IngresoCard extends StatelessWidget {
         ),
       ),
     );
-    return ingreso.activo ? card : Opacity(opacity: 0.6, child: card);
+    return AtenuableCard(atenuada: !ingreso.activo, child: card);
   }
 }
 
@@ -901,7 +853,7 @@ class _GastoFijoCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
-                  _FrecuenciaChip(label: frecuenciaLabel),
+                  AppChip(label: frecuenciaLabel),
                   if (gasto.diaCobro != null) ...[
                     const SizedBox(width: AppSpacing.sm),
                     Icon(Icons.event_repeat, size: 14, color: colorSec),
@@ -920,6 +872,6 @@ class _GastoFijoCard extends StatelessWidget {
         ),
       ),
     );
-    return gasto.activo ? card : Opacity(opacity: 0.6, child: card);
+    return AtenuableCard(atenuada: !gasto.activo, child: card);
   }
 }

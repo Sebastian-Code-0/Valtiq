@@ -48,6 +48,7 @@ dependencies:
   url_launcher: ^6.3.1
   shared_preferences: ^2.5.3
   package_info_plus: ^8.3.0
+  meta: ^1.16.0
 
 dev_dependencies:
   flutter_test:

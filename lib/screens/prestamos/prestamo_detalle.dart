@@ -77,11 +77,23 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
     if (mounted) Navigator.pop(context);
   }
 
-  Future<void> _registrarPago() async {
+  Future<void> _registrarPago(Prestamo prestamo, double totalAbonado) async {
+    final resumen = InteresCalculator.resumenPrestamo(
+      montoPrestado: prestamo.montoPrestado,
+      tasaInteres: prestamo.tasaInteres,
+      tipoInteres: prestamo.tipoInteres,
+      modalidadCalculo: prestamo.modalidadCalculo,
+      fechaPrestamo: prestamo.fechaPrestamo,
+      totalAbonado: totalAbonado,
+    );
+    final saldoPendiente = resumen['saldoPendiente']!;
     await showDialog<bool>(
       context: context,
-      builder: (_) =>
-          _RegistrarPagoDialog(db: widget.db, prestamoId: widget.prestamoId),
+      builder: (_) => _RegistrarPagoDialog(
+        db: widget.db,
+        prestamoId: widget.prestamoId,
+        saldoPendiente: saldoPendiente,
+      ),
     );
   }
 
@@ -193,7 +205,7 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
                     const SizedBox(height: AppSpacing.md),
                     _PagosSection(
                       pagos: pagos,
-                      onRegistrar: _registrarPago,
+                      onRegistrar: () => _registrarPago(prestamo, totalAbonado),
                       onEliminar: _confirmarEliminarPago,
                     ),
                   ],
@@ -549,10 +561,15 @@ class _PagosSection extends StatelessWidget {
 }
 
 class _RegistrarPagoDialog extends StatefulWidget {
-  const _RegistrarPagoDialog({required this.db, required this.prestamoId});
+  const _RegistrarPagoDialog({
+    required this.db,
+    required this.prestamoId,
+    required this.saldoPendiente,
+  });
 
   final AppDatabase db;
   final int prestamoId;
+  final double saldoPendiente;
 
   @override
   State<_RegistrarPagoDialog> createState() => _RegistrarPagoDialogState();
@@ -632,6 +649,10 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog>
                   if (v == null || v.trim().isEmpty) return 'Requerido';
                   final n = parseCOP(v);
                   if (n == null || n <= 0) return 'Debe ser > 0';
+                  if (n - widget.saldoPendiente > 1) {
+                    return 'No puede superar el saldo pendiente '
+                        '(${formatCOP(widget.saldoPendiente)})';
+                  }
                   return null;
                 },
               ),

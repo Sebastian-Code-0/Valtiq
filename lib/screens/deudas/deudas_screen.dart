@@ -505,6 +505,6 @@ class _DeudaCard extends StatelessWidget {
       ),
     );
 
-    return atenuada ? Opacity(opacity: 0.6, child: card) : card;
+    return AtenuableCard(atenuada: atenuada, child: card);
   }
 }

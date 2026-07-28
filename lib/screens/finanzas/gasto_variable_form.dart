@@ -4,20 +4,10 @@ import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
+import '../../utils/categoria_gasto.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/formulario_guardado_mixin.dart';
-
-const kCategoriasGasto = [
-  'Alimentación',
-  'Ropa',
-  'Transporte',
-  'Entretenimiento',
-  'Salud',
-  'Educación',
-  'Hogar',
-  'Otros',
-];
 
 class GastoVariableForm extends StatefulWidget {
   const GastoVariableForm({super.key, required this.db, this.gasto});
@@ -170,7 +160,7 @@ class _GastoVariableFormState extends State<GastoVariableForm>
                     labelText: 'Categoría',
                     prefixIcon: Icon(Icons.category_outlined),
                   ),
-                  items: kCategoriasGasto
+                  items: CategoriaGasto.nombres
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (v) => setState(() => _categoria = v),

@@ -1,5 +1,6 @@
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
+import 'package:meta/meta.dart';
 
 import '../db/database.dart';
 import 'email_template.dart';
@@ -120,9 +121,9 @@ class SmtpService {
       final detalle = e.problems.isNotEmpty
           ? e.problems.map((p) => '${p.code}: ${p.msg}').join('; ')
           : e.message;
-      return SmtpResult(exito: false, mensaje: _mensajeAmigable(detalle));
+      return SmtpResult(exito: false, mensaje: mensajeAmigable(detalle));
     } catch (e) {
-      return SmtpResult(exito: false, mensaje: _mensajeAmigable(e.toString()));
+      return SmtpResult(exito: false, mensaje: mensajeAmigable(e.toString()));
     }
   }
 
@@ -150,13 +151,14 @@ class SmtpService {
       final detalle = e.problems.isNotEmpty
           ? e.problems.map((p) => '${p.code}: ${p.msg}').join('; ')
           : e.message;
-      return SmtpResult(exito: false, mensaje: _mensajeAmigable(detalle));
+      return SmtpResult(exito: false, mensaje: mensajeAmigable(detalle));
     } catch (e) {
-      return SmtpResult(exito: false, mensaje: _mensajeAmigable(e.toString()));
+      return SmtpResult(exito: false, mensaje: mensajeAmigable(e.toString()));
     }
   }
 
-  static String _mensajeAmigable(String errorTecnico) {
+  @visibleForTesting
+  static String mensajeAmigable(String errorTecnico) {
     final e = errorTecnico.toLowerCase();
     if (e.contains('535') ||
         e.contains('authentication') ||

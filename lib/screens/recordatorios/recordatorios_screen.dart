@@ -452,10 +452,10 @@ class _RecordatorioCard extends StatelessWidget {
                   runSpacing: AppSpacing.xs,
                   children: [
                     if (recordatorio.referenciaTabla != null)
-                      _Chip(
+                      AppChip(
                         label: _labelReferencia(recordatorio.referenciaTabla!),
                       ),
-                    if (recordatorio.repetir) const _Chip(label: 'Mensual'),
+                    if (recordatorio.repetir) const AppChip(label: 'Mensual'),
                   ],
                 ),
               ],
@@ -465,34 +465,6 @@ class _RecordatorioCard extends StatelessWidget {
       ),
     );
 
-    return atenuada ? Opacity(opacity: 0.6, child: card) : card;
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
+    return AtenuableCard(atenuada: atenuada, child: card);
   }
 }
