@@ -5,8 +5,9 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
-import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
+import '../../utils/format.dart';
+import '../../utils/formulario_guardado_mixin.dart';
 
 class DeudaForm extends StatefulWidget {
   const DeudaForm({super.key, required this.db, this.deuda});
@@ -18,9 +19,8 @@ class DeudaForm extends StatefulWidget {
   State<DeudaForm> createState() => _DeudaFormState();
 }
 
-class _DeudaFormState extends State<DeudaForm> {
-  final _formKey = GlobalKey<FormState>();
-
+class _DeudaFormState extends State<DeudaForm>
+    with FormularioGuardadoMixin<DeudaForm> {
   late final TextEditingController _acreedorCtrl;
   late final TextEditingController _montoCtrl;
   late final TextEditingController _tasaCtrl;
@@ -31,7 +31,6 @@ class _DeudaFormState extends State<DeudaForm> {
   late String _modalidadCalculo;
   late DateTime _fechaPrestamo;
   DateTime? _fechaLimite;
-  bool _guardando = false;
 
   @override
   void initState() {
@@ -42,7 +41,7 @@ class _DeudaFormState extends State<DeudaForm> {
       text: d != null ? formatCOPInput(d.montoOriginal) : '',
     );
     _tasaCtrl = TextEditingController(
-      text: d != null ? _formatTasaInicial(d.tasaInteres) : '0',
+      text: d != null ? formatTasaInicial(d.tasaInteres) : '0',
     );
     _cuotaCtrl = TextEditingController(
       text: d?.cuotaMensual != null ? formatCOPInput(d!.cuotaMensual!) : '',
@@ -52,11 +51,6 @@ class _DeudaFormState extends State<DeudaForm> {
     _modalidadCalculo = d?.modalidadCalculo ?? 'simple';
     _fechaPrestamo = d?.fechaPrestamo ?? DateTime.now();
     _fechaLimite = d?.fechaLimite;
-  }
-
-  String _formatTasaInicial(double t) {
-    if (t == t.truncateToDouble()) return t.toStringAsFixed(0);
-    return t.toStringAsFixed(2);
   }
 
   @override
@@ -97,12 +91,12 @@ class _DeudaFormState extends State<DeudaForm> {
   }
 
   Future<void> _guardar() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _guardando = true);
+    if (!formKey.currentState!.validate()) return;
+    setState(() => guardando = true);
 
     final monto = parseCOP(_montoCtrl.text);
     if (monto == null) {
-      setState(() => _guardando = false);
+      setState(() => guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -121,7 +115,7 @@ class _DeudaFormState extends State<DeudaForm> {
     final acreedor = _acreedorCtrl.text.trim();
 
     final dao = widget.db.deudasDao;
-    try {
+    await ejecutarGuardado(() async {
       if (widget.deuda == null) {
         await dao.insertDeuda(
           DeudasCompanion.insert(
@@ -152,15 +146,7 @@ class _DeudaFormState extends State<DeudaForm> {
           ),
         );
       }
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      setState(() => _guardando = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
-      }
-    }
+    });
   }
 
   @override
@@ -171,7 +157,7 @@ class _DeudaFormState extends State<DeudaForm> {
     return Scaffold(
       appBar: AppBar(title: Text(esEdicion ? 'Editar deuda' : 'Nueva deuda')),
       body: Form(
-        key: _formKey,
+        key: formKey,
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
@@ -338,7 +324,7 @@ class _DeudaFormState extends State<DeudaForm> {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: _guardando),
+            FormSaveButton(onPressed: _guardar, loading: guardando),
             const SizedBox(height: AppSpacing.md),
           ],
         ),

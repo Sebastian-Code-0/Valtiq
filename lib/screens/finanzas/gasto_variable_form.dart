@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
-import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
+import '../../utils/formulario_guardado_mixin.dart';
 
 const kCategoriasGasto = [
   'Alimentación',
@@ -29,16 +29,14 @@ class GastoVariableForm extends StatefulWidget {
   State<GastoVariableForm> createState() => _GastoVariableFormState();
 }
 
-class _GastoVariableFormState extends State<GastoVariableForm> {
-  final _formKey = GlobalKey<FormState>();
-
+class _GastoVariableFormState extends State<GastoVariableForm>
+    with FormularioGuardadoMixin<GastoVariableForm> {
   late final TextEditingController _descripcionCtrl;
   late final TextEditingController _montoCtrl;
   late final TextEditingController _notasCtrl;
 
   late String? _categoria;
   late DateTime _fecha;
-  bool _guardando = false;
 
   @override
   void initState() {
@@ -73,13 +71,13 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
   }
 
   Future<void> _guardar() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _guardando = true);
+    if (!formKey.currentState!.validate()) return;
+    setState(() => guardando = true);
 
     final descripcion = _descripcionCtrl.text.trim();
     final monto = parseCOP(_montoCtrl.text);
     if (monto == null) {
-      setState(() => _guardando = false);
+      setState(() => guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -92,7 +90,7 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
     final notas = _notasCtrl.text.trim();
 
     final dao = widget.db.gastosVariablesDao;
-    try {
+    await ejecutarGuardado(() async {
       if (widget.gasto == null) {
         await dao.insertGastoVariable(
           GastosVariablesCompanion.insert(
@@ -114,15 +112,7 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
           ),
         );
       }
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      setState(() => _guardando = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
-      }
-    }
+    });
   }
 
   @override
@@ -136,7 +126,7 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
         ),
       ),
       body: Form(
-        key: _formKey,
+        key: formKey,
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
@@ -220,7 +210,7 @@ class _GastoVariableFormState extends State<GastoVariableForm> {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: _guardando),
+            FormSaveButton(onPressed: _guardar, loading: guardando),
             const SizedBox(height: AppSpacing.md),
           ],
         ),

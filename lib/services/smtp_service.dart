@@ -166,7 +166,12 @@ class SmtpService {
     }
     if (e.contains('connection') ||
         e.contains('timeout') ||
-        e.contains('connect')) {
+        e.contains('connect') ||
+        e.contains('socketexception') ||
+        e.contains('host lookup') ||
+        e.contains('network is unreachable') ||
+        e.contains('no route to host') ||
+        e.contains('no address associated')) {
       return 'No se pudo conectar al servidor de correo. Verifica tu conexión a internet y los datos del servidor SMTP.';
     }
     if (e.contains('550') || e.contains('recipient')) {
@@ -175,6 +180,6 @@ class SmtpService {
     if (e.contains('ssl') || e.contains('tls') || e.contains('certificate')) {
       return 'Error de seguridad SSL/TLS. Verifica el puerto y la configuración de seguridad del servidor.';
     }
-    return 'Error al enviar: $errorTecnico';
+    return 'No se pudo enviar el correo. Intenta de nuevo.';
   }
 }

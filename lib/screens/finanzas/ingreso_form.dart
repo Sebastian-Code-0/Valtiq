@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
-import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
+import '../../utils/formulario_guardado_mixin.dart';
 
 class IngresoForm extends StatefulWidget {
   const IngresoForm({super.key, required this.db, this.ingreso});
@@ -18,16 +18,14 @@ class IngresoForm extends StatefulWidget {
   State<IngresoForm> createState() => _IngresoFormState();
 }
 
-class _IngresoFormState extends State<IngresoForm> {
-  final _formKey = GlobalKey<FormState>();
-
+class _IngresoFormState extends State<IngresoForm>
+    with FormularioGuardadoMixin<IngresoForm> {
   late final TextEditingController _conceptoCtrl;
   late final TextEditingController _montoCtrl;
   late final TextEditingController _notasCtrl;
 
   late String _frecuencia;
   late DateTime _fecha;
-  bool _guardando = false;
 
   @override
   void initState() {
@@ -62,13 +60,13 @@ class _IngresoFormState extends State<IngresoForm> {
   }
 
   Future<void> _guardar() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _guardando = true);
+    if (!formKey.currentState!.validate()) return;
+    setState(() => guardando = true);
 
     final concepto = _conceptoCtrl.text.trim();
     final monto = parseCOP(_montoCtrl.text);
     if (monto == null) {
-      setState(() => _guardando = false);
+      setState(() => guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -81,7 +79,7 @@ class _IngresoFormState extends State<IngresoForm> {
     final notas = _notasCtrl.text.trim();
 
     final dao = widget.db.ingresosDao;
-    try {
+    await ejecutarGuardado(() async {
       if (widget.ingreso == null) {
         await dao.insertIngreso(
           IngresosCompanion.insert(
@@ -104,15 +102,7 @@ class _IngresoFormState extends State<IngresoForm> {
           ),
         );
       }
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      setState(() => _guardando = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
-      }
-    }
+    });
   }
 
   @override
@@ -124,7 +114,7 @@ class _IngresoFormState extends State<IngresoForm> {
         title: Text(esEdicion ? 'Editar ingreso' : 'Nuevo ingreso'),
       ),
       body: Form(
-        key: _formKey,
+        key: formKey,
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
@@ -213,7 +203,7 @@ class _IngresoFormState extends State<IngresoForm> {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: _guardando),
+            FormSaveButton(onPressed: _guardar, loading: guardando),
             const SizedBox(height: AppSpacing.md),
           ],
         ),

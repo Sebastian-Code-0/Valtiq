@@ -5,8 +5,9 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
-import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
+import '../../utils/format.dart';
+import '../../utils/formulario_guardado_mixin.dart';
 
 class PrestamoForm extends StatefulWidget {
   const PrestamoForm({super.key, required this.db, this.prestamo});
@@ -18,9 +19,8 @@ class PrestamoForm extends StatefulWidget {
   State<PrestamoForm> createState() => _PrestamoFormState();
 }
 
-class _PrestamoFormState extends State<PrestamoForm> {
-  final _formKey = GlobalKey<FormState>();
-
+class _PrestamoFormState extends State<PrestamoForm>
+    with FormularioGuardadoMixin<PrestamoForm> {
   late final TextEditingController _deudorCtrl;
   late final TextEditingController _contactoCtrl;
   late final TextEditingController _montoCtrl;
@@ -31,7 +31,6 @@ class _PrestamoFormState extends State<PrestamoForm> {
   late String _modalidadCalculo;
   late DateTime _fechaPrestamo;
   DateTime? _fechaPactada;
-  bool _guardando = false;
 
   @override
   void initState() {
@@ -43,18 +42,13 @@ class _PrestamoFormState extends State<PrestamoForm> {
       text: p != null ? formatCOPInput(p.montoPrestado) : '',
     );
     _tasaCtrl = TextEditingController(
-      text: p != null ? _fmtTasa(p.tasaInteres) : '0',
+      text: p != null ? formatTasaInicial(p.tasaInteres) : '0',
     );
     _notasCtrl = TextEditingController(text: p?.notas ?? '');
     _tipoInteres = p?.tipoInteres ?? 'ninguno';
     _modalidadCalculo = p?.modalidadCalculo ?? 'simple';
     _fechaPrestamo = p?.fechaPrestamo ?? DateTime.now();
     _fechaPactada = p?.fechaPactadaPago;
-  }
-
-  String _fmtTasa(double t) {
-    if (t == t.truncateToDouble()) return t.toStringAsFixed(0);
-    return t.toStringAsFixed(2);
   }
 
   @override
@@ -95,12 +89,12 @@ class _PrestamoFormState extends State<PrestamoForm> {
   }
 
   Future<void> _guardar() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _guardando = true);
+    if (!formKey.currentState!.validate()) return;
+    setState(() => guardando = true);
 
     final monto = parseCOP(_montoCtrl.text);
     if (monto == null) {
-      setState(() => _guardando = false);
+      setState(() => guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -115,7 +109,7 @@ class _PrestamoFormState extends State<PrestamoForm> {
     final modalidad = tasa > 0 ? _modalidadCalculo : 'simple';
 
     final dao = widget.db.prestamosDao;
-    try {
+    await ejecutarGuardado(() async {
       if (widget.prestamo == null) {
         await dao.insertPrestamo(
           PrestamosCompanion.insert(
@@ -146,15 +140,7 @@ class _PrestamoFormState extends State<PrestamoForm> {
           ),
         );
       }
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      setState(() => _guardando = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
-      }
-    }
+    });
   }
 
   @override
@@ -167,7 +153,7 @@ class _PrestamoFormState extends State<PrestamoForm> {
         title: Text(esEdicion ? 'Editar préstamo' : 'Nuevo préstamo'),
       ),
       body: Form(
-        key: _formKey,
+        key: formKey,
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
@@ -319,7 +305,7 @@ class _PrestamoFormState extends State<PrestamoForm> {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: _guardando),
+            FormSaveButton(onPressed: _guardar, loading: guardando),
             const SizedBox(height: AppSpacing.md),
           ],
         ),

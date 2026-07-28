@@ -80,6 +80,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                         alpha: 0.15,
                       ),
                       selectedForegroundColor: acentoNotifier.value,
+                      textStyle: const TextStyle(fontSize: 13),
                     ),
                   ),
                 ],

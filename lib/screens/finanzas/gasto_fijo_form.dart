@@ -5,8 +5,8 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
-import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
+import '../../utils/formulario_guardado_mixin.dart';
 
 class GastoFijoForm extends StatefulWidget {
   const GastoFijoForm({super.key, required this.db, this.gasto});
@@ -18,16 +18,14 @@ class GastoFijoForm extends StatefulWidget {
   State<GastoFijoForm> createState() => _GastoFijoFormState();
 }
 
-class _GastoFijoFormState extends State<GastoFijoForm> {
-  final _formKey = GlobalKey<FormState>();
-
+class _GastoFijoFormState extends State<GastoFijoForm>
+    with FormularioGuardadoMixin<GastoFijoForm> {
   late final TextEditingController _conceptoCtrl;
   late final TextEditingController _montoCtrl;
   late final TextEditingController _diaCobroCtrl;
   late final TextEditingController _notasCtrl;
 
   late String _frecuencia;
-  bool _guardando = false;
 
   @override
   void initState() {
@@ -52,13 +50,13 @@ class _GastoFijoFormState extends State<GastoFijoForm> {
   }
 
   Future<void> _guardar() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _guardando = true);
+    if (!formKey.currentState!.validate()) return;
+    setState(() => guardando = true);
 
     final concepto = _conceptoCtrl.text.trim();
     final monto = parseCOP(_montoCtrl.text);
     if (monto == null) {
-      setState(() => _guardando = false);
+      setState(() => guardando = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -73,7 +71,7 @@ class _GastoFijoFormState extends State<GastoFijoForm> {
     final diaCobro = diaCobroText.isEmpty ? null : int.tryParse(diaCobroText);
 
     final dao = widget.db.gastosFijosDao;
-    try {
+    await ejecutarGuardado(() async {
       if (widget.gasto == null) {
         await dao.insertGastoFijo(
           GastosFijosCompanion.insert(
@@ -96,15 +94,7 @@ class _GastoFijoFormState extends State<GastoFijoForm> {
           ),
         );
       }
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      setState(() => _guardando = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
-      }
-    }
+    });
   }
 
   @override
@@ -116,7 +106,7 @@ class _GastoFijoFormState extends State<GastoFijoForm> {
         title: Text(esEdicion ? 'Editar gasto fijo' : 'Nuevo gasto fijo'),
       ),
       body: Form(
-        key: _formKey,
+        key: formKey,
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
@@ -217,7 +207,7 @@ class _GastoFijoFormState extends State<GastoFijoForm> {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: _guardando),
+            FormSaveButton(onPressed: _guardar, loading: guardando),
             const SizedBox(height: AppSpacing.md),
           ],
         ),

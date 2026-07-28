@@ -6,3 +6,8 @@ String formatCOP(double monto) {
   final agrupado = agruparMiles(entero.toString());
   return '${esNegativo ? '-\$' : '\$'}$agrupado';
 }
+
+String formatTasaInicial(double t) {
+  if (t == t.truncateToDouble()) return t.toStringAsFixed(0);
+  return t.toStringAsFixed(2);
+}

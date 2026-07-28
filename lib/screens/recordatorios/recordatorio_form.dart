@@ -4,9 +4,9 @@ import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
-import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../../utils/formulario_guardado_mixin.dart';
 
 class RecordatorioForm extends StatefulWidget {
   const RecordatorioForm({super.key, required this.db, this.recordatorio});
@@ -18,9 +18,8 @@ class RecordatorioForm extends StatefulWidget {
   State<RecordatorioForm> createState() => _RecordatorioFormState();
 }
 
-class _RecordatorioFormState extends State<RecordatorioForm> {
-  final _formKey = GlobalKey<FormState>();
-
+class _RecordatorioFormState extends State<RecordatorioForm>
+    with FormularioGuardadoMixin<RecordatorioForm> {
   late final TextEditingController _tituloCtrl;
   late final TextEditingController _diasCtrl;
 
@@ -29,7 +28,6 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
   late bool _repetir;
   late String _tipoReferencia;
   int? _referenciaId;
-  bool _guardando = false;
 
   late int _horaAviso;
   late int _minutoAviso;
@@ -109,14 +107,13 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
   }
 
   Future<void> _guardar() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!formKey.currentState!.validate()) return;
     if (_tipoReferencia != 'ninguna' && _referenciaId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona el elemento referenciado')),
       );
       return;
     }
-    setState(() => _guardando = true);
 
     final titulo = _tituloCtrl.text.trim();
     final dias = int.tryParse(_diasCtrl.text.trim()) ?? 3;
@@ -124,7 +121,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
     final refId = _tipoReferencia == 'ninguna' ? null : _referenciaId;
 
     final dao = widget.db.recordatoriosDao;
-    try {
+    await ejecutarGuardado(() async {
       if (widget.recordatorio == null) {
         await dao.insertRecordatorio(
           RecordatoriosCompanion.insert(
@@ -159,15 +156,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
           await dao.resetearDeduplicacion(widget.recordatorio!.id);
         }
       }
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      setState(() => _guardando = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
-      }
-    }
+    });
   }
 
   Widget? _buildReferenciaSelector() {
@@ -265,7 +254,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
         title: Text(esEdicion ? 'Editar recordatorio' : 'Nuevo recordatorio'),
       ),
       body: Form(
-        key: _formKey,
+        key: formKey,
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
@@ -399,7 +388,7 @@ class _RecordatorioFormState extends State<RecordatorioForm> {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: _guardando),
+            FormSaveButton(onPressed: _guardar, loading: guardando),
             const SizedBox(height: AppSpacing.md),
           ],
         ),
