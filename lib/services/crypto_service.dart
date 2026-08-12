@@ -16,7 +16,9 @@ abstract class CryptoService {
   static bool claveFueRegenerada = false;
 
   static Future<void> init() async {
-    final dir = await getApplicationDocumentsDirectory();
+    final dir = Platform.isAndroid
+        ? await getApplicationDocumentsDirectory()
+        : await getApplicationSupportDirectory();
     final keyFile = File(p.join(dir.path, 'valtiq_key.bin'));
 
     Uint8List keyBytes;

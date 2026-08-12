@@ -78,7 +78,12 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
       fechaPrestamo: deuda.fechaPrestamo,
       totalAbonado: totalAbonado,
     );
-    final saldoPendiente = resumen['saldoPendiente']!;
+    // Sin recortar a 0: resumen['saldoPendiente'] sí lo recorta (para no
+    // mostrar saldo negativo en la UI), pero eso permitiría abonar de a $1
+    // indefinidamente una vez saldada la deuda, ya que el recorte nunca deja
+    // ver que ya se sobrepasó.
+    final saldoPendiente =
+        resumen['totalConInteres']! - resumen['totalAbonado']!;
     await showDialog<bool>(
       context: context,
       builder: (_) => _RegistrarAbonoDialog(

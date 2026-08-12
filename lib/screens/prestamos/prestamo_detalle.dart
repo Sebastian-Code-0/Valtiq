@@ -86,7 +86,12 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
       fechaPrestamo: prestamo.fechaPrestamo,
       totalAbonado: totalAbonado,
     );
-    final saldoPendiente = resumen['saldoPendiente']!;
+    // Sin recortar a 0: resumen['saldoPendiente'] sí lo recorta (para no
+    // mostrar saldo negativo en la UI), pero eso permitiría abonar de a $1
+    // indefinidamente una vez saldado el préstamo, ya que el recorte nunca
+    // deja ver que ya se sobrepasó.
+    final saldoPendiente =
+        resumen['totalConInteres']! - resumen['totalAbonado']!;
     await showDialog<bool>(
       context: context,
       builder: (_) => _RegistrarPagoDialog(
