@@ -235,10 +235,13 @@ transaccional y respeta integridad referencial (FK enforcement).
   entre las pantallas de detalle de deuda y préstamo. También
   `SelectorMes` (navegación `< Mes Año >` reutilizada en Finanzas
   Variables y en el comparativo del Dashboard, con variante
-  `compacto`), `BarraCategoria` (barra proporcional por categoría) y
-  `BarraCategoriaComparada` (dos mini-barras apiladas + insignia de
-  variación entre dos meses), ambas apoyadas en el widget privado
-  compartido `_PistaBarra`.
+  `compacto` y `mesExcluido` opcional para deshabilitar la flecha que
+  llevaría a un mes concreto), `BarraCategoria` (barra proporcional
+  por categoría) y `BarraCategoriaComparada` (dos mini-barras
+  apiladas + insignia de variación entre dos meses), ambas apoyadas
+  en el widget privado compartido `_PistaBarra`, que anima el
+  crecimiento del ancho con `TweenAnimationBuilder` (600ms,
+  `Curves.easeOutCubic`) cada vez que cambia `fraccion`.
 - `utils/categoria_gasto.dart` — `CategoriaGasto`, origen único de
   nombre+ícono+color por categoría de gasto variable, con fallback a
   "otros" para valores libres no listados. El color es fijo por
@@ -269,15 +272,29 @@ En Finanzas → pestaña Variables, `SelectorMes` permite navegar meses
 históricos (la flecha de avanzar se deshabilita al llegar al mes
 actual); el mes visible controla tanto la lista de gastos como el
 stream `watchTotalPorCategoria`, cuyo resultado se dibuja como una
-`BarraCategoria` por categoría (ordenadas de mayor a menor monto).
+`BarraCategoria` por categoría (ordenadas de mayor a menor monto). El
+bloque de total + barras + lista está envuelto en un
+`AnimatedSwitcher` (400ms) con `key: ValueKey(_mesVariables)`, para
+que el cambio de mes se vea como un fundido y no un salto brusco; el
+`SelectorMes` de arriba queda fuera del `AnimatedSwitcher`. Si no hay
+gastos ese mes, el estado vacío antepone un ícono de calendario al
+texto.
 
 La card `_ComparativoCategorias` del Dashboard es un `StatefulWidget`
 con dos `SelectorMes` compactos independientes (mes A y mes B,
 inicializados en mes anterior vs. mes actual), lo que permite comparar
-cualquier par de meses. Usa dos streams de `watchTotalPorCategoria`
+cualquier par de meses. Cada `SelectorMes` recibe `mesExcluido` con el
+mes que muestra el otro selector, así ninguna flecha puede llevar a
+una colisión (mismo mes en A y B) — la restricción vive en la UI, sin
+mensaje de error adicional. Usa dos streams de `watchTotalPorCategoria`
 (uno por mes) para generar una frase resumen del total (más/menos
 gastado en el mes B que en el mes A) y una `BarraCategoriaComparada`
 por cada categoría con datos en A y/o B, con insignia de variación
-porcentual. Si no hay datos del mes B muestra un mensaje invitando a
-registrar gastos; si no hay datos del mes A avisa que no hay datos
-para comparar.
+(`_InsigniaVariacion`: porcentual hasta +300%, multiplicador tipo
+`↑ ×20` por encima). Si no hay datos del mes B o del mes A, el método
+`_estadoVacio` muestra un ícono de calendario + "Sin gastos en
+{mes}" + texto secundario invitando a registrar o avisando que no hay
+histórico para comparar. Todo el bloque de resumen/estado
+vacío/barras está envuelto en un `AnimatedSwitcher` (400ms) con
+`key: ValueKey('$_mesA-$_mesB')`; los dos `SelectorMes` y el título
+quedan fuera.

@@ -603,7 +603,7 @@ class _ComparativoCategoriasState extends State<_ComparativoCategorias> {
                     const SizedBox(height: AppSpacing.md),
 
                     AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
+                      duration: const Duration(milliseconds: 400),
                       child: Column(
                         key: ValueKey('$_mesA-$_mesB'),
                         crossAxisAlignment: CrossAxisAlignment.start,

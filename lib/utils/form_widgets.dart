@@ -361,7 +361,7 @@ class _PistaBarra extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0, end: fraccion),
-          duration: const Duration(milliseconds: 350),
+          duration: const Duration(milliseconds: 600),
           curve: Curves.easeOutCubic,
           builder: (context, valor, child) => FractionallySizedBox(
             widthFactor: valor,

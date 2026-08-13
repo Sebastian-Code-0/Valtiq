@@ -19,12 +19,33 @@
   con dos `SelectorMes` compactos independientes, permitiendo comparar
   cualquier par de meses
 - Nuevo widget `BarraCategoriaComparada`: dos mini-barras apiladas por
-  categoría más una insignia de variación porcentual (tope en
-  "999%+" para variaciones absurdas por montos base muy pequeños, o
-  "nuevo" si la categoría no existía en el mes A)
+  categoría más una insignia de variación (`_InsigniaVariacion`)
 - `_PistaBarra` factorizado como widget privado compartido entre
   `BarraCategoria` y `BarraCategoriaComparada` para no duplicar el
   track de la barra
+- `SelectorMes` gana `mesExcluido` opcional: deshabilita la flecha
+  (anterior o siguiente) que llevaría exactamente a ese mes. Los dos
+  `SelectorMes` del comparativo del Dashboard se pasan `mesExcluido`
+  cruzado (`_mesA` excluye `_mesB` y viceversa) para que nunca puedan
+  terminar mostrando el mismo mes; Finanzas Variables no lo usa
+- `_InsigniaVariacion`: por encima de +300% de aumento, en vez de
+  seguir mostrando un porcentaje (que llegaba a ser ilegible, ej.
+  $1.000 → $500.000 = 49900%), muestra un multiplicador
+  (`↑ ×20`); bajadas y alzas ≤300% siguen mostrando el porcentaje
+  normal
+- Estados vacíos con ícono: tanto el mensaje de la card comparativa
+  del Dashboard ("Sin gastos en {mes}", vía nuevo método
+  `_estadoVacio`) como el de Finanzas Variables ("No hay gastos
+  variables este mes") anteponen un `Icon(Icons.calendar_month_outlined)`
+  para que se note de un vistazo que es un estado intencional y no un
+  error o pantalla en blanco
+- Animaciones (solo Flutter puro, sin dependencias nuevas):
+  `_PistaBarra` anima `widthFactor` de 0 al valor final con
+  `TweenAnimationBuilder` (600ms, `Curves.easeOutCubic`), heredada por
+  `BarraCategoria` y `BarraCategoriaComparada`; el bloque que depende
+  del mes visible (total + barras + lista en Finanzas Variables;
+  resumen + barras pareadas en el comparativo del Dashboard) hace un
+  fundido con `AnimatedSwitcher` (400ms) al cambiar de mes
 
 ### Integridad de datos y ciclo de vida de recordatorios
 - Borrado de deudas/préstamos con pagos asociados ahora es

@@ -290,7 +290,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
             const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
+                duration: const Duration(milliseconds: 400),
                 child: Column(
                   key: ValueKey(_mesVariables),
                   crossAxisAlignment: CrossAxisAlignment.stretch,
