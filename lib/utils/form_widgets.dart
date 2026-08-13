@@ -359,9 +359,14 @@ class _PistaBarra extends StatelessWidget {
         height: 8,
         color: color.withValues(alpha: 0.15),
         alignment: Alignment.centerLeft,
-        child: FractionallySizedBox(
-          widthFactor: fraccion,
-          child: Container(color: colorRelleno),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: fraccion),
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOutCubic,
+          builder: (context, valor, child) => FractionallySizedBox(
+            widthFactor: valor,
+            child: Container(color: colorRelleno),
+          ),
         ),
       ),
     );

@@ -602,22 +602,31 @@ class _ComparativoCategoriasState extends State<_ComparativoCategorias> {
                     ),
                     const SizedBox(height: AppSpacing.md),
 
-                    if (!hayMesB)
-                      _estadoVacio(nombreMesB)
-                    else if (!hayMesA)
-                      _estadoVacio(nombreMesA)
-                    else ...[
-                      _FraseResumen(
-                        totalMesA: totalA,
-                        totalMesB: totalB,
-                        nombreMesA: nombreMesA,
-                        nombreMesB: nombreMesB,
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Column(
+                        key: ValueKey('$_mesA-$_mesB'),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (!hayMesB)
+                            _estadoVacio(nombreMesB)
+                          else if (!hayMesA)
+                            _estadoVacio(nombreMesA)
+                          else ...[
+                            _FraseResumen(
+                              totalMesA: totalA,
+                              totalMesB: totalB,
+                              nombreMesA: nombreMesA,
+                              nombreMesB: nombreMesB,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            const Divider(),
+                            const SizedBox(height: AppSpacing.sm),
+                            ..._barrasPorCategoria(montosA, montosB),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      const Divider(),
-                      const SizedBox(height: AppSpacing.sm),
-                      ..._barrasPorCategoria(montosA, montosB),
-                    ],
+                    ),
                   ],
                 );
               },

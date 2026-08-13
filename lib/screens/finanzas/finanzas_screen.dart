@@ -288,71 +288,93 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
               onCambiar: _cambiarMesVariables,
             ),
             const SizedBox(height: AppSpacing.sm),
-            _totalRow(theme: theme, total: total, color: AppColors.alerta),
-            const SizedBox(height: AppSpacing.md),
-            StreamBuilder<Map<String, double>>(
-              stream: _streamTotalPorCategoria,
-              builder: (context, snapCategorias) {
-                final porCategoria = snapCategorias.data ?? {};
-                if (porCategoria.isEmpty) return const SizedBox.shrink();
-
-                final entradas = porCategoria.entries.toList()
-                  ..sort((a, b) => b.value.compareTo(a.value));
-                final montoMaximo = entradas.first.value;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (final e in entradas)
-                        BarraCategoria(
-                          categoria: e.key,
-                          monto: e.value,
-                          montoMaximo: montoMaximo,
-                        ),
-                    ],
-                  ),
-                );
-              },
-            ),
             Expanded(
-              child: gastos.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.calendar_month_outlined,
-                            size: 32,
-                            color: colorSec,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: Column(
+                  key: ValueKey(_mesVariables),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _totalRow(
+                      theme: theme,
+                      total: total,
+                      color: AppColors.alerta,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    StreamBuilder<Map<String, double>>(
+                      stream: _streamTotalPorCategoria,
+                      builder: (context, snapCategorias) {
+                        final porCategoria = snapCategorias.data ?? {};
+                        if (porCategoria.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final entradas = porCategoria.entries.toList()
+                          ..sort((a, b) => b.value.compareTo(a.value));
+                        final montoMaximo = entradas.first.value;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: AppSpacing.md,
                           ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Text(
-                            'No hay gastos variables este mes',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: colorSec,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (final e in entradas)
+                                BarraCategoria(
+                                  categoria: e.key,
+                                  monto: e.value,
+                                  montoMaximo: montoMaximo,
+                                ),
+                            ],
                           ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      itemCount: gastos.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppSpacing.sm),
-                      itemBuilder: (_, i) {
-                        final g = gastos[i];
-                        return _GastoVariableCard(
-                          gasto: g,
-                          colorSec: colorSec,
-                          onTap: () => _abrirGastoVariableForm(gasto: g),
-                          onLongPress: () => _confirmarEliminarGastoVariable(g),
-                          onEditar: () => _abrirGastoVariableForm(gasto: g),
-                          onEliminar: () => _confirmarEliminarGastoVariable(g),
                         );
                       },
                     ),
+                    Expanded(
+                      child: gastos.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.calendar_month_outlined,
+                                    size: 32,
+                                    color: colorSec,
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Text(
+                                    'No hay gastos variables este mes',
+                                    style: theme.textTheme.bodyLarge
+                                        ?.copyWith(color: colorSec),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount: gastos.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: AppSpacing.sm),
+                              itemBuilder: (_, i) {
+                                final g = gastos[i];
+                                return _GastoVariableCard(
+                                  gasto: g,
+                                  colorSec: colorSec,
+                                  onTap: () =>
+                                      _abrirGastoVariableForm(gasto: g),
+                                  onLongPress: () =>
+                                      _confirmarEliminarGastoVariable(g),
+                                  onEditar: () =>
+                                      _abrirGastoVariableForm(gasto: g),
+                                  onEliminar: () =>
+                                      _confirmarEliminarGastoVariable(g),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         );
