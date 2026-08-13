@@ -234,12 +234,16 @@ class SelectorMes extends StatelessWidget {
     required this.mes,
     required this.onCambiar,
     this.compacto = false,
+    this.mesExcluido,
   });
 
   final int anio;
   final int mes;
   final ValueChanged<DateTime> onCambiar;
   final bool compacto;
+  // Mes que este selector no puede alcanzar (p. ej. el mes que ya muestra el
+  // otro selector en un comparativo), para que ambos nunca coincidan.
+  final DateTime? mesExcluido;
 
   static String nombreMes(int mes) => _nombresMeses[mes - 1];
   static String nombreMesCorto(int mes) =>
@@ -250,6 +254,11 @@ class SelectorMes extends StatelessWidget {
     final theme = Theme.of(context);
     final ahora = DateTime.now();
     final esMesActual = anio == ahora.year && mes == ahora.month;
+    final mesAnterior = DateTime(anio, mes - 1, 1);
+    final mesSiguiente = DateTime(anio, mes + 1, 1);
+    final anteriorExcluido = mesExcluido != null && mesAnterior == mesExcluido;
+    final siguienteExcluido =
+        mesExcluido != null && mesSiguiente == mesExcluido;
     final estiloTexto = compacto
         ? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)
         : theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold);
@@ -262,16 +271,16 @@ class SelectorMes extends StatelessWidget {
           icon: const Icon(Icons.chevron_left),
           visualDensity: densidad,
           tooltip: 'Mes anterior',
-          onPressed: () => onCambiar(DateTime(anio, mes - 1, 1)),
+          onPressed: anteriorExcluido ? null : () => onCambiar(mesAnterior),
         ),
         Text('${_nombresMeses[mes - 1]} $anio', style: estiloTexto),
         IconButton(
           icon: const Icon(Icons.chevron_right),
           visualDensity: densidad,
           tooltip: 'Mes siguiente',
-          onPressed: esMesActual
+          onPressed: esMesActual || siguienteExcluido
               ? null
-              : () => onCambiar(DateTime(anio, mes + 1, 1)),
+              : () => onCambiar(mesSiguiente),
         ),
       ],
     );
@@ -479,10 +488,10 @@ class _MiniFilaMes extends StatelessWidget {
   }
 }
 
-/// Insignia de variación porcentual entre [montoA] y [montoB]. Muestra
-/// "nuevo" si la categoría no existía en el mes A, nada si la variación es
-/// 0%, y limita a "999%+" variaciones absurdas que surgen de montos base
-/// muy pequeños (ej. $1.000 → $500.000 sería 49900%).
+/// Insignia de variación entre [montoA] y [montoB]. Muestra "nuevo" si la
+/// categoría no existía en el mes A, nada si la variación es 0%, un
+/// porcentaje normal hasta +300% (o cualquier baja), y un multiplicador
+/// (ej. "×20") por encima de +300%, donde un porcentaje ya no es legible.
 class _InsigniaVariacion extends StatelessWidget {
   const _InsigniaVariacion({required this.montoA, required this.montoB});
 
@@ -507,11 +516,20 @@ class _InsigniaVariacion extends StatelessWidget {
     if (pct == 0) return const SizedBox.shrink();
 
     final esMas = pct > 0;
-    final pctAbs = pct.abs();
-    final texto = pctAbs > 999 ? '999%+' : '$pctAbs%';
+
+    if (esMas && pct > 300) {
+      final multiplicador = (montoB / montoA).round();
+      return Text(
+        '↑ ×$multiplicador',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: AppColors.alerta,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
 
     return Text(
-      '${esMas ? '↑' : '↓'} $texto',
+      '${esMas ? '↑' : '↓'} ${pct.abs()}%',
       style: theme.textTheme.bodySmall?.copyWith(
         color: esMas ? AppColors.alerta : AppColors.positivo,
         fontWeight: FontWeight.w600,

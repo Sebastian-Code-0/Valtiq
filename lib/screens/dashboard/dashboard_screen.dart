@@ -583,6 +583,7 @@ class _ComparativoCategoriasState extends State<_ComparativoCategorias> {
                           anio: _mesA.year,
                           mes: _mesA.month,
                           onCambiar: (d) => setState(() => _mesA = d),
+                          mesExcluido: _mesB,
                         ),
                         Text(
                           'vs',
@@ -595,6 +596,7 @@ class _ComparativoCategoriasState extends State<_ComparativoCategorias> {
                           anio: _mesB.year,
                           mes: _mesB.month,
                           onCambiar: (d) => setState(() => _mesB = d),
+                          mesExcluido: _mesA,
                         ),
                       ],
                     ),
