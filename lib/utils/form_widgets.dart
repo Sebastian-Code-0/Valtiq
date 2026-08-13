@@ -263,6 +263,14 @@ class SelectorMes extends StatelessWidget {
         ? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)
         : theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold);
     final densidad = compacto ? VisualDensity.compact : null;
+    // Pantallas angostas (celular) no tienen espacio para "Julio 2026" x2
+    // lado a lado en el comparativo del Dashboard sin desbordar; ahí se
+    // abrevia a "Jul 26". En pantallas anchas (tablet/desktop) se mantiene
+    // el nombre completo.
+    final esPantallaAngosta = MediaQuery.sizeOf(context).width < 600;
+    final textoMes = esPantallaAngosta
+        ? '${nombreMesCorto(mes)} ${(anio % 100).toString().padLeft(2, '0')}'
+        : '${_nombresMeses[mes - 1]} $anio';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -273,7 +281,7 @@ class SelectorMes extends StatelessWidget {
           tooltip: 'Mes anterior',
           onPressed: anteriorExcluido ? null : () => onCambiar(mesAnterior),
         ),
-        Text('${_nombresMeses[mes - 1]} $anio', style: estiloTexto),
+        Text(textoMes, style: estiloTexto),
         IconButton(
           icon: const Icon(Icons.chevron_right),
           visualDensity: densidad,
@@ -497,6 +505,8 @@ class _MiniFilaMes extends StatelessWidget {
 /// categoría no existía en el mes A, nada si la variación es 0%, un
 /// porcentaje normal hasta +300% (o cualquier baja), y un multiplicador
 /// (ej. "×20") por encima de +300%, donde un porcentaje ya no es legible.
+/// Una baja nunca se muestra como "100%" salvo eliminación real a $0
+/// (evita que el redondeo diga "eliminado" cuando queda remanente).
 class _InsigniaVariacion extends StatelessWidget {
   const _InsigniaVariacion({required this.montoA, required this.montoB});
 
@@ -533,8 +543,16 @@ class _InsigniaVariacion extends StatelessWidget {
       );
     }
 
+    // El redondeo puede inflar una baja de, por ej., 99.9% a "100%" cuando
+    // en realidad queda un remanente (montoB > 0). "100%" debe reservarse
+    // para cuando la categoría se elimina por completo.
+    var pctMostrado = pct.abs();
+    if (!esMas && pctMostrado >= 100 && montoB > 0) {
+      pctMostrado = 99;
+    }
+
     return Text(
-      '${esMas ? '↑' : '↓'} ${pct.abs()}%',
+      '${esMas ? '↑' : '↓'} $pctMostrado%',
       style: theme.textTheme.bodySmall?.copyWith(
         color: esMas ? AppColors.alerta : AppColors.positivo,
         fontWeight: FontWeight.w600,

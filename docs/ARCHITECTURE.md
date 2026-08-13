@@ -236,12 +236,15 @@ transaccional y respeta integridad referencial (FK enforcement).
   `SelectorMes` (navegación `< Mes Año >` reutilizada en Finanzas
   Variables y en el comparativo del Dashboard, con variante
   `compacto` y `mesExcluido` opcional para deshabilitar la flecha que
-  llevaría a un mes concreto), `BarraCategoria` (barra proporcional
-  por categoría) y `BarraCategoriaComparada` (dos mini-barras
-  apiladas + insignia de variación entre dos meses), ambas apoyadas
-  en el widget privado compartido `_PistaBarra`, que anima el
-  crecimiento del ancho con `TweenAnimationBuilder` (600ms,
-  `Curves.easeOutCubic`) cada vez que cambia `fraccion`.
+  llevaría a un mes concreto; el texto es responsivo — nombre completo
+  del mes en pantallas ≥600px de ancho, abreviado "Jul 26" en
+  celulares, para no desbordar cuando hay dos selectores lado a lado),
+  `BarraCategoria` (barra proporcional por categoría) y
+  `BarraCategoriaComparada` (dos mini-barras apiladas + insignia de
+  variación entre dos meses), ambas apoyadas en el widget privado
+  compartido `_PistaBarra`, que anima el crecimiento del ancho con
+  `TweenAnimationBuilder` (600ms, `Curves.easeOutCubic`) cada vez que
+  cambia `fraccion`.
 - `utils/categoria_gasto.dart` — `CategoriaGasto`, origen único de
   nombre+ícono+color por categoría de gasto variable, con fallback a
   "otros" para valores libres no listados. El color es fijo por
@@ -291,7 +294,9 @@ mensaje de error adicional. Usa dos streams de `watchTotalPorCategoria`
 gastado en el mes B que en el mes A) y una `BarraCategoriaComparada`
 por cada categoría con datos en A y/o B, con insignia de variación
 (`_InsigniaVariacion`: porcentual hasta +300%, multiplicador tipo
-`↑ ×20` por encima). Si no hay datos del mes B o del mes A, el método
+`↑ ×20` por encima; una baja nunca se muestra como "100%" por
+redondeo si queda remanente — solo cuando `montoB == 0` de verdad).
+Si no hay datos del mes B o del mes A, el método
 `_estadoVacio` muestra un ícono de calendario + "Sin gastos en
 {mes}" + texto secundario invitando a registrar o avisando que no hay
 histórico para comparar. Todo el bloque de resumen/estado

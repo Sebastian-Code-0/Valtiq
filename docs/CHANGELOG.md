@@ -46,6 +46,17 @@
   del mes visible (total + barras + lista en Finanzas Variables;
   resumen + barras pareadas en el comparativo del Dashboard) hace un
   fundido con `AnimatedSwitcher` (400ms) al cambiar de mes
+- Fix: `SelectorMes` desbordaba (overflow) en celulares cuando el
+  comparativo del Dashboard mostraba dos selectores lado a lado con
+  el nombre completo del mes (ej. "Julio 2026"). Ahora es responsivo:
+  en pantallas angostas (`MediaQuery.sizeOf(context).width < 600`)
+  abrevia a formato "Jul 26"; en pantallas anchas (tablet/desktop)
+  mantiene el nombre completo
+- Fix: `_InsigniaVariacion` podía mostrar "↓ 100%" en una baja que en
+  realidad dejaba remanente (ej. $5.000 → $5 = -99.9%, que `.round()`
+  inflaba a -100%). Ahora una baja solo se muestra como "100%" cuando
+  la categoría se elimina por completo (`montoB == 0`); si queda
+  remanente se topa en 99%
 
 ### Integridad de datos y ciclo de vida de recordatorios
 - Borrado de deudas/préstamos con pagos asociados ahora es
