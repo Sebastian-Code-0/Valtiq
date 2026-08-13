@@ -241,6 +241,10 @@ class SelectorMes extends StatelessWidget {
   final ValueChanged<DateTime> onCambiar;
   final bool compacto;
 
+  static String nombreMes(int mes) => _nombresMeses[mes - 1];
+  static String nombreMesCorto(int mes) =>
+      _nombresMeses[mes - 1].substring(0, 3);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -310,18 +314,7 @@ class BarraCategoria extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                height: 8,
-                color: color.withValues(alpha: 0.15),
-                alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  widthFactor: fraccion,
-                  child: Container(color: color),
-                ),
-              ),
-            ),
+            child: _PistaBarra(color: color, fraccion: fraccion),
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(
@@ -329,6 +322,199 @@ class BarraCategoria extends StatelessWidget {
             style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Pista de una barra proporcional: fondo tenue del [color] + relleno
+/// (opacidad [alpha]) con ancho `fraccion` del total. Compartida por
+/// [BarraCategoria] y [BarraCategoriaComparada].
+class _PistaBarra extends StatelessWidget {
+  const _PistaBarra({
+    required this.color,
+    required this.fraccion,
+    this.alpha = 1.0,
+  });
+
+  final Color color;
+  final double fraccion;
+  final double alpha;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorRelleno = alpha == 1.0 ? color : color.withValues(alpha: alpha);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        height: 8,
+        color: color.withValues(alpha: 0.15),
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: fraccion,
+          child: Container(color: colorRelleno),
+        ),
+      ),
+    );
+  }
+}
+
+class BarraCategoriaComparada extends StatelessWidget {
+  const BarraCategoriaComparada({
+    super.key,
+    required this.categoria,
+    required this.mesACorto,
+    required this.montoA,
+    required this.mesBCorto,
+    required this.montoB,
+    required this.montoMaximo,
+  });
+
+  final String categoria;
+  final String mesACorto;
+  final double montoA;
+  final String mesBCorto;
+  final double montoB;
+  final double montoMaximo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = CategoriaGasto.colorPara(categoria);
+    final fraccionA = montoMaximo <= 0
+        ? 0.0
+        : (montoA / montoMaximo).clamp(0.0, 1.0);
+    final fraccionB = montoMaximo <= 0
+        ? 0.0
+        : (montoB / montoMaximo).clamp(0.0, 1.0);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(CategoriaGasto.iconoPara(categoria), size: 16, color: color),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  categoria,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              _InsigniaVariacion(montoA: montoA, montoB: montoB),
+            ],
+          ),
+          const SizedBox(height: 4),
+          _MiniFilaMes(
+            label: mesACorto,
+            monto: montoA,
+            color: color,
+            fraccion: fraccionA,
+            alpha: 0.35,
+          ),
+          const SizedBox(height: 2),
+          _MiniFilaMes(
+            label: mesBCorto,
+            monto: montoB,
+            color: color,
+            fraccion: fraccionB,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniFilaMes extends StatelessWidget {
+  const _MiniFilaMes({
+    required this.label,
+    required this.monto,
+    required this.color,
+    required this.fraccion,
+    this.alpha = 1.0,
+  });
+
+  final String label;
+  final double monto;
+  final Color color;
+  final double fraccion;
+  final double alpha;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        SizedBox(
+          width: 28,
+          child: Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              color: theme.colorSecundario,
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _PistaBarra(color: color, fraccion: fraccion, alpha: alpha),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        SizedBox(
+          width: 76,
+          child: Text(
+            formatCOP(monto),
+            style: monoStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Insignia de variación porcentual entre [montoA] y [montoB]. Muestra
+/// "nuevo" si la categoría no existía en el mes A, nada si la variación es
+/// 0%, y limita a "999%+" variaciones absurdas que surgen de montos base
+/// muy pequeños (ej. $1.000 → $500.000 sería 49900%).
+class _InsigniaVariacion extends StatelessWidget {
+  const _InsigniaVariacion({required this.montoA, required this.montoB});
+
+  final double montoA;
+  final double montoB;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (montoA == 0 && montoB > 0) {
+      return Text(
+        'nuevo',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorSecundario,
+        ),
+      );
+    }
+    if (montoA <= 0) return const SizedBox.shrink();
+
+    final pct = ((montoB - montoA) / montoA * 100).round();
+    if (pct == 0) return const SizedBox.shrink();
+
+    final esMas = pct > 0;
+    final pctAbs = pct.abs();
+    final texto = pctAbs > 999 ? '999%+' : '$pctAbs%';
+
+    return Text(
+      '${esMas ? '↑' : '↓'} $texto',
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: esMas ? AppColors.alerta : AppColors.positivo,
+        fontWeight: FontWeight.w600,
       ),
     );
   }

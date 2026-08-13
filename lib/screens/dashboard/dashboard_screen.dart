@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../db/database.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
+import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../config/settings_screen.dart';
 
@@ -494,28 +495,43 @@ class _PosicionPrestamosCard extends StatelessWidget {
   }
 }
 
-class _ComparativoCategorias extends StatelessWidget {
+class _ComparativoCategorias extends StatefulWidget {
   const _ComparativoCategorias({required this.db});
 
   final AppDatabase db;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  State<_ComparativoCategorias> createState() => _ComparativoCategoriasState();
+}
+
+class _ComparativoCategoriasState extends State<_ComparativoCategorias> {
+  late DateTime _mesA;
+  late DateTime _mesB;
+
+  @override
+  void initState() {
+    super.initState();
     final now = DateTime.now();
     final mesAnterior = now.month == 1 ? 12 : now.month - 1;
     final anioAnterior = now.month == 1 ? now.year - 1 : now.year;
+    _mesA = DateTime(anioAnterior, mesAnterior, 1);
+    _mesB = DateTime(now.year, now.month, 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: StreamBuilder<Map<String, double>>(
-          stream: db.gastosVariablesDao.watchTotalPorCategoria(
-            now.year,
-            now.month,
+          stream: widget.db.gastosVariablesDao.watchTotalPorCategoria(
+            _mesB.year,
+            _mesB.month,
           ),
-          builder: (context, snapActual) {
-            if (snapActual.hasError) {
+          builder: (context, snapB) {
+            if (snapB.hasError) {
               return Center(
                 child: Text(
                   'Error al cargar los datos.',
@@ -524,12 +540,12 @@ class _ComparativoCategorias extends StatelessWidget {
               );
             }
             return StreamBuilder<Map<String, double>>(
-              stream: db.gastosVariablesDao.watchTotalPorCategoria(
-                anioAnterior,
-                mesAnterior,
+              stream: widget.db.gastosVariablesDao.watchTotalPorCategoria(
+                _mesA.year,
+                _mesA.month,
               ),
-              builder: (context, snapAnterior) {
-                if (snapAnterior.hasError) {
+              builder: (context, snapA) {
+                if (snapA.hasError) {
                   return Center(
                     child: Text(
                       'Error al cargar los datos.',
@@ -537,52 +553,74 @@ class _ComparativoCategorias extends StatelessWidget {
                     ),
                   );
                 }
-                final actual = snapActual.data ?? {};
-                final anterior = snapAnterior.data ?? {};
+                final montosB = snapB.data ?? {};
+                final montosA = snapA.data ?? {};
 
-                final totalActual = actual.values.fold<double>(
-                  0,
-                  (s, v) => s + v,
-                );
-                final totalAnterior = anterior.values.fold<double>(
-                  0,
-                  (s, v) => s + v,
-                );
+                final totalB = montosB.values.fold<double>(0, (s, v) => s + v);
+                final totalA = montosA.values.fold<double>(0, (s, v) => s + v);
 
-                final hayMesAnterior = anterior.isNotEmpty;
-                final hayMesActual = actual.isNotEmpty;
+                final hayMesB = montosB.isNotEmpty;
+                final hayMesA = montosA.isNotEmpty;
+
+                final nombreMesA = SelectorMes.nombreMes(_mesA.month);
+                final nombreMesB = SelectorMes.nombreMes(_mesB.month);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Comparación con el mes pasado',
+                      'Comparación entre meses',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        SelectorMes(
+                          compacto: true,
+                          anio: _mesA.year,
+                          mes: _mesA.month,
+                          onCambiar: (d) => setState(() => _mesA = d),
+                        ),
+                        Text(
+                          'vs',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorSecundario,
+                          ),
+                        ),
+                        SelectorMes(
+                          compacto: true,
+                          anio: _mesB.year,
+                          mes: _mesB.month,
+                          onCambiar: (d) => setState(() => _mesB = d),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: AppSpacing.md),
 
-                    if (!hayMesActual)
+                    if (!hayMesB)
                       Text(
-                        'Aún no has registrado gastos este mes.',
+                        'Aún no has registrado gastos en $nombreMesB.',
                         style: theme.textTheme.bodyMedium,
                       )
-                    else if (!hayMesAnterior)
+                    else if (!hayMesA)
                       Text(
-                        'Todavía no hay datos del mes pasado para comparar. '
-                        'Vuelve en unos días para ver cómo va tu mes.',
+                        'Todavía no hay datos de $nombreMesA para comparar.',
                         style: theme.textTheme.bodyMedium,
                       )
                     else ...[
                       _FraseResumen(
-                        totalActual: totalActual,
-                        totalAnterior: totalAnterior,
+                        totalMesA: totalA,
+                        totalMesB: totalB,
+                        nombreMesA: nombreMesA,
+                        nombreMesB: nombreMesB,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       const Divider(),
                       const SizedBox(height: AppSpacing.sm),
-                      ..._frasesPorCategoria(actual, anterior, theme),
+                      ..._barrasPorCategoria(montosA, montosB),
                     ],
                   ],
                 );
@@ -594,79 +632,73 @@ class _ComparativoCategorias extends StatelessWidget {
     );
   }
 
-  List<Widget> _frasesPorCategoria(
-    Map<String, double> actual,
-    Map<String, double> anterior,
-    ThemeData theme,
+  List<Widget> _barrasPorCategoria(
+    Map<String, double> montosA,
+    Map<String, double> montosB,
   ) {
-    final categorias = actual.keys.toList()..sort();
-    final frases = <Widget>[];
+    final categorias = {...montosA.keys, ...montosB.keys};
+    final entradas =
+        categorias
+            .map(
+              (c) => (
+                categoria: c,
+                montoA: montosA[c] ?? 0.0,
+                montoB: montosB[c] ?? 0.0,
+              ),
+            )
+            .where((e) => e.montoA > 0 || e.montoB > 0)
+            .toList()
+          ..sort((a, b) {
+            final maxA = a.montoA > a.montoB ? a.montoA : a.montoB;
+            final maxB = b.montoA > b.montoB ? b.montoA : b.montoB;
+            return maxB.compareTo(maxA);
+          });
 
-    for (final cat in categorias) {
-      final montoActual = actual[cat] ?? 0.0;
-      final montoAnterior = anterior[cat] ?? 0.0;
-      final diferencia = montoActual - montoAnterior;
+    final montoMaximo = entradas.fold<double>(
+      0,
+      (m, e) => [m, e.montoA, e.montoB].reduce((x, y) => x > y ? x : y),
+    );
+    final mesACorto = SelectorMes.nombreMesCorto(_mesA.month);
+    final mesBCorto = SelectorMes.nombreMesCorto(_mesB.month);
 
-      if (diferencia == 0) continue;
-
-      final esMas = diferencia > 0;
-      final colorTexto = esMas ? AppColors.alerta : AppColors.positivo;
-      final verbo = esMas ? 'más' : 'menos';
-
-      frases.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: RichText(
-            text: TextSpan(
-              style: theme.textTheme.bodyMedium,
-              children: [
-                TextSpan(text: 'En $cat gastaste '),
-                TextSpan(
-                  text: formatCOP(diferencia.abs()),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: colorTexto,
-                  ),
-                ),
-                TextSpan(text: ' $verbo que el mes pasado.'),
-              ],
-            ),
-          ),
+    return [
+      for (final e in entradas)
+        BarraCategoriaComparada(
+          categoria: e.categoria,
+          mesACorto: mesACorto,
+          montoA: e.montoA,
+          mesBCorto: mesBCorto,
+          montoB: e.montoB,
+          montoMaximo: montoMaximo,
         ),
-      );
-    }
-
-    if (frases.isEmpty) {
-      frases.add(
-        Text(
-          'Gastaste prácticamente igual que el mes pasado en todas '
-          'las categorías.',
-          style: theme.textTheme.bodyMedium,
-        ),
-      );
-    }
-
-    return frases;
+    ];
   }
 }
 
 class _FraseResumen extends StatelessWidget {
-  const _FraseResumen({required this.totalActual, required this.totalAnterior});
+  const _FraseResumen({
+    required this.totalMesA,
+    required this.totalMesB,
+    required this.nombreMesA,
+    required this.nombreMesB,
+  });
 
-  final double totalActual;
-  final double totalAnterior;
+  final double totalMesA;
+  final double totalMesB;
+  final String nombreMesA;
+  final String nombreMesB;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final diferencia = totalActual - totalAnterior;
+    final diferencia = totalMesB - totalMesA;
     final esMas = diferencia > 0;
     final color = esMas ? AppColors.alerta : AppColors.positivo;
     final verbo = esMas ? 'más' : 'menos';
 
     if (diferencia.abs() < 1) {
       return Text(
-        'Este mes has gastado prácticamente lo mismo que el mes pasado.',
+        'Gastaste prácticamente lo mismo en $nombreMesB que en $nombreMesA.',
         style: theme.textTheme.bodyMedium,
       );
     }
@@ -675,12 +707,12 @@ class _FraseResumen extends StatelessWidget {
       text: TextSpan(
         style: theme.textTheme.bodyMedium,
         children: [
-          const TextSpan(text: 'Este mes has gastado '),
+          const TextSpan(text: 'Gastaste '),
           TextSpan(
             text: formatCOP(diferencia.abs()),
             style: TextStyle(fontWeight: FontWeight.bold, color: color),
           ),
-          TextSpan(text: ' $verbo que el mes pasado.'),
+          TextSpan(text: ' $verbo en $nombreMesB que en $nombreMesA.'),
         ],
       ),
     );
