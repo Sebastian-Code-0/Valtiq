@@ -1,5 +1,63 @@
 # Changelog
 
+## Ciclo de estabilización post-Fase 7, continuación (2026-07 a 2026-08) — v1.2.0+3
+
+### Integridad de datos y ciclo de vida de recordatorios
+- Borrado de deudas/préstamos con pagos asociados ahora es
+  transaccional y respeta integridad referencial (FK enforcement);
+  manejo de errores agregado a los formularios de recordatorio y SMTP
+- Ciclo de vida de recordatorios ligados a deuda/préstamo/gasto fijo
+  centralizado en los DAOs (antes vivía repetido e incompleto en las
+  pantallas): marcar pagado/activo, eliminar y reactivar el registro
+  original ahora sincronizan correctamente la activación del
+  recordatorio vinculado, sin importar desde qué pantalla se dispare
+- Nuevo botón "vaciar inactivos" en Recordatorios (borrado masivo
+  manual de recordatorios desactivados)
+- Eliminado `marcarComoVencido` de PrestamosDao (código muerto, sin
+  caller y desincronizado del ciclo de vida de recordatorios)
+
+### Seguridad
+- CryptoService migrado de AES-256-CBC a AES-GCM autenticado; ante
+  fallo de desencriptado (clave o formato antiguo) se autoregenera la
+  clave y se loguea, en vez de crashear
+- En Linux/Windows, la base de datos (valtiq.db) y la clave de
+  encriptación (valtiq_key.bin) se mueven de la carpeta de Documentos
+  del usuario a la carpeta de soporte de la app
+  (getApplicationSupportDirectory); Android no cambia (sigue en su
+  directorio de documentos privado, ya usado por instalaciones
+  existentes)
+
+### Validaciones UX
+- Abonos y pagos a deudas/préstamos ya no pueden superar el saldo
+  pendiente real (sin recortar a 0), cerrando un loophole que
+  permitía sobrepagar de a $1 indefinidamente una vez saldada la
+  deuda
+
+### Rendimiento
+- revisarRecordatorios() carga en batch las referencias de
+  deuda/préstamo/gasto de todos los recordatorios en vez de una query
+  por recordatorio, y reutiliza una sola conexión SMTP para todos los
+  correos de una misma revisión
+- Quitada la animación de fade al cambiar de pestaña en el Shell de
+  navegación (reconstruía las 5 pantallas en cada cambio)
+
+### Refactors — reducción de duplicación
+- `FormularioGuardadoMixin` aplicado a los 6 formularios principales
+  y a los diálogos de registrar abono/pago
+- `theme.colorSecundario` (AppThemeExtension) reemplaza el cálculo
+  repetido de isDark en 7 pantallas
+- `InfoRow` compartido entre las pantallas de detalle de deuda y
+  préstamo
+- `CategoriaGasto` como origen único de nombre+ícono de categoría de
+  gasto variable
+- `AppChip` y `AtenuableCard` reemplazan chips y el patrón
+  Opacity(0.6) duplicados en varias pantallas
+- Tests agregados para SmtpService, DeudasDao, PrestamosDao,
+  formatCOP y helpers de formato de fecha
+
+### Preparación para publicación
+- Firma de release Android configurada con keystore
+
 ## Ciclo de estabilización post-Fase 7 (2026-06) — v1.2.0
 
 ### Correcciones críticas (Tanda A)

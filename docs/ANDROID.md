@@ -16,7 +16,7 @@
 # APK debug (para pruebas directas en dispositivo/emulador)
 flutter build apk --debug
 
-# APK release (requiere configurar signing en build.gradle.kts)
+# APK release (requiere android/key.properties, ver abajo)
 flutter build apk --release
 
 # Instalar directamente en dispositivo conectado
@@ -27,6 +27,22 @@ flutter run
 ```
 
 El APK de debug se genera en: `build/app/outputs/flutter-apk/app-debug.apk`
+
+## Firma de release
+
+`android/app/build.gradle.kts` define `signingConfigs.release` leyendo
+credenciales desde `android/key.properties` (no versionado, no existe
+en el repo):
+```
+storePassword=...
+keyPassword=...
+keyAlias=...
+storeFile=/ruta/al/keystore.jks
+```
+Sin ese archivo, `flutter build apk --release` falla al resolver
+`keystoreProperties["..."]`. El keystore y `key.properties` se
+generan y guardan fuera del repo, solo en la máquina que compila el
+release.
 
 ## Versiones SDK
 

@@ -140,6 +140,15 @@
 - v6 → v7: crear GastosVariables
 - v7 → v8: añadir Deudas.modalidadCalculo (default 'simple')
 
+### Ubicación de archivos
+
+`valtiq.db` y `valtiq_key.bin` se guardan fuera del árbol de código.
+En Android usan `getApplicationDocumentsDirectory()` (directorio
+privado de la app, ya usado por instalaciones existentes). En
+Linux/Windows usan `getApplicationSupportDirectory()`: la carpeta de
+Documentos del usuario no es apropiada para archivos internos de la
+app.
+
 ## Pantallas
 
 | Pantalla      | Archivo                   | Descripción                           |
@@ -172,16 +181,60 @@ Ejecuta revisarRecordatorios() al arrancar la app: evalúa cada
 recordatorio activo, aplica deduplicación por frecuencia
 (unica/diaria) y canal (sistema/correo), y dispara las
 notificaciones que correspondan. En Android programa notificaciones
-futuras con AndroidScheduleMode.inexact.
+futuras con AndroidScheduleMode.inexact. Las referencias de
+deuda/préstamo/gasto de los recordatorios se cargan en batch (no una
+query por recordatorio).
 
 **SmtpService** (`services/smtp_service.dart`)
 Envía correos usando mailer con la configuración de ConfigSmtps.
 La contraseña se desencripta en memoria antes de cada envío.
+revisarRecordatorios() reutiliza una única conexión SMTP para todos
+los correos de una misma revisión, en vez de abrir una por
+recordatorio.
 
 **CryptoService** (`services/crypto_service.dart`)
-Encripta y desencripta la contraseña SMTP con AES-256-CBC.
-La clave se genera al primer uso y se persiste en valtiq_key.bin
-fuera de la base de datos.
+Encripta y desencripta la contraseña SMTP con AES-GCM autenticado
+(reemplaza el AES-256-CBC original). Si el desencriptado falla por
+clave o formato antiguo, se autoregenera la clave y se loguea el
+fallo en vez de crashear. La clave se genera al primer uso y se
+persiste en valtiq_key.bin junto a la base de datos (ver
+"Ubicación de archivos" arriba).
+
+## Ciclo de vida de recordatorios ligados
+
+Cuando un Recordatorio tiene `referenciaTabla`/`referenciaId`, su
+activación se mantiene sincronizada con el estado del registro al
+que referencia. La lógica está centralizada en los DAOs (no en las
+pantallas), dentro de la misma `transaction()`:
+- `DeudasDao.marcarComoPagada` / `marcarComoActiva`
+- `PrestamosDao.marcarComoPagado` / `reactivarPrestamo`
+- `GastosFijosDao.setActivo`
+- `deleteDeudaConPagos` / `deletePrestamoConPagos` /
+  `deleteGastoFijoConRecordatorios` desactivan (no borran) el
+  recordatorio vinculado al eliminar el registro original
+
+`RecordatoriosDao` expone `reactivarRecordatoriosPorReferencia`
+(reactiva y resetea `ultimaNotificacion`/`ultimoEnvioCorreo` para que
+vuelva a notificar limpio) y `eliminarRecordatoriosInactivos`
+(borrado masivo, usado por el botón "vaciar inactivos" en la vista
+de inactivos). El borrado de deudas/préstamos con pagos asociados es
+transaccional y respeta integridad referencial (FK enforcement).
+
+## Utilidades compartidas
+
+- `utils/formulario_guardado_mixin.dart` — `FormularioGuardadoMixin`:
+  valida, marca estado de guardando, persiste y maneja error/snackbar
+  de forma uniforme; usado por los 6 formularios principales y los
+  diálogos de registrar abono/pago.
+- `theme/theme_extensions.dart` — `AppThemeExtension.colorSecundario`,
+  reemplaza el cálculo repetido de `isDark` en 7 pantallas.
+- `utils/form_widgets.dart` — `InfoRow`, fila label→valor compartida
+  entre las pantallas de detalle de deuda y préstamo.
+- `utils/categoria_gasto.dart` — `CategoriaGasto`, origen único de
+  nombre+ícono por categoría de gasto variable, con fallback a
+  "otros" para valores libres no listados.
+- `theme/app_chip.dart` — `AppChip` y `AtenuableCard`, reemplazan
+  chips y el patrón `Opacity(0.6)` duplicados en varias pantallas.
 
 ## Flujo de datos
 
@@ -194,6 +247,9 @@ pantallas acceden a AppDatabase vía constructor.
 Los streams de drift (watchAll, watchActivos) mantienen las
 listas reactivas: cualquier insert/update/delete reconstruye
 automáticamente los widgets suscritos.
+
+El Shell de navegación no anima el cambio de pestaña con fade
+(se quitó: reconstruía las 5 pantallas en cada cambio).
 
 ### Comparativo mensual de gastos variables
 
