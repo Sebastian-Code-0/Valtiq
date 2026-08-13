@@ -319,11 +319,22 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
             Expanded(
               child: gastos.isEmpty
                   ? Center(
-                      child: Text(
-                        'No hay gastos variables este mes',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: colorSec,
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.calendar_month_outlined,
+                            size: 32,
+                            color: colorSec,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'No hay gastos variables este mes',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: colorSec,
+                            ),
+                          ),
+                        ],
                       ),
                     )
                   : ListView.separated(

@@ -603,15 +603,9 @@ class _ComparativoCategoriasState extends State<_ComparativoCategorias> {
                     const SizedBox(height: AppSpacing.md),
 
                     if (!hayMesB)
-                      Text(
-                        'Aún no has registrado gastos en $nombreMesB.',
-                        style: theme.textTheme.bodyMedium,
-                      )
+                      _estadoVacio(nombreMesB)
                     else if (!hayMesA)
-                      Text(
-                        'Todavía no hay datos de $nombreMesA para comparar.',
-                        style: theme.textTheme.bodyMedium,
-                      )
+                      _estadoVacio(nombreMesA)
                     else ...[
                       _FraseResumen(
                         totalMesA: totalA,
@@ -629,6 +623,38 @@ class _ComparativoCategoriasState extends State<_ComparativoCategorias> {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _estadoVacio(String nombreMes) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: Column(
+          children: [
+            Icon(
+              Icons.calendar_month_outlined,
+              size: 32,
+              color: theme.colorSecundario,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Sin gastos en $nombreMes',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'No hay nada registrado ese mes para comparar.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorSecundario,
+              ),
+            ),
+          ],
         ),
       ),
     );
