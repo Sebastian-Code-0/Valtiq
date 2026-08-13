@@ -5,6 +5,7 @@ import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/categoria_gasto.dart';
 import '../../utils/date_format.dart';
+import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import 'gasto_fijo_form.dart';
 import 'gasto_variable_form.dart';
@@ -23,8 +24,11 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
   String _modo = 'ingresos';
 
   late final Stream<List<Ingreso>> _streamIngresos;
-  late final Stream<List<GastosVariable>> _streamGastosVariables;
+  late Stream<List<GastosVariable>> _streamGastosVariables;
   late final Stream<List<GastosFijo>> _streamGastos;
+
+  late DateTime _mesVariables;
+  late Stream<Map<String, double>> _streamTotalPorCategoria;
 
   String _capitalizar(String s) =>
       s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
@@ -36,13 +40,27 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
       widget.db.ingresos,
     )..orderBy([(i) => OrderingTerm.desc(i.fecha)])).watch();
     final now = DateTime.now();
-    _streamGastosVariables = widget.db.gastosVariablesDao.watchGastosPorMes(
-      now.year,
-      now.month,
-    );
+    _mesVariables = DateTime(now.year, now.month, 1);
+    _cargarStreamsVariables();
     _streamGastos = (widget.db.select(
       widget.db.gastosFijos,
     )..orderBy([(g) => OrderingTerm.asc(g.concepto)])).watch();
+  }
+
+  void _cargarStreamsVariables() {
+    _streamGastosVariables = widget.db.gastosVariablesDao.watchGastosPorMes(
+      _mesVariables.year,
+      _mesVariables.month,
+    );
+    _streamTotalPorCategoria = widget.db.gastosVariablesDao
+        .watchTotalPorCategoria(_mesVariables.year, _mesVariables.month);
+  }
+
+  void _cambiarMesVariables(DateTime nuevoMes) {
+    setState(() {
+      _mesVariables = nuevoMes;
+      _cargarStreamsVariables();
+    });
   }
 
   Future<void> _abrirIngresoForm({Ingreso? ingreso}) async {
@@ -264,8 +282,40 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            SelectorMes(
+              anio: _mesVariables.year,
+              mes: _mesVariables.month,
+              onCambiar: _cambiarMesVariables,
+            ),
+            const SizedBox(height: AppSpacing.sm),
             _totalRow(theme: theme, total: total, color: AppColors.alerta),
             const SizedBox(height: AppSpacing.md),
+            StreamBuilder<Map<String, double>>(
+              stream: _streamTotalPorCategoria,
+              builder: (context, snapCategorias) {
+                final porCategoria = snapCategorias.data ?? {};
+                if (porCategoria.isEmpty) return const SizedBox.shrink();
+
+                final entradas = porCategoria.entries.toList()
+                  ..sort((a, b) => b.value.compareTo(a.value));
+                final montoMaximo = entradas.first.value;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final e in entradas)
+                        BarraCategoria(
+                          categoria: e.key,
+                          monto: e.value,
+                          montoMaximo: montoMaximo,
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
             Expanded(
               child: gastos.isEmpty
                   ? Center(

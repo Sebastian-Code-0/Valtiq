@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
+import 'categoria_gasto.dart';
 import 'date_format.dart';
+import 'format.dart';
 
 class FormSection extends StatelessWidget {
   const FormSection({
@@ -204,6 +206,128 @@ class InfoRow extends StatelessWidget {
             ),
           ),
           Expanded(child: Text(valor, style: theme.textTheme.bodyMedium)),
+        ],
+      ),
+    );
+  }
+}
+
+const _nombresMeses = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+class SelectorMes extends StatelessWidget {
+  const SelectorMes({
+    super.key,
+    required this.anio,
+    required this.mes,
+    required this.onCambiar,
+    this.compacto = false,
+  });
+
+  final int anio;
+  final int mes;
+  final ValueChanged<DateTime> onCambiar;
+  final bool compacto;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ahora = DateTime.now();
+    final esMesActual = anio == ahora.year && mes == ahora.month;
+    final estiloTexto = compacto
+        ? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)
+        : theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold);
+    final densidad = compacto ? VisualDensity.compact : null;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left),
+          visualDensity: densidad,
+          tooltip: 'Mes anterior',
+          onPressed: () => onCambiar(DateTime(anio, mes - 1, 1)),
+        ),
+        Text('${_nombresMeses[mes - 1]} $anio', style: estiloTexto),
+        IconButton(
+          icon: const Icon(Icons.chevron_right),
+          visualDensity: densidad,
+          tooltip: 'Mes siguiente',
+          onPressed: esMesActual
+              ? null
+              : () => onCambiar(DateTime(anio, mes + 1, 1)),
+        ),
+      ],
+    );
+  }
+}
+
+class BarraCategoria extends StatelessWidget {
+  const BarraCategoria({
+    super.key,
+    required this.categoria,
+    required this.monto,
+    required this.montoMaximo,
+  });
+
+  final String categoria;
+  final double monto;
+  final double montoMaximo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = CategoriaGasto.colorPara(categoria);
+    final fraccion = montoMaximo <= 0
+        ? 0.0
+        : (monto / montoMaximo).clamp(0.0, 1.0);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        children: [
+          Icon(CategoriaGasto.iconoPara(categoria), size: 16, color: color),
+          const SizedBox(width: AppSpacing.sm),
+          SizedBox(
+            width: 96,
+            child: Text(
+              categoria,
+              style: theme.textTheme.bodySmall,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                height: 8,
+                color: color.withValues(alpha: 0.15),
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: fraccion,
+                  child: Container(color: color),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            formatCOP(monto),
+            style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
