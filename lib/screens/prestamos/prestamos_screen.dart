@@ -5,6 +5,7 @@ import '../../db/database.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
+import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import 'prestamo_detalle.dart';
 import 'prestamo_form.dart';
@@ -306,6 +307,10 @@ class _PrestamoCard extends StatelessWidget {
       fechaPrestamo: prestamo.fechaPrestamo,
       totalAbonado: abonado,
     );
+    final totalConInteres = abonado + saldo;
+    final fraccionCobrada = totalConInteres > 0
+        ? abonado / totalConInteres
+        : 0.0;
     final vencido =
         prestamo.fechaPactadaPago != null &&
         prestamo.fechaPactadaPago!.isBefore(DateTime.now()) &&
@@ -499,6 +504,25 @@ class _PrestamoCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
                     ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  Expanded(
+                    child: BarraProgreso(
+                      fraccion: fraccionCobrada,
+                      color: AppColors.positivo,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    '${(fraccionCobrada * 100).round()}% cobrado',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorSec,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

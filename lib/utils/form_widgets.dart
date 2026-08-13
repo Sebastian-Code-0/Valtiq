@@ -381,6 +381,24 @@ class _PistaBarra extends StatelessWidget {
   }
 }
 
+class BarraProgreso extends StatelessWidget {
+  const BarraProgreso({
+    super.key,
+    required this.fraccion,
+    required this.color,
+  });
+
+  /// 0.0 a 1.0 — la fracción ya calculada por quien llama.
+  final double fraccion;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final valor = fraccion.isFinite ? fraccion.clamp(0.0, 1.0) : 0.0;
+    return _PistaBarra(color: color, fraccion: valor);
+  }
+}
+
 class BarraCategoriaComparada extends StatelessWidget {
   const BarraCategoriaComparada({
     super.key,

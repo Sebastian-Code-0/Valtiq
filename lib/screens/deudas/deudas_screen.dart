@@ -5,6 +5,7 @@ import '../../db/database.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
+import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import 'deuda_detalle.dart';
 import 'deuda_form.dart';
@@ -310,6 +311,10 @@ class _DeudaCard extends StatelessWidget {
       fechaPrestamo: deuda.fechaPrestamo,
       totalAbonado: abonado,
     );
+    final totalConInteres = abonado + saldo;
+    final fraccionPagada = totalConInteres > 0
+        ? abonado / totalConInteres
+        : 0.0;
     final vencida =
         deuda.fechaLimite != null &&
         deuda.fechaLimite!.isBefore(DateTime.now());
@@ -496,6 +501,25 @@ class _DeudaCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
                     ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  Expanded(
+                    child: BarraProgreso(
+                      fraccion: fraccionPagada,
+                      color: AppColors.positivo,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    '${(fraccionPagada * 100).round()}% pagado',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorSec,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
