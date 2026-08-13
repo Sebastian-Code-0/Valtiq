@@ -2,6 +2,30 @@
 
 ## Ciclo de estabilización post-Fase 7, continuación (2026-07 a 2026-08) — v1.2.0+3
 
+### Finanzas variables y Dashboard — navegación mensual y comparativos por categoría
+- `CategoriaGasto` gana un color fijo por categoría (campo `color` +
+  helper `colorPara`), independiente del acento personalizable y de
+  `AppColors.alerta`, para que ninguna categoría se confunda
+  visualmente con una alerta o con el acento activo
+- Nuevos widgets reutilizables en `form_widgets.dart`: `SelectorMes`
+  (navegación `< Mes Año >`, con la flecha de avanzar deshabilitada
+  al llegar al mes actual) y `BarraCategoria` (barra horizontal
+  proporcional coloreada por categoría)
+- Finanzas → pestaña Variables: ahora navega meses históricos con
+  `SelectorMes` (antes quedaba fija al mes actual) y muestra las
+  barras de gasto por categoría del mes visible
+- Dashboard: la card de comparación mensual (`_ComparativoCategorias`)
+  pasa de mostrar solo mes actual vs. mes anterior a `StatefulWidget`
+  con dos `SelectorMes` compactos independientes, permitiendo comparar
+  cualquier par de meses
+- Nuevo widget `BarraCategoriaComparada`: dos mini-barras apiladas por
+  categoría más una insignia de variación porcentual (tope en
+  "999%+" para variaciones absurdas por montos base muy pequeños, o
+  "nuevo" si la categoría no existía en el mes A)
+- `_PistaBarra` factorizado como widget privado compartido entre
+  `BarraCategoria` y `BarraCategoriaComparada` para no duplicar el
+  track de la barra
+
 ### Integridad de datos y ciclo de vida de recordatorios
 - Borrado de deudas/préstamos con pagos asociados ahora es
   transaccional y respeta integridad referencial (FK enforcement);
@@ -26,6 +50,9 @@
   (getApplicationSupportDirectory); Android no cambia (sigue en su
   directorio de documentos privado, ya usado por instalaciones
   existentes)
+- Android: `allowBackup="false"` en AndroidManifest.xml — sin esto,
+  Auto Backup/`adb backup` podían extraer `valtiq.db` +
+  `valtiq_key.bin` juntos y desencriptar la contraseña SMTP
 
 ### Validaciones UX
 - Abonos y pagos a deudas/préstamos ya no pueden superar el saldo

@@ -147,7 +147,10 @@ En Android usan `getApplicationDocumentsDirectory()` (directorio
 privado de la app, ya usado por instalaciones existentes). En
 Linux/Windows usan `getApplicationSupportDirectory()`: la carpeta de
 Documentos del usuario no es apropiada para archivos internos de la
-app.
+app. En Android, `allowBackup="false"` en AndroidManifest.xml impide
+que Auto Backup/`adb backup` extraiga `valtiq.db` y `valtiq_key.bin`
+juntos (lo que permitiría desencriptar la contraseña SMTP fuera del
+dispositivo).
 
 ## Pantallas
 
@@ -229,10 +232,19 @@ transaccional y respeta integridad referencial (FK enforcement).
 - `theme/theme_extensions.dart` — `AppThemeExtension.colorSecundario`,
   reemplaza el cálculo repetido de `isDark` en 7 pantallas.
 - `utils/form_widgets.dart` — `InfoRow`, fila label→valor compartida
-  entre las pantallas de detalle de deuda y préstamo.
+  entre las pantallas de detalle de deuda y préstamo. También
+  `SelectorMes` (navegación `< Mes Año >` reutilizada en Finanzas
+  Variables y en el comparativo del Dashboard, con variante
+  `compacto`), `BarraCategoria` (barra proporcional por categoría) y
+  `BarraCategoriaComparada` (dos mini-barras apiladas + insignia de
+  variación entre dos meses), ambas apoyadas en el widget privado
+  compartido `_PistaBarra`.
 - `utils/categoria_gasto.dart` — `CategoriaGasto`, origen único de
-  nombre+ícono por categoría de gasto variable, con fallback a
-  "otros" para valores libres no listados.
+  nombre+ícono+color por categoría de gasto variable, con fallback a
+  "otros" para valores libres no listados. El color es fijo por
+  categoría (independiente del acento personalizable y de
+  `AppColors.alerta`) y se usa en las barras de Finanzas Variables y
+  del comparativo del Dashboard.
 - `theme/app_chip.dart` — `AppChip` y `AtenuableCard`, reemplazan
   chips y el patrón `Opacity(0.6)` duplicados en varias pantallas.
 
@@ -251,12 +263,21 @@ automáticamente los widgets suscritos.
 El Shell de navegación no anima el cambio de pestaña con fade
 (se quitó: reconstruía las 5 pantallas en cada cambio).
 
-### Comparativo mensual de gastos variables
+### Navegación mensual y comparativos de gastos variables
 
-La card `_ComparativoCategorias` del Dashboard compara el mes actual
-contra el mes anterior usando dos streams de `watchTotalPorCategoria`.
-Genera una frase resumen del total (más/menos que el mes pasado) y una
-línea por cada categoría donde la diferencia sea distinta de cero.
-Si no hay datos del mes actual muestra un mensaje invitando a registrar
-gastos; si no hay datos del mes anterior avisa que aún no hay histórico
+En Finanzas → pestaña Variables, `SelectorMes` permite navegar meses
+históricos (la flecha de avanzar se deshabilita al llegar al mes
+actual); el mes visible controla tanto la lista de gastos como el
+stream `watchTotalPorCategoria`, cuyo resultado se dibuja como una
+`BarraCategoria` por categoría (ordenadas de mayor a menor monto).
+
+La card `_ComparativoCategorias` del Dashboard es un `StatefulWidget`
+con dos `SelectorMes` compactos independientes (mes A y mes B,
+inicializados en mes anterior vs. mes actual), lo que permite comparar
+cualquier par de meses. Usa dos streams de `watchTotalPorCategoria`
+(uno por mes) para generar una frase resumen del total (más/menos
+gastado en el mes B que en el mes A) y una `BarraCategoriaComparada`
+por cada categoría con datos en A y/o B, con insignia de variación
+porcentual. Si no hay datos del mes B muestra un mensaje invitando a
+registrar gastos; si no hay datos del mes A avisa que no hay datos
 para comparar.
