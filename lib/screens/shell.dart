@@ -18,6 +18,14 @@ class ShellScreen extends StatefulWidget {
 
 class _ShellScreenState extends State<ShellScreen> {
   int _index = 0;
+  final List<bool> _visitada = [true, false, false, false, false];
+
+  void _cambiarIndice(int i) {
+    setState(() {
+      _index = i;
+      _visitada[i] = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +38,16 @@ class _ShellScreenState extends State<ShellScreen> {
     ];
 
     return Scaffold(
-      body: IndexedStack(index: _index, children: pantallas),
+      body: IndexedStack(
+        index: _index,
+        children: [
+          for (var i = 0; i < pantallas.length; i++)
+            _visitada[i] ? pantallas[i] : const SizedBox.shrink(),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _index,
-        onTap: (i) => setState(() => _index = i),
+        onTap: _cambiarIndice,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
