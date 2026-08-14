@@ -10,6 +10,12 @@ class PagosDeudaDao extends DatabaseAccessor<AppDatabase>
     with _$PagosDeudaDaoMixin {
   PagosDeudaDao(super.db);
 
+  Future<List<PagosDeudaData>> getAllPagos() {
+    return (select(
+      pagosDeuda,
+    )..orderBy([(t) => OrderingTerm.desc(t.fechaPago)])).get();
+  }
+
   Stream<List<PagosDeudaData>> watchPagosDeDeuda(int deudaId) {
     return (select(pagosDeuda)
           ..where((t) => t.deudaId.equals(deudaId))

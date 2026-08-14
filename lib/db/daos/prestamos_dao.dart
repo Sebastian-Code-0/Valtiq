@@ -80,6 +80,12 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     });
   }
 
+  Future<List<PagosRecibido>> getAllPagosRecibidos() {
+    return (select(
+      pagosRecibidos,
+    )..orderBy([(t) => OrderingTerm.desc(t.fechaPago)])).get();
+  }
+
   Future<List<PagosRecibido>> getPagosDelPrestamo(int prestamoId) {
     return (select(pagosRecibidos)
           ..where((t) => t.prestamoId.equals(prestamoId))

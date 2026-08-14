@@ -10,6 +10,12 @@ class GastosFijosDao extends DatabaseAccessor<AppDatabase>
     with _$GastosFijosDaoMixin {
   GastosFijosDao(super.db);
 
+  Future<List<GastosFijo>> getAllGastosFijos() {
+    return (select(
+      gastosFijos,
+    )..orderBy([(t) => OrderingTerm.asc(t.concepto)])).get();
+  }
+
   Future<List<GastosFijo>> getGastosFijosActivos() {
     return (select(gastosFijos)..where((t) => t.activo.equals(true))).get();
   }

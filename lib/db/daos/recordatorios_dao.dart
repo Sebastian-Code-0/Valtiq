@@ -10,6 +10,12 @@ class RecordatoriosDao extends DatabaseAccessor<AppDatabase>
     with _$RecordatoriosDaoMixin {
   RecordatoriosDao(super.db);
 
+  Future<List<Recordatorio>> getAllRecordatorios() {
+    return (select(
+      recordatorios,
+    )..orderBy([(t) => OrderingTerm.asc(t.fechaAlerta)])).get();
+  }
+
   Future<List<Recordatorio>> getRecordatoriosActivos() {
     return (select(recordatorios)..where((t) => t.activo.equals(true))).get();
   }

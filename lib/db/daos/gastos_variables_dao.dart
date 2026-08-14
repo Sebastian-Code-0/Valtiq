@@ -9,6 +9,10 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
     with _$GastosVariablesDaoMixin {
   GastosVariablesDao(super.db);
 
+  Future<List<GastosVariable>> getAllGastosVariables() => (select(
+    gastosVariables,
+  )..orderBy([(g) => OrderingTerm.desc(g.fecha)])).get();
+
   Stream<List<GastosVariable>> watchGastosVariables() => (select(
     gastosVariables,
   )..orderBy([(g) => OrderingTerm.desc(g.fecha)])).watch();
