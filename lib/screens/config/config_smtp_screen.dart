@@ -7,6 +7,7 @@ import '../../services/smtp_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
+import '../../utils/notificaciones.dart';
 
 class ConfigSmtpScreen extends StatefulWidget {
   const ConfigSmtpScreen({super.key, required this.db});
@@ -102,11 +103,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_destinoCtrl.text.trim().isNotEmpty &&
         !_esEmailValido(_destinoCtrl.text)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('El correo destino no tiene un formato válido'),
-        ),
-      );
+      mostrarAlerta(context, 'El correo destino no tiene un formato válido');
       return;
     }
     setState(() => _guardando = true);
@@ -131,14 +128,10 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
       setState(() {
         if (passTexto.isNotEmpty) _tieneContrasena = true;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Configuración guardada')));
+      mostrarExito(context, 'Configuración guardada');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
+      mostrarAlerta(context, mensajeAmigableGuardado(e));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -175,21 +168,24 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
         password: password,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.mensaje ?? (result.exito ? 'OK' : 'Falló')),
-          backgroundColor: result.exito ? AppColors.positivo : AppColors.alerta,
-          duration: const Duration(seconds: 6),
-        ),
-      );
+      if (result.exito) {
+        mostrarExito(
+          context,
+          result.mensaje ?? 'OK',
+          duracion: const Duration(seconds: 6),
+        );
+      } else {
+        mostrarAlerta(
+          context,
+          result.mensaje ?? 'Falló',
+          duracion: const Duration(seconds: 6),
+        );
+      }
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No se pudo probar la configuración. Intenta de nuevo.',
-          ),
-        ),
+      mostrarAlerta(
+        context,
+        'No se pudo probar la configuración. Intenta de nuevo.',
       );
     } finally {
       if (mounted) setState(() => _probando = false);
@@ -200,9 +196,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     final uri = Uri.parse('https://myaccount.google.com/apppasswords');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo abrir el navegador')),
-        );
+        mostrarAlerta(context, 'No se pudo abrir el navegador');
       }
     }
   }

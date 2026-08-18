@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/formulario_guardado_mixin.dart';
+import '../../utils/notificaciones.dart';
 
 class RecordatorioForm extends StatefulWidget {
   const RecordatorioForm({super.key, required this.db, this.recordatorio});
@@ -109,9 +110,7 @@ class _RecordatorioFormState extends State<RecordatorioForm>
   Future<void> _guardar() async {
     if (!formKey.currentState!.validate()) return;
     if (_tipoReferencia != 'ninguna' && _referenciaId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona el elemento referenciado')),
-      );
+      mostrarAlerta(context, 'Selecciona el elemento referenciado');
       return;
     }
 

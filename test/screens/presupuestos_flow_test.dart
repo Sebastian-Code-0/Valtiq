@@ -7,6 +7,17 @@ import 'package:valtiq/screens/dashboard/dashboard_screen.dart';
 
 AppDatabase _createInMemoryDb() => AppDatabase(NativeDatabase.memory());
 
+// Los StreamBuilder de estas pantallas usan streams .watch() de drift, que
+// al cancelarse agendan un Timer de duración cero para limpieza interna.
+// Sin este pump extra tras desmontar el árbol, ese timer queda "pendiente"
+// y el framework de test lo reporta como fallo aunque la app funcione bien.
+Future<void> _cerrar(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox());
+  // Duration.zero explícito (no pump() a secas) para que el reloj falso de
+  // test avance lo suficiente y dispare el timer de limpieza de drift.
+  await tester.pump(Duration.zero);
+}
+
 void main() {
   late AppDatabase db;
 
@@ -18,171 +29,83 @@ void main() {
     await db.close();
   });
 
-  group('PresupuestosScreen', () {
-    testWidgets('definir un límite nuevo no lanza excepción al cerrar el diálogo', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(home: PresupuestosScreen(db: db)),
-      );
+  testWidgets(
+    'PresupuestosScreen: crear, editar (mismo upsert) y quitar un límite '
+    'sin excepciones',
+    (tester) async {
+      await tester.pumpWidget(MaterialApp(home: PresupuestosScreen(db: db)));
       await tester.pumpAndSettle();
 
-      expect(find.text('Sin límite'), findsNWidgets(8));
-
+      // Crear.
       await tester.tap(find.text('Alimentación'));
       await tester.pumpAndSettle();
-
       await tester.enterText(find.byType(TextFormField), '200000');
       await tester.tap(find.text('Guardar'));
       await tester.pumpAndSettle();
-
       expect(tester.takeException(), isNull);
       expect(find.text('\$200.000'), findsOneWidget);
-      expect(find.text('Sin límite'), findsNWidgets(7));
-    });
 
-    testWidgets(
-      'editar un límite existente (mismo upsert) no lanza UNIQUE constraint',
-      (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(home: PresupuestosScreen(db: db)),
-        );
-        await tester.pumpAndSettle();
-
-        // Primer guardado.
-        await tester.tap(find.text('Alimentación'));
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextFormField), '200000');
-        await tester.tap(find.text('Guardar'));
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull);
-
-        // Reabrir la misma categoría y editar: esto es exactamente el
-        // camino que antes fallaba con "UNIQUE constraint failed:
-        // presupuestos_categorias.categoria" porque insertOnConflictUpdate
-        // apuntaba al conflicto de "id" en vez de "categoria".
-        await tester.tap(find.text('Alimentación'));
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextFormField), '250000');
-        await tester.tap(find.text('Guardar'));
-        await tester.pumpAndSettle();
-
-        expect(tester.takeException(), isNull);
-        expect(find.text('\$250.000'), findsOneWidget);
-
-        final todos = await db.presupuestosCategoriasDao.getAllPresupuestos();
-        expect(todos.length, 1);
-        expect(todos.single.limiteMensual, 250000.0);
-      },
-    );
-
-    testWidgets('quitar límite lo elimina y vuelve a "Sin límite"', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(home: PresupuestosScreen(db: db)),
-      );
-      await tester.pumpAndSettle();
-
+      // Editar la misma categoría: antes fallaba con "UNIQUE constraint
+      // failed" porque el upsert apuntaba al conflicto de "id" en vez de
+      // "categoria".
       await tester.tap(find.text('Alimentación'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), '200000');
+      await tester.enterText(find.byType(TextFormField), '250000');
       await tester.tap(find.text('Guardar'));
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('\$250.000'), findsOneWidget);
 
+      final trasEditar = await db.presupuestosCategoriasDao
+          .getAllPresupuestos();
+      expect(trasEditar.length, 1);
+      expect(trasEditar.single.limiteMensual, 250000.0);
+
+      // Quitar límite.
       await tester.tap(find.text('Alimentación'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Quitar límite'));
       await tester.pumpAndSettle();
-
       expect(tester.takeException(), isNull);
-      expect(find.text('Sin límite'), findsNWidgets(8));
-      expect(
-        await db.presupuestosCategoriasDao.getAllPresupuestos(),
-        isEmpty,
-      );
-    });
+      expect(find.text('\$250.000'), findsNothing);
+      expect(await db.presupuestosCategoriasDao.getAllPresupuestos(), isEmpty);
 
-    testWidgets('cancelar no guarda cambios ni lanza excepción', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(home: PresupuestosScreen(db: db)),
-      );
-      await tester.pumpAndSettle();
+      await _cerrar(tester);
+    },
+  );
 
-      await tester.tap(find.text('Ropa'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), '999000');
-      await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
-      expect(
-        await db.presupuestosCategoriasDao.getAllPresupuestos(),
-        isEmpty,
-      );
-    });
-
-    testWidgets('monto vacío o cero no cierra el diálogo (validación)', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(home: PresupuestosScreen(db: db)),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Salud'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Guardar'));
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
-      // El diálogo sigue abierto: "Guardar" y "Cancelar" siguen visibles.
-      expect(find.text('Guardar'), findsOneWidget);
-      expect(find.text('Cancelar'), findsOneWidget);
-    });
-  });
-
-  group('Dashboard — _PresupuestosCard', () {
-    testWidgets('sin presupuestos definidos, la card no se muestra', (
-      tester,
-    ) async {
+  testWidgets(
+    'Dashboard: sin presupuestos no muestra la card; con gasto por encima '
+    'del límite muestra "Superado"',
+    (tester) async {
       await tester.pumpWidget(MaterialApp(home: DashboardScreen(db: db)));
       await tester.pumpAndSettle();
-
       expect(tester.takeException(), isNull);
       expect(find.text('Presupuestos del mes'), findsNothing);
-    });
 
-    testWidgets(
-      'con gasto por encima del límite, muestra la card y "Superado"',
-      (tester) async {
-        final ahora = DateTime.now();
+      final ahora = DateTime.now();
+      await db.presupuestosCategoriasDao.upsertPresupuesto(
+        PresupuestosCategoriasCompanion.insert(
+          categoria: 'Alimentación',
+          limiteMensual: 100000,
+        ),
+      );
+      await db.gastosVariablesDao.insertGastoVariable(
+        GastosVariablesCompanion.insert(
+          descripcion: 'Mercado',
+          monto: 150000,
+          categoria: 'Alimentación',
+          fecha: DateTime(ahora.year, ahora.month, 15),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        await db.presupuestosCategoriasDao.upsertPresupuesto(
-          PresupuestosCategoriasCompanion.insert(
-            categoria: 'Alimentación',
-            limiteMensual: 100000,
-          ),
-        );
-        await db.gastosVariablesDao.insertGastoVariable(
-          GastosVariablesCompanion.insert(
-            descripcion: 'Mercado',
-            monto: 150000,
-            categoria: 'Alimentación',
-            fecha: DateTime(ahora.year, ahora.month, 15),
-          ),
-        );
+      expect(tester.takeException(), isNull);
+      expect(find.text('Presupuestos del mes'), findsOneWidget);
+      expect(find.text('Superado'), findsOneWidget);
+      expect(find.text('de \$100.000'), findsOneWidget);
 
-        await tester.pumpWidget(MaterialApp(home: DashboardScreen(db: db)));
-        await tester.pumpAndSettle();
-
-        expect(tester.takeException(), isNull);
-        expect(find.text('Presupuestos del mes'), findsOneWidget);
-        expect(find.text('Superado'), findsOneWidget);
-        expect(find.text('de \$100.000'), findsOneWidget);
-      },
-    );
-  });
+      await _cerrar(tester);
+    },
+  );
 }

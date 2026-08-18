@@ -5,6 +5,7 @@ import '../../db/database.dart';
 import '../../services/notification_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
+import '../../utils/notificaciones.dart';
 import 'recordatorio_form.dart';
 
 class RecordatoriosScreen extends StatefulWidget {
@@ -65,9 +66,7 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
   Future<void> _inactivar(Recordatorio r) async {
     await widget.db.recordatoriosDao.desactivarRecordatorio(r.id);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Recordatorio "${r.titulo}" desactivado')),
-      );
+      mostrarInfo(context, 'Recordatorio "${r.titulo}" desactivado');
     }
   }
 
@@ -75,9 +74,7 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
     await widget.db.recordatoriosDao.activarRecordatorio(r.id);
     await widget.db.recordatoriosDao.resetearDeduplicacion(r.id);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Recordatorio "${r.titulo}" activado')),
-      );
+      mostrarInfo(context, 'Recordatorio "${r.titulo}" activado');
     }
   }
 
@@ -109,15 +106,14 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
     final eliminados = await widget.db.recordatoriosDao
         .eliminarRecordatoriosInactivos();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            eliminados > 0
-                ? 'Se eliminaron $eliminados recordatorios inactivos'
-                : 'No hay recordatorios inactivos para eliminar',
-          ),
-        ),
-      );
+      if (eliminados > 0) {
+        mostrarExito(
+          context,
+          'Se eliminaron $eliminados recordatorios inactivos',
+        );
+      } else {
+        mostrarInfo(context, 'No hay recordatorios inactivos para eliminar');
+      }
     }
   }
 
@@ -128,9 +124,7 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
       body: '🔔 Prueba — ${fechaRelativa(r.fechaAlerta)}',
     );
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Notificación enviada')));
+      mostrarInfo(context, 'Notificación enviada');
     }
   }
 

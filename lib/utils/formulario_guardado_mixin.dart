@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'error_messages.dart';
+import 'notificaciones.dart';
 
 mixin FormularioGuardadoMixin<T extends StatefulWidget> on State<T> {
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -21,9 +22,7 @@ mixin FormularioGuardadoMixin<T extends StatefulWidget> on State<T> {
     } catch (e) {
       if (mounted) {
         setState(() => guardando = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensajeAmigableGuardado(e))));
+        mostrarAlerta(context, mensajeAmigableGuardado(e));
       }
     }
   }

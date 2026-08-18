@@ -8,6 +8,7 @@ import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/formulario_guardado_mixin.dart';
+import '../../utils/notificaciones.dart';
 
 class DeudaForm extends StatefulWidget {
   const DeudaForm({super.key, required this.db, this.deuda});
@@ -98,11 +99,7 @@ class _DeudaFormState extends State<DeudaForm>
     if (monto == null) {
       setState(() => guardando = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Monto inválido. Verifica el valor ingresado.'),
-          ),
-        );
+        mostrarAlerta(context, 'Monto inválido. Verifica el valor ingresado.');
       }
       return;
     }

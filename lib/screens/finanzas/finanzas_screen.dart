@@ -7,6 +7,7 @@ import '../../utils/categoria_gasto.dart';
 import '../../utils/date_format.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../../utils/notificaciones.dart';
 import 'gasto_fijo_form.dart';
 import 'gasto_variable_form.dart';
 import 'ingreso_form.dart';
@@ -80,10 +81,9 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
       ),
     );
     if (resultado is String && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Superaste tu presupuesto de $resultado este mes.'),
-        ),
+      mostrarAlerta(
+        context,
+        'Superaste tu presupuesto de $resultado este mes.',
       );
     }
   }
@@ -177,9 +177,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         );
       } catch (_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No se pudo eliminar el gasto.')),
-          );
+          mostrarAlerta(context, 'No se pudo eliminar el gasto.');
         }
       }
     }
@@ -321,9 +319,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                         final montoMaximo = entradas.first.value;
 
                         return Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: AppSpacing.md,
-                          ),
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -352,8 +348,9 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                                   const SizedBox(height: AppSpacing.sm),
                                   Text(
                                     'No hay gastos variables este mes',
-                                    style: theme.textTheme.bodyLarge
-                                        ?.copyWith(color: colorSec),
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      color: colorSec,
+                                    ),
                                   ),
                                 ],
                               ),

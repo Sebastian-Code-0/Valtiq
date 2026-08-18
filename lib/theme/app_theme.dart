@@ -54,6 +54,13 @@ abstract class AppTheme {
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        ),
+        contentTextStyle: const TextStyle(color: Colors.white),
+      ),
       elevatedButtonTheme: _elevatedButtonTheme(),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -106,6 +113,13 @@ abstract class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        ),
+        contentTextStyle: const TextStyle(color: Colors.white),
       ),
       elevatedButtonTheme: _elevatedButtonTheme(),
       inputDecorationTheme: InputDecorationTheme(

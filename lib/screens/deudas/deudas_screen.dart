@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../../utils/notificaciones.dart';
 import 'deuda_detalle.dart';
 import 'deuda_form.dart';
 
@@ -91,9 +92,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
         await widget.db.deudasDao.deleteDeudaConPagos(deuda.id);
       } catch (_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No se pudo eliminar la deuda.')),
-          );
+          mostrarAlerta(context, 'No se pudo eliminar la deuda.');
         }
       }
     }
@@ -516,9 +515,7 @@ class _DeudaCard extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Text(
                     '${(fraccionPagada * 100).round()}% pagado',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorSec,
-                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],

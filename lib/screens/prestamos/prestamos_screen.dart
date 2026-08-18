@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../../utils/notificaciones.dart';
 import 'prestamo_detalle.dart';
 import 'prestamo_form.dart';
 
@@ -150,9 +151,7 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
         await widget.db.prestamosDao.deletePrestamoConPagos(prestamo.id);
       } catch (_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No se pudo eliminar el préstamo.')),
-          );
+          mostrarAlerta(context, 'No se pudo eliminar el préstamo.');
         }
       }
     }
@@ -519,9 +518,7 @@ class _PrestamoCard extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Text(
                     '${(fraccionCobrada * 100).round()}% cobrado',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorSec,
-                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],

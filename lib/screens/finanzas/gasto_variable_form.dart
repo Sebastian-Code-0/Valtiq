@@ -8,6 +8,7 @@ import '../../utils/categoria_gasto.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/formulario_guardado_mixin.dart';
+import '../../utils/notificaciones.dart';
 
 class GastoVariableForm extends StatefulWidget {
   const GastoVariableForm({super.key, required this.db, this.gasto});
@@ -69,32 +70,24 @@ class _GastoVariableFormState extends State<GastoVariableForm>
     if (monto == null) {
       setState(() => guardando = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Monto inválido. Verifica el valor ingresado.'),
-          ),
-        );
+        mostrarAlerta(context, 'Monto inválido. Verifica el valor ingresado.');
       }
       return;
     }
     final notas = _notasCtrl.text.trim();
 
     String? categoriaExcedida;
-    final presupuesto = await widget.db.presupuestosCategoriasDao
-        .getPresupuestoPorCategoria(_categoria!);
-    if (presupuesto != null) {
-      final totales = await widget.db.gastosVariablesDao
-          .watchTotalPorCategoria(_fecha.year, _fecha.month)
-          .first;
-      var gastadoPrevio = totales[_categoria!] ?? 0.0;
-      // Si se está editando un gasto existente de la misma categoría, resta su
-      // monto anterior para no contarlo dos veces junto con el monto nuevo.
-      if (widget.gasto != null && widget.gasto!.categoria == _categoria) {
-        gastadoPrevio -= widget.gasto!.monto;
-      }
-      final proyectado = gastadoPrevio + monto;
-      if (proyectado > presupuesto.limiteMensual) {
-        categoriaExcedida = _categoria;
+    if (widget.gasto == null) {
+      final presupuesto = await widget.db.presupuestosCategoriasDao
+          .getPresupuestoPorCategoria(_categoria!);
+      if (presupuesto != null) {
+        final totales = await widget.db.gastosVariablesDao
+            .watchTotalPorCategoria(_fecha.year, _fecha.month)
+            .first;
+        final proyectado = (totales[_categoria!] ?? 0.0) + monto;
+        if (proyectado > presupuesto.limiteMensual) {
+          categoriaExcedida = _categoria;
+        }
       }
     }
 

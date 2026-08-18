@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../db/database.dart';
 import '../../services/backup_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/notificaciones.dart';
 
 class RespaldoScreen extends StatefulWidget {
   const RespaldoScreen({super.key, required this.db});
@@ -46,14 +47,10 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
       await archivo.saveTo(resultado.path);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Datos exportados')));
+      mostrarExito(context, 'Datos exportados');
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo exportar los datos.')),
-      );
+      mostrarAlerta(context, 'No se pudo exportar los datos.');
     } finally {
       if (mounted) setState(() => _exportando = false);
     }
@@ -110,21 +107,13 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
       await BackupService(widget.db).importarDatos(json);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Datos importados')));
+      mostrarExito(context, 'Datos importados');
     } on FormatException catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('El archivo no es un respaldo válido de Valtiq.'),
-        ),
-      );
+      mostrarAlerta(context, 'El archivo no es un respaldo válido de Valtiq.');
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo importar los datos.')),
-      );
+      mostrarAlerta(context, 'No se pudo importar los datos.');
     } finally {
       if (mounted) setState(() => _importando = false);
     }

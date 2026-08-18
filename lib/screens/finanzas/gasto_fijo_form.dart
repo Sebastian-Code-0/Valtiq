@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/formulario_guardado_mixin.dart';
+import '../../utils/notificaciones.dart';
 
 class GastoFijoForm extends StatefulWidget {
   const GastoFijoForm({super.key, required this.db, this.gasto});
@@ -58,11 +59,7 @@ class _GastoFijoFormState extends State<GastoFijoForm>
     if (monto == null) {
       setState(() => guardando = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Monto inválido. Verifica el valor ingresado.'),
-          ),
-        );
+        mostrarAlerta(context, 'Monto inválido. Verifica el valor ingresado.');
       }
       return;
     }
