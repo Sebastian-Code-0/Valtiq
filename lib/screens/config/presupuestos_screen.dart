@@ -32,61 +32,11 @@ class _PresupuestosScreenState extends State<PresupuestosScreen> {
     CategoriaGasto categoria,
     PresupuestosCategoria? actual,
   ) async {
-    final controller = TextEditingController(
-      text: actual != null ? formatCOPInput(actual.limiteMensual) : '',
-    );
-    final formKey = GlobalKey<FormState>();
-
     final resultado = await showDialog<Object?>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Límite para ${categoria.nombre}'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Límite mensual',
-              prefixIcon: Icon(Icons.attach_money),
-            ),
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              CopInputFormatter(),
-            ],
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Requerido';
-              final n = parseCOP(v);
-              if (n == null || n <= 0) return 'Debe ser mayor a 0';
-              return null;
-            },
-          ),
-        ),
-        actions: [
-          if (actual != null)
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, 'quitar'),
-              child: const Text(
-                'Quitar límite',
-                style: TextStyle(color: AppColors.alerta),
-              ),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (!formKey.currentState!.validate()) return;
-              Navigator.pop(ctx, parseCOP(controller.text));
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
+      builder: (ctx) =>
+          _EditarPresupuestoDialog(categoria: categoria, actual: actual),
     );
-    controller.dispose();
 
     if (resultado == 'quitar' && actual != null) {
       await widget.db.presupuestosCategoriasDao.eliminarPresupuesto(actual.id);
@@ -135,6 +85,88 @@ class _PresupuestosScreenState extends State<PresupuestosScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+class _EditarPresupuestoDialog extends StatefulWidget {
+  const _EditarPresupuestoDialog({required this.categoria, this.actual});
+
+  final CategoriaGasto categoria;
+  final PresupuestosCategoria? actual;
+
+  @override
+  State<_EditarPresupuestoDialog> createState() =>
+      _EditarPresupuestoDialogState();
+}
+
+class _EditarPresupuestoDialogState extends State<_EditarPresupuestoDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.actual != null
+          ? formatCOPInput(widget.actual!.limiteMensual)
+          : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Límite para ${widget.categoria.nombre}'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Límite mensual',
+            prefixIcon: Icon(Icons.attach_money),
+          ),
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            CopInputFormatter(),
+          ],
+          validator: (v) {
+            if (v == null || v.trim().isEmpty) return 'Requerido';
+            final n = parseCOP(v);
+            if (n == null || n <= 0) return 'Debe ser mayor a 0';
+            return null;
+          },
+        ),
+      ),
+      actions: [
+        if (widget.actual != null)
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'quitar'),
+            child: const Text(
+              'Quitar límite',
+              style: TextStyle(color: AppColors.alerta),
+            ),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () {
+            if (!_formKey.currentState!.validate()) return;
+            Navigator.pop(context, parseCOP(_controller.text));
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
     );
   }
 }
