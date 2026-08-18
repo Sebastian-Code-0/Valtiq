@@ -6,6 +6,7 @@ import '../../theme/theme.dart';
 import 'acerca_de_screen.dart';
 import 'apariencia_screen.dart';
 import 'config_smtp_screen.dart';
+import 'presupuestos_screen.dart';
 import 'respaldo_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -66,6 +67,21 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => RespaldoScreen(db: db)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.pie_chart_outline),
+                  title: const Text('Presupuestos por categoría'),
+                  subtitle: const Text('Límites mensuales de gasto'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PresupuestosScreen(db: db),
+                    ),
                   ),
                 ),
               ),
