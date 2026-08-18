@@ -8,6 +8,7 @@ import 'daos/ingresos_dao.dart';
 import 'daos/pagos_deuda_dao.dart';
 import 'daos/prestamos_dao.dart';
 import 'daos/gastos_variables_dao.dart';
+import 'daos/presupuestos_categorias_dao.dart';
 import 'daos/recordatorios_dao.dart';
 import 'tables.dart';
 
@@ -24,6 +25,7 @@ part 'database.g.dart';
     Recordatorios,
     ConfigSmtps,
     GastosVariables,
+    PresupuestosCategorias,
   ],
   daos: [
     DeudasDao,
@@ -34,6 +36,7 @@ part 'database.g.dart';
     RecordatoriosDao,
     ConfigSmtpDao,
     GastosVariablesDao,
+    PresupuestosCategoriasDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -42,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor openConnection() => conn.openValtiqConnection();
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -97,6 +100,17 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 8) {
         await m.addColumn(deudas, deudas.modalidadCalculo);
+      }
+      if (from < 9) {
+        await m.createTable(presupuestosCategorias);
+        // Los @TableIndex ya cubren instalaciones nuevas (onCreate); estas dos
+        // líneas son solo para bases de datos existentes que están actualizando.
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_pagos_deuda_deuda_id ON pagos_deuda (deuda_id)',
+        );
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_pagos_recibidos_prestamo_id ON pagos_recibidos (prestamo_id)',
+        );
       }
     },
     beforeOpen: (details) async {

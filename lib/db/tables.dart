@@ -37,9 +37,9 @@ class Prestamos extends Table {
       dateTime().withDefault(currentDateAndTime)();
 }
 
+@TableIndex(name: 'idx_pagos_recibidos_prestamo_id', columns: {#prestamoId})
 class PagosRecibidos extends Table {
   IntColumn get id => integer().autoIncrement()();
-  // TODO: añadir índice en prestamo_id en la próxima migración (schemaVersion 8)
   IntColumn get prestamoId => integer().references(Prestamos, #id)();
   RealColumn get montoAbonado => real()();
   DateTimeColumn get fechaPago => dateTime()();
@@ -47,9 +47,9 @@ class PagosRecibidos extends Table {
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
 }
 
+@TableIndex(name: 'idx_pagos_deuda_deuda_id', columns: {#deudaId})
 class PagosDeuda extends Table {
   IntColumn get id => integer().autoIncrement()();
-  // TODO: añadir índice en deuda_id en la próxima migración (schemaVersion 8)
   IntColumn get deudaId => integer().references(Deudas, #id)();
   RealColumn get montoAbonado => real()();
   DateTimeColumn get fechaPago => dateTime()();
@@ -132,4 +132,18 @@ class GastosVariables extends Table {
   DateTimeColumn get fecha => dateTime()();
   TextColumn get notas => text().nullable()();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
+}
+
+class PresupuestosCategorias extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get categoria => text()();
+  RealColumn get limiteMensual => real()();
+  DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get actualizadoEn =>
+      dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {categoria},
+  ];
 }

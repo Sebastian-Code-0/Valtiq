@@ -5497,6 +5497,374 @@ class GastosVariablesCompanion extends UpdateCompanion<GastosVariable> {
   }
 }
 
+class $PresupuestosCategoriasTable extends PresupuestosCategorias
+    with TableInfo<$PresupuestosCategoriasTable, PresupuestosCategoria> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PresupuestosCategoriasTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _categoriaMeta = const VerificationMeta(
+    'categoria',
+  );
+  @override
+  late final GeneratedColumn<String> categoria = GeneratedColumn<String>(
+    'categoria',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _limiteMensualMeta = const VerificationMeta(
+    'limiteMensual',
+  );
+  @override
+  late final GeneratedColumn<double> limiteMensual = GeneratedColumn<double>(
+    'limite_mensual',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _creadoEnMeta = const VerificationMeta(
+    'creadoEn',
+  );
+  @override
+  late final GeneratedColumn<DateTime> creadoEn = GeneratedColumn<DateTime>(
+    'creado_en',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _actualizadoEnMeta = const VerificationMeta(
+    'actualizadoEn',
+  );
+  @override
+  late final GeneratedColumn<DateTime> actualizadoEn =
+      GeneratedColumn<DateTime>(
+        'actualizado_en',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+        defaultValue: currentDateAndTime,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    categoria,
+    limiteMensual,
+    creadoEn,
+    actualizadoEn,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'presupuestos_categorias';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PresupuestosCategoria> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('categoria')) {
+      context.handle(
+        _categoriaMeta,
+        categoria.isAcceptableOrUnknown(data['categoria']!, _categoriaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoriaMeta);
+    }
+    if (data.containsKey('limite_mensual')) {
+      context.handle(
+        _limiteMensualMeta,
+        limiteMensual.isAcceptableOrUnknown(
+          data['limite_mensual']!,
+          _limiteMensualMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_limiteMensualMeta);
+    }
+    if (data.containsKey('creado_en')) {
+      context.handle(
+        _creadoEnMeta,
+        creadoEn.isAcceptableOrUnknown(data['creado_en']!, _creadoEnMeta),
+      );
+    }
+    if (data.containsKey('actualizado_en')) {
+      context.handle(
+        _actualizadoEnMeta,
+        actualizadoEn.isAcceptableOrUnknown(
+          data['actualizado_en']!,
+          _actualizadoEnMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {categoria},
+  ];
+  @override
+  PresupuestosCategoria map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PresupuestosCategoria(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      categoria: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}categoria'],
+      )!,
+      limiteMensual: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}limite_mensual'],
+      )!,
+      creadoEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}creado_en'],
+      )!,
+      actualizadoEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}actualizado_en'],
+      )!,
+    );
+  }
+
+  @override
+  $PresupuestosCategoriasTable createAlias(String alias) {
+    return $PresupuestosCategoriasTable(attachedDatabase, alias);
+  }
+}
+
+class PresupuestosCategoria extends DataClass
+    implements Insertable<PresupuestosCategoria> {
+  final int id;
+  final String categoria;
+  final double limiteMensual;
+  final DateTime creadoEn;
+  final DateTime actualizadoEn;
+  const PresupuestosCategoria({
+    required this.id,
+    required this.categoria,
+    required this.limiteMensual,
+    required this.creadoEn,
+    required this.actualizadoEn,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['categoria'] = Variable<String>(categoria);
+    map['limite_mensual'] = Variable<double>(limiteMensual);
+    map['creado_en'] = Variable<DateTime>(creadoEn);
+    map['actualizado_en'] = Variable<DateTime>(actualizadoEn);
+    return map;
+  }
+
+  PresupuestosCategoriasCompanion toCompanion(bool nullToAbsent) {
+    return PresupuestosCategoriasCompanion(
+      id: Value(id),
+      categoria: Value(categoria),
+      limiteMensual: Value(limiteMensual),
+      creadoEn: Value(creadoEn),
+      actualizadoEn: Value(actualizadoEn),
+    );
+  }
+
+  factory PresupuestosCategoria.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PresupuestosCategoria(
+      id: serializer.fromJson<int>(json['id']),
+      categoria: serializer.fromJson<String>(json['categoria']),
+      limiteMensual: serializer.fromJson<double>(json['limiteMensual']),
+      creadoEn: serializer.fromJson<DateTime>(json['creadoEn']),
+      actualizadoEn: serializer.fromJson<DateTime>(json['actualizadoEn']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'categoria': serializer.toJson<String>(categoria),
+      'limiteMensual': serializer.toJson<double>(limiteMensual),
+      'creadoEn': serializer.toJson<DateTime>(creadoEn),
+      'actualizadoEn': serializer.toJson<DateTime>(actualizadoEn),
+    };
+  }
+
+  PresupuestosCategoria copyWith({
+    int? id,
+    String? categoria,
+    double? limiteMensual,
+    DateTime? creadoEn,
+    DateTime? actualizadoEn,
+  }) => PresupuestosCategoria(
+    id: id ?? this.id,
+    categoria: categoria ?? this.categoria,
+    limiteMensual: limiteMensual ?? this.limiteMensual,
+    creadoEn: creadoEn ?? this.creadoEn,
+    actualizadoEn: actualizadoEn ?? this.actualizadoEn,
+  );
+  PresupuestosCategoria copyWithCompanion(
+    PresupuestosCategoriasCompanion data,
+  ) {
+    return PresupuestosCategoria(
+      id: data.id.present ? data.id.value : this.id,
+      categoria: data.categoria.present ? data.categoria.value : this.categoria,
+      limiteMensual: data.limiteMensual.present
+          ? data.limiteMensual.value
+          : this.limiteMensual,
+      creadoEn: data.creadoEn.present ? data.creadoEn.value : this.creadoEn,
+      actualizadoEn: data.actualizadoEn.present
+          ? data.actualizadoEn.value
+          : this.actualizadoEn,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PresupuestosCategoria(')
+          ..write('id: $id, ')
+          ..write('categoria: $categoria, ')
+          ..write('limiteMensual: $limiteMensual, ')
+          ..write('creadoEn: $creadoEn, ')
+          ..write('actualizadoEn: $actualizadoEn')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, categoria, limiteMensual, creadoEn, actualizadoEn);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PresupuestosCategoria &&
+          other.id == this.id &&
+          other.categoria == this.categoria &&
+          other.limiteMensual == this.limiteMensual &&
+          other.creadoEn == this.creadoEn &&
+          other.actualizadoEn == this.actualizadoEn);
+}
+
+class PresupuestosCategoriasCompanion
+    extends UpdateCompanion<PresupuestosCategoria> {
+  final Value<int> id;
+  final Value<String> categoria;
+  final Value<double> limiteMensual;
+  final Value<DateTime> creadoEn;
+  final Value<DateTime> actualizadoEn;
+  const PresupuestosCategoriasCompanion({
+    this.id = const Value.absent(),
+    this.categoria = const Value.absent(),
+    this.limiteMensual = const Value.absent(),
+    this.creadoEn = const Value.absent(),
+    this.actualizadoEn = const Value.absent(),
+  });
+  PresupuestosCategoriasCompanion.insert({
+    this.id = const Value.absent(),
+    required String categoria,
+    required double limiteMensual,
+    this.creadoEn = const Value.absent(),
+    this.actualizadoEn = const Value.absent(),
+  }) : categoria = Value(categoria),
+       limiteMensual = Value(limiteMensual);
+  static Insertable<PresupuestosCategoria> custom({
+    Expression<int>? id,
+    Expression<String>? categoria,
+    Expression<double>? limiteMensual,
+    Expression<DateTime>? creadoEn,
+    Expression<DateTime>? actualizadoEn,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (categoria != null) 'categoria': categoria,
+      if (limiteMensual != null) 'limite_mensual': limiteMensual,
+      if (creadoEn != null) 'creado_en': creadoEn,
+      if (actualizadoEn != null) 'actualizado_en': actualizadoEn,
+    });
+  }
+
+  PresupuestosCategoriasCompanion copyWith({
+    Value<int>? id,
+    Value<String>? categoria,
+    Value<double>? limiteMensual,
+    Value<DateTime>? creadoEn,
+    Value<DateTime>? actualizadoEn,
+  }) {
+    return PresupuestosCategoriasCompanion(
+      id: id ?? this.id,
+      categoria: categoria ?? this.categoria,
+      limiteMensual: limiteMensual ?? this.limiteMensual,
+      creadoEn: creadoEn ?? this.creadoEn,
+      actualizadoEn: actualizadoEn ?? this.actualizadoEn,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (categoria.present) {
+      map['categoria'] = Variable<String>(categoria.value);
+    }
+    if (limiteMensual.present) {
+      map['limite_mensual'] = Variable<double>(limiteMensual.value);
+    }
+    if (creadoEn.present) {
+      map['creado_en'] = Variable<DateTime>(creadoEn.value);
+    }
+    if (actualizadoEn.present) {
+      map['actualizado_en'] = Variable<DateTime>(actualizadoEn.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PresupuestosCategoriasCompanion(')
+          ..write('id: $id, ')
+          ..write('categoria: $categoria, ')
+          ..write('limiteMensual: $limiteMensual, ')
+          ..write('creadoEn: $creadoEn, ')
+          ..write('actualizadoEn: $actualizadoEn')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5510,6 +5878,16 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ConfigSmtpsTable configSmtps = $ConfigSmtpsTable(this);
   late final $GastosVariablesTable gastosVariables = $GastosVariablesTable(
     this,
+  );
+  late final $PresupuestosCategoriasTable presupuestosCategorias =
+      $PresupuestosCategoriasTable(this);
+  late final Index idxPagosDeudaDeudaId = Index(
+    'idx_pagos_deuda_deuda_id',
+    'CREATE INDEX idx_pagos_deuda_deuda_id ON pagos_deuda (deuda_id)',
+  );
+  late final Index idxPagosRecibidosPrestamoId = Index(
+    'idx_pagos_recibidos_prestamo_id',
+    'CREATE INDEX idx_pagos_recibidos_prestamo_id ON pagos_recibidos (prestamo_id)',
   );
   late final DeudasDao deudasDao = DeudasDao(this as AppDatabase);
   late final PagosDeudaDao pagosDeudaDao = PagosDeudaDao(this as AppDatabase);
@@ -5525,6 +5903,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final GastosVariablesDao gastosVariablesDao = GastosVariablesDao(
     this as AppDatabase,
   );
+  late final PresupuestosCategoriasDao presupuestosCategoriasDao =
+      PresupuestosCategoriasDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5539,6 +5919,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     recordatorios,
     configSmtps,
     gastosVariables,
+    presupuestosCategorias,
+    idxPagosDeudaDeudaId,
+    idxPagosRecibidosPrestamoId,
   ];
 }
 
@@ -8670,6 +9053,223 @@ typedef $$GastosVariablesTableProcessedTableManager =
       GastosVariable,
       PrefetchHooks Function()
     >;
+typedef $$PresupuestosCategoriasTableCreateCompanionBuilder =
+    PresupuestosCategoriasCompanion Function({
+      Value<int> id,
+      required String categoria,
+      required double limiteMensual,
+      Value<DateTime> creadoEn,
+      Value<DateTime> actualizadoEn,
+    });
+typedef $$PresupuestosCategoriasTableUpdateCompanionBuilder =
+    PresupuestosCategoriasCompanion Function({
+      Value<int> id,
+      Value<String> categoria,
+      Value<double> limiteMensual,
+      Value<DateTime> creadoEn,
+      Value<DateTime> actualizadoEn,
+    });
+
+class $$PresupuestosCategoriasTableFilterComposer
+    extends Composer<_$AppDatabase, $PresupuestosCategoriasTable> {
+  $$PresupuestosCategoriasTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoria => $composableBuilder(
+    column: $table.categoria,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get limiteMensual => $composableBuilder(
+    column: $table.limiteMensual,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creadoEn => $composableBuilder(
+    column: $table.creadoEn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get actualizadoEn => $composableBuilder(
+    column: $table.actualizadoEn,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PresupuestosCategoriasTableOrderingComposer
+    extends Composer<_$AppDatabase, $PresupuestosCategoriasTable> {
+  $$PresupuestosCategoriasTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoria => $composableBuilder(
+    column: $table.categoria,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get limiteMensual => $composableBuilder(
+    column: $table.limiteMensual,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creadoEn => $composableBuilder(
+    column: $table.creadoEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get actualizadoEn => $composableBuilder(
+    column: $table.actualizadoEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PresupuestosCategoriasTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PresupuestosCategoriasTable> {
+  $$PresupuestosCategoriasTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get categoria =>
+      $composableBuilder(column: $table.categoria, builder: (column) => column);
+
+  GeneratedColumn<double> get limiteMensual => $composableBuilder(
+    column: $table.limiteMensual,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get creadoEn =>
+      $composableBuilder(column: $table.creadoEn, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get actualizadoEn => $composableBuilder(
+    column: $table.actualizadoEn,
+    builder: (column) => column,
+  );
+}
+
+class $$PresupuestosCategoriasTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PresupuestosCategoriasTable,
+          PresupuestosCategoria,
+          $$PresupuestosCategoriasTableFilterComposer,
+          $$PresupuestosCategoriasTableOrderingComposer,
+          $$PresupuestosCategoriasTableAnnotationComposer,
+          $$PresupuestosCategoriasTableCreateCompanionBuilder,
+          $$PresupuestosCategoriasTableUpdateCompanionBuilder,
+          (
+            PresupuestosCategoria,
+            BaseReferences<
+              _$AppDatabase,
+              $PresupuestosCategoriasTable,
+              PresupuestosCategoria
+            >,
+          ),
+          PresupuestosCategoria,
+          PrefetchHooks Function()
+        > {
+  $$PresupuestosCategoriasTableTableManager(
+    _$AppDatabase db,
+    $PresupuestosCategoriasTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PresupuestosCategoriasTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$PresupuestosCategoriasTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PresupuestosCategoriasTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> categoria = const Value.absent(),
+                Value<double> limiteMensual = const Value.absent(),
+                Value<DateTime> creadoEn = const Value.absent(),
+                Value<DateTime> actualizadoEn = const Value.absent(),
+              }) => PresupuestosCategoriasCompanion(
+                id: id,
+                categoria: categoria,
+                limiteMensual: limiteMensual,
+                creadoEn: creadoEn,
+                actualizadoEn: actualizadoEn,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String categoria,
+                required double limiteMensual,
+                Value<DateTime> creadoEn = const Value.absent(),
+                Value<DateTime> actualizadoEn = const Value.absent(),
+              }) => PresupuestosCategoriasCompanion.insert(
+                id: id,
+                categoria: categoria,
+                limiteMensual: limiteMensual,
+                creadoEn: creadoEn,
+                actualizadoEn: actualizadoEn,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PresupuestosCategoriasTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PresupuestosCategoriasTable,
+      PresupuestosCategoria,
+      $$PresupuestosCategoriasTableFilterComposer,
+      $$PresupuestosCategoriasTableOrderingComposer,
+      $$PresupuestosCategoriasTableAnnotationComposer,
+      $$PresupuestosCategoriasTableCreateCompanionBuilder,
+      $$PresupuestosCategoriasTableUpdateCompanionBuilder,
+      (
+        PresupuestosCategoria,
+        BaseReferences<
+          _$AppDatabase,
+          $PresupuestosCategoriasTable,
+          PresupuestosCategoria
+        >,
+      ),
+      PresupuestosCategoria,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8692,4 +9292,9 @@ class $AppDatabaseManager {
       $$ConfigSmtpsTableTableManager(_db, _db.configSmtps);
   $$GastosVariablesTableTableManager get gastosVariables =>
       $$GastosVariablesTableTableManager(_db, _db.gastosVariables);
+  $$PresupuestosCategoriasTableTableManager get presupuestosCategorias =>
+      $$PresupuestosCategoriasTableTableManager(
+        _db,
+        _db.presupuestosCategorias,
+      );
 }
