@@ -79,6 +79,25 @@ class _GastoVariableFormState extends State<GastoVariableForm>
     }
     final notas = _notasCtrl.text.trim();
 
+    String? categoriaExcedida;
+    final presupuesto = await widget.db.presupuestosCategoriasDao
+        .getPresupuestoPorCategoria(_categoria!);
+    if (presupuesto != null) {
+      final totales = await widget.db.gastosVariablesDao
+          .watchTotalPorCategoria(_fecha.year, _fecha.month)
+          .first;
+      var gastadoPrevio = totales[_categoria!] ?? 0.0;
+      // Si se está editando un gasto existente de la misma categoría, resta su
+      // monto anterior para no contarlo dos veces junto con el monto nuevo.
+      if (widget.gasto != null && widget.gasto!.categoria == _categoria) {
+        gastadoPrevio -= widget.gasto!.monto;
+      }
+      final proyectado = gastadoPrevio + monto;
+      if (proyectado > presupuesto.limiteMensual) {
+        categoriaExcedida = _categoria;
+      }
+    }
+
     final dao = widget.db.gastosVariablesDao;
     await ejecutarGuardado(() async {
       if (widget.gasto == null) {
@@ -102,7 +121,7 @@ class _GastoVariableFormState extends State<GastoVariableForm>
           ),
         );
       }
-    });
+    }, resultadoExtra: () => categoriaExcedida);
   }
 
   @override

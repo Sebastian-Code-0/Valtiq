@@ -829,7 +829,9 @@ class _PresupuestosCard extends StatelessWidget {
                   children: [
                     Text(
                       'Presupuestos del mes',
-                      style: theme.textTheme.titleMedium,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     for (final p in filas)
@@ -882,7 +884,7 @@ class _FilaPresupuesto extends StatelessWidget {
               children: [
                 Text(
                   'de ${formatCOP(limite)}',
-                  style: theme.textTheme.labelSmall?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorSecundario,
                   ),
                 ),
@@ -896,7 +898,7 @@ class _FilaPresupuesto extends StatelessWidget {
                   const SizedBox(width: 2),
                   Text(
                     'Superado',
-                    style: theme.textTheme.labelSmall?.copyWith(
+                    style: theme.textTheme.bodySmall?.copyWith(
                       color: AppColors.alerta,
                       fontWeight: FontWeight.w600,
                     ),

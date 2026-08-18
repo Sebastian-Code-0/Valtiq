@@ -73,12 +73,19 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
   }
 
   Future<void> _abrirGastoVariableForm({GastosVariable? gasto}) async {
-    await Navigator.push(
+    final resultado = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => GastoVariableForm(db: widget.db, gasto: gasto),
       ),
     );
+    if (resultado is String && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Superaste tu presupuesto de $resultado este mes.'),
+        ),
+      );
+    }
   }
 
   Future<void> _abrirGastoForm({GastosFijo? gasto}) async {
