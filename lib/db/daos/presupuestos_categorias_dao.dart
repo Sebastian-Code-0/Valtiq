@@ -23,7 +23,13 @@ class PresupuestosCategoriasDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<int> upsertPresupuesto(PresupuestosCategoriasCompanion presupuesto) {
-    return into(presupuestosCategorias).insertOnConflictUpdate(presupuesto);
+    return into(presupuestosCategorias).insert(
+      presupuesto,
+      onConflict: DoUpdate(
+        (old) => presupuesto,
+        target: [presupuestosCategorias.categoria],
+      ),
+    );
   }
 
   Future<int> eliminarPresupuesto(int id) {
