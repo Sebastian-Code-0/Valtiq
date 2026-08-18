@@ -301,16 +301,18 @@ class BarraCategoria extends StatelessWidget {
     required this.categoria,
     required this.monto,
     required this.montoMaximo,
+    this.colorOverride,
   });
 
   final String categoria;
   final double monto;
   final double montoMaximo;
+  final Color? colorOverride;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = CategoriaGasto.colorPara(categoria);
+    final color = colorOverride ?? CategoriaGasto.colorPara(categoria);
     final fraccion = montoMaximo <= 0
         ? 0.0
         : (monto / montoMaximo).clamp(0.0, 1.0);
