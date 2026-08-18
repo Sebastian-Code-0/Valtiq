@@ -40,6 +40,10 @@ class BackupService {
         'recordatorios': (await db.recordatoriosDao.getAllRecordatorios())
             .map((e) => e.toJson())
             .toList(),
+        'presupuestosCategorias':
+            (await db.presupuestosCategoriasDao.getAllPresupuestos())
+                .map((e) => e.toJson())
+                .toList(),
       },
       // ConfigSmtps se excluye a propósito — nunca debe salir en el backup.
     };
@@ -88,6 +92,10 @@ class BackupService {
       datos,
       'recordatorios',
     ).map(Recordatorio.fromJson).toList();
+    final presupuestosCategorias = _lista(
+      datos,
+      'presupuestosCategorias',
+    ).map(PresupuestosCategoria.fromJson).toList();
 
     await db.transaction(() async {
       // Borra primero las tablas hijas (referencian deuda/préstamo por FK),
@@ -101,6 +109,7 @@ class BackupService {
       await db.delete(db.ingresos).go();
       await db.delete(db.gastosFijos).go();
       await db.delete(db.gastosVariables).go();
+      await db.delete(db.presupuestosCategorias).go();
 
       // Reinserta en el orden inverso: padres antes que hijos, para que las
       // FK de pagosDeuda/pagosRecibidos encuentren su deuda/préstamo ya
@@ -115,6 +124,7 @@ class BackupService {
         b.insertAll(db.gastosFijos, gastosFijos);
         b.insertAll(db.gastosVariables, gastosVariables);
         b.insertAll(db.recordatorios, recordatorios);
+        b.insertAll(db.presupuestosCategorias, presupuestosCategorias);
       });
     });
   }

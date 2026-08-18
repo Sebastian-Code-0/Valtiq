@@ -13,6 +13,9 @@ class PresupuestosCategoriasDao extends DatabaseAccessor<AppDatabase>
   Stream<List<PresupuestosCategoria>> watchPresupuestos() =>
       select(presupuestosCategorias).watch();
 
+  Future<List<PresupuestosCategoria>> getAllPresupuestos() =>
+      select(presupuestosCategorias).get();
+
   Future<PresupuestosCategoria?> getPresupuestoPorCategoria(String categoria) {
     return (select(
       presupuestosCategorias,
