@@ -93,7 +93,7 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
     // deja ver que ya se sobrepasó.
     final saldoPendiente =
         resumen['totalConInteres']! - resumen['totalAbonado']!;
-    await showDialog<bool>(
+    final guardado = await showDialog<bool>(
       context: context,
       builder: (_) => _RegistrarPagoDialog(
         db: widget.db,
@@ -101,6 +101,32 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
         saldoPendiente: saldoPendiente,
       ),
     );
+    if (guardado == true && mounted) {
+      final totalAbonadoActual = await widget.db.prestamosDao.getTotalAbonado(
+        widget.prestamoId,
+      );
+      final resumenActual = InteresCalculator.resumenPrestamo(
+        montoPrestado: prestamo.montoPrestado,
+        tasaInteres: prestamo.tasaInteres,
+        tipoInteres: prestamo.tipoInteres,
+        modalidadCalculo: prestamo.modalidadCalculo,
+        fechaPrestamo: prestamo.fechaPrestamo,
+        totalAbonado: totalAbonadoActual,
+      );
+      final saldoPendienteActual =
+          resumenActual['totalConInteres']! - resumenActual['totalAbonado']!;
+      if (saldoPendienteActual <= 1) {
+        await widget.db.prestamosDao.marcarComoPagado(widget.prestamoId);
+        if (mounted) {
+          mostrarExito(
+            context,
+            'Préstamo a nombre de "${prestamo.deudorNombre}" ha sido pagado '
+            'por completo y se movió a pagados.',
+          );
+          Navigator.pop(context);
+        }
+      }
+    }
   }
 
   Future<void> _confirmarEliminarPago(PagosRecibido pago) async {

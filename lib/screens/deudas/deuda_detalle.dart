@@ -85,7 +85,7 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
     // ver que ya se sobrepasó.
     final saldoPendiente =
         resumen['totalConInteres']! - resumen['totalAbonado']!;
-    await showDialog<bool>(
+    final guardado = await showDialog<bool>(
       context: context,
       builder: (_) => _RegistrarAbonoDialog(
         db: widget.db,
@@ -93,6 +93,35 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
         saldoPendiente: saldoPendiente,
       ),
     );
+    if (guardado == true && mounted) {
+      final totalAbonadoActual = await widget.db.pagosDeudaDao.getTotalAbonado(
+        widget.deudaId,
+      );
+      final resumenActual = InteresCalculator.resumenPrestamo(
+        montoPrestado: deuda.montoOriginal,
+        tasaInteres: deuda.tasaInteres,
+        tipoInteres: deuda.tipoInteres,
+        modalidadCalculo: deuda.modalidadCalculo,
+        fechaPrestamo: deuda.fechaPrestamo,
+        totalAbonado: totalAbonadoActual,
+      );
+      final saldoPendienteActual =
+          resumenActual['totalConInteres']! - resumenActual['totalAbonado']!;
+      if (saldoPendienteActual <= 1) {
+        await widget.db.deudasDao.marcarComoPagada(
+          widget.deudaId,
+          DateTime.now(),
+        );
+        if (mounted) {
+          mostrarExito(
+            context,
+            'Deuda "${deuda.acreedorNombre}" ha sido pagada por completo '
+            'y se movió a pagadas.',
+          );
+          Navigator.pop(context);
+        }
+      }
+    }
   }
 
   Future<void> _confirmarEliminarAbono(PagosDeudaData pago) async {
