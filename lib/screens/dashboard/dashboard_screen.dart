@@ -358,42 +358,63 @@ class _BalanceMensualCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        _BalanceDonut(
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Pantallas angostas no tienen espacio para el
+                        // anillo y las tres filas de montos lado a lado
+                        // sin desbordar; ahí se apilan verticalmente.
+                        final angosto = constraints.maxWidth < 360;
+                        final donut = _BalanceDonut(
                           ingresos: ingresos,
                           gastos: gastos,
                           gastosVariables: gastosVariables,
                           disponible: disponible,
                           disponibleColor: disponibleColor,
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          diametro: angosto ? 160 : 130,
+                        );
+                        final filas = Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _FilaMonto(
+                              label: 'Ingresos',
+                              valor: formatCOP(ingresos),
+                              color: AppColors.positivo,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            _FilaMonto(
+                              label: 'Gastos fijos',
+                              valor: '-${formatCOP(gastos)}',
+                              color: AppColors.alerta,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            _FilaMonto(
+                              label: 'Gastos variables',
+                              valor: '-${formatCOP(gastosVariables)}',
+                              color: AppColors.alerta,
+                            ),
+                          ],
+                        );
+
+                        if (angosto) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _FilaMonto(
-                                label: 'Ingresos',
-                                valor: formatCOP(ingresos),
-                                color: AppColors.positivo,
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              _FilaMonto(
-                                label: 'Gastos fijos',
-                                valor: '-${formatCOP(gastos)}',
-                                color: AppColors.alerta,
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              _FilaMonto(
-                                label: 'Gastos variables',
-                                valor: '-${formatCOP(gastosVariables)}',
-                                color: AppColors.alerta,
-                              ),
+                              Center(child: donut),
+                              const SizedBox(height: AppSpacing.md),
+                              filas,
                             ],
-                          ),
-                        ),
-                      ],
+                          );
+                        }
+
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            donut,
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(child: filas),
+                          ],
+                        );
+                      },
                     ),
                     const Divider(height: AppSpacing.lg),
                     Row(
@@ -854,6 +875,7 @@ class _BalanceDonut extends StatelessWidget {
     required this.gastosVariables,
     required this.disponible,
     required this.disponibleColor,
+    this.diametro = 100.0,
   });
 
   final double ingresos;
@@ -861,8 +883,7 @@ class _BalanceDonut extends StatelessWidget {
   final double gastosVariables;
   final double disponible;
   final Color disponibleColor;
-
-  static const _diametro = 100.0;
+  final double diametro;
 
   @override
   Widget build(BuildContext context) {
@@ -870,8 +891,8 @@ class _BalanceDonut extends StatelessWidget {
 
     if (ingresos <= 0) {
       return SizedBox(
-        width: _diametro,
-        height: _diametro,
+        width: diametro,
+        height: diametro,
         child: Center(
           child: Icon(
             Icons.donut_large_outlined,
@@ -898,9 +919,19 @@ class _BalanceDonut extends StatelessWidget {
       fraccionDisponible = disponible / ingresos;
     }
 
-    return SizedBox(
-      width: _diametro,
-      height: _diametro,
+    final textoDisponible = formatCOP(disponible);
+    // Montos muy largos ya no caben legibles dentro del anillo aunque
+    // FittedBox los achique; en ese caso se muestran debajo en su lugar.
+    final textoLargo = textoDisponible.length > 10;
+    final estiloTexto = monoStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      color: disponibleColor,
+    );
+
+    final anillo = SizedBox(
+      width: diametro,
+      height: diametro,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -909,7 +940,7 @@ class _BalanceDonut extends StatelessWidget {
             duration: const Duration(milliseconds: 600),
             curve: Curves.easeOutCubic,
             builder: (context, progreso, child) => CustomPaint(
-              size: const Size(_diametro, _diametro),
+              size: Size(diametro, diametro),
               painter: _BalanceDonutPainter(
                 fraccionGastos: fraccionGastos,
                 fraccionVariables: fraccionVariables,
@@ -922,21 +953,28 @@ class _BalanceDonut extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                formatCOP(disponible),
-                style: monoStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: disponibleColor,
-                ),
-                maxLines: 1,
+          if (!textoLargo)
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(textoDisponible, style: estiloTexto, maxLines: 1),
               ),
             ),
-          ),
+        ],
+      ),
+    );
+
+    if (!textoLargo) return anillo;
+
+    return SizedBox(
+      width: diametro,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          anillo,
+          const SizedBox(height: AppSpacing.xs),
+          Text(textoDisponible, style: estiloTexto, textAlign: TextAlign.center),
         ],
       ),
     );
@@ -975,7 +1013,8 @@ class _BalanceDonutPainter extends CustomPainter {
     final pistaPaint = Paint()
       ..color = colorPista
       ..style = PaintingStyle.stroke
-      ..strokeWidth = _grosor;
+      ..strokeWidth = _grosor
+      ..isAntiAlias = true;
     canvas.drawCircle(centro, radio, pistaPaint);
 
     var anguloActual = -math.pi / 2;
@@ -986,8 +1025,12 @@ class _BalanceDonutPainter extends CustomPainter {
         final paint = Paint()
           ..color = color
           ..style = PaintingStyle.stroke
-          ..strokeWidth = _grosor;
-        canvas.drawArc(arcoRect, anguloActual, barrido, false, paint);
+          ..strokeWidth = _grosor
+          ..isAntiAlias = true;
+        // Solape leve para que segmentos consecutivos se toquen de más en
+        // vez de dejar una línea/gap visible entre colores.
+        const solape = 0.025;
+        canvas.drawArc(arcoRect, anguloActual, barrido + solape, false, paint);
       }
       anguloActual += 2 * math.pi * fraccion;
     }
