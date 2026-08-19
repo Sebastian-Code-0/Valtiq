@@ -33,10 +33,10 @@ class FormSection extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: AppColors.acento.withValues(alpha: 0.12),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   ),
-                  child: Icon(icon, size: 18, color: AppColors.acento),
+                  child: Icon(icon, size: 18, color: theme.colorScheme.primary),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
@@ -384,11 +384,7 @@ class _PistaBarra extends StatelessWidget {
 }
 
 class BarraProgreso extends StatelessWidget {
-  const BarraProgreso({
-    super.key,
-    required this.fraccion,
-    required this.color,
-  });
+  const BarraProgreso({super.key, required this.fraccion, required this.color});
 
   /// 0.0 a 1.0 — la fracción ya calculada por quien llama.
   final double fraccion;

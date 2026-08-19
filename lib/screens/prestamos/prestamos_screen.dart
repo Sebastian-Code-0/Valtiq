@@ -347,7 +347,7 @@ class _PrestamoCard extends StatelessWidget {
                       style: monoStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.acento,
+                        color: theme.colorScheme.primary,
                       ),
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
@@ -384,17 +384,17 @@ class _PrestamoCard extends StatelessWidget {
                           ),
                         ),
                       if (onReactivar != null)
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'reactivar',
                           child: Row(
                             children: [
                               Icon(
                                 Icons.undo,
                                 size: 18,
-                                color: AppColors.acento,
+                                color: theme.colorScheme.primary,
                               ),
-                              SizedBox(width: AppSpacing.sm),
-                              Text('Reactivar préstamo'),
+                              const SizedBox(width: AppSpacing.sm),
+                              const Text('Reactivar préstamo'),
                             ],
                           ),
                         ),

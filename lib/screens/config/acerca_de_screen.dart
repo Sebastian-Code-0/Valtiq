@@ -29,7 +29,7 @@ class AcercaDeScreen extends StatelessWidget {
                   Image.asset(
                     'assets/logo_icono.png',
                     height: 64,
-                    color: AppColors.acento,
+                    color: theme.colorScheme.primary,
                     colorBlendMode: BlendMode.srcIn,
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -106,10 +106,10 @@ class AcercaDeScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.shield_outlined,
                         size: 18,
-                        color: AppColors.acento,
+                        color: theme.colorScheme.primary,
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Text(

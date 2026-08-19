@@ -391,17 +391,17 @@ class _DeudaCard extends StatelessWidget {
                           ),
                         ),
                       if (onMarcarActiva != null)
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'activa',
                           child: Row(
                             children: [
                               Icon(
                                 Icons.undo,
                                 size: 18,
-                                color: AppColors.acento,
+                                color: theme.colorScheme.primary,
                               ),
-                              SizedBox(width: AppSpacing.sm),
-                              Text('Reactivar deuda'),
+                              const SizedBox(width: AppSpacing.sm),
+                              const Text('Reactivar deuda'),
                             ],
                           ),
                         ),

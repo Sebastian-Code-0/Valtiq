@@ -264,7 +264,7 @@ class _ResumenCard extends StatelessWidget {
             _filaResumen(
               label: 'Interés acumulado:',
               valor: resumen['interesAcumulado']!,
-              colorValor: AppColors.acento,
+              colorValor: theme.colorScheme.primary,
               colorSec: colorSec,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -314,7 +314,7 @@ class _ResumenCard extends StatelessWidget {
             _filaResumen(
               label: 'Diferencia por interés:',
               valor: resumen['gananciaInteres']!,
-              colorValor: AppColors.acento,
+              colorValor: theme.colorScheme.primary,
               colorSec: colorSec,
               chico: true,
             ),

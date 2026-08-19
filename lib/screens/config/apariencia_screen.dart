@@ -158,4 +158,5 @@ const _coloresAcento = [
   (color: Color(0xFF1E8A63), nombre: 'Esmeralda oscuro'),
   (color: Color(0xFFB08D3E), nombre: 'Dorado'),
   (color: Color(0xFF8B3A46), nombre: 'Vino'),
+  (color: Color(0xFF6B4E8C), nombre: 'Morado'),
 ];

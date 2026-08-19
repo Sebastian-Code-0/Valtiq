@@ -350,17 +350,17 @@ class _RecordatorioCard extends StatelessWidget {
                       }
                     },
                     itemBuilder: (_) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'probar',
                         child: Row(
                           children: [
                             Icon(
                               Icons.notifications_outlined,
                               size: 18,
-                              color: AppColors.acento,
+                              color: theme.colorScheme.primary,
                             ),
-                            SizedBox(width: AppSpacing.sm),
-                            Text('Probar notificación'),
+                            const SizedBox(width: AppSpacing.sm),
+                            const Text('Probar notificación'),
                           ],
                         ),
                       ),

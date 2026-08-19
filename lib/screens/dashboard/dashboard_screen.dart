@@ -162,7 +162,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Image.asset(
                     'assets/logo_icono.png',
                     height: 32,
-                    color: AppColors.acento,
+                    color: Theme.of(context).colorScheme.primary,
                     colorBlendMode: BlendMode.srcIn,
                   ),
                   const Spacer(),
@@ -196,7 +196,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _ResumenCard(
                     titulo: 'Prestado activo',
                     icono: Icons.handshake_outlined,
-                    colorIcono: AppColors.acento,
+                    colorIcono: Theme.of(context).colorScheme.primary,
                     stream: _streamPrestamos,
                   ),
                   _ResumenCard(

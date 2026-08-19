@@ -11,12 +11,12 @@ abstract class AppColors {
   static const positivo = Color(0xFF1E8A63);
 
   static const fondoClaro = Color(0xFFF5F0E6);
-  static const superficieClaro = Color(0xFFFFFFFF);
+  static const superficieClaro = Color(0xFFFAF6ED);
   static const textoClaro = Color(0xFF211E19);
   static const textoSecundarioClaro = Color(0xFF756F63);
 
-  static const fondoOscuro = Color(0xFF0D110F);
-  static const superficieOscuro = Color(0xFF161C19);
+  static const fondoOscuro = Color(0xFF121212);
+  static const superficieOscuro = Color(0xFF1C1C1C);
   static const textoOscuro = Color(0xFFF1EFE9);
   static const textoSecundarioOscuro = Color(0xFF9A9D97);
 }

@@ -52,6 +52,9 @@ abstract class AppTheme {
         elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          side: BorderSide(
+            color: AppColors.textoSecundarioClaro.withValues(alpha: 0.12),
+          ),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
@@ -112,6 +115,9 @@ abstract class AppTheme {
         elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          side: BorderSide(
+            color: AppColors.textoSecundarioOscuro.withValues(alpha: 0.12),
+          ),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
@@ -130,7 +136,7 @@ abstract class AppTheme {
         ),
       ),
       dividerTheme: const DividerThemeData(
-        color: Color(0xFF262E2A),
+        color: Color(0xFF2A2A2A),
         thickness: 0.5,
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
