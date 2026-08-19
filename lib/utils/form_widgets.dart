@@ -319,33 +319,27 @@ class BarraCategoria extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(CategoriaGasto.iconoPara(categoria), size: 16, color: color),
-              const SizedBox(width: AppSpacing.sm),
-              SizedBox(
-                width: 96,
-                child: Text(
-                  categoria,
-                  style: theme.textTheme.bodySmall,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Flexible(
-                child: Text(
-                  formatCOP(monto),
-                  style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  textAlign: TextAlign.end,
-                ),
-              ),
-            ],
+          Icon(CategoriaGasto.iconoPara(categoria), size: 16, color: color),
+          const SizedBox(width: AppSpacing.sm),
+          SizedBox(
+            width: 96,
+            child: Text(
+              categoria,
+              style: theme.textTheme.bodySmall,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          const SizedBox(height: 4),
-          _PistaBarra(color: color, fraccion: fraccion),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _PistaBarra(color: color, fraccion: fraccion),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            formatCOP(monto),
+            style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
@@ -509,11 +503,13 @@ class _MiniFilaMes extends StatelessWidget {
           child: _PistaBarra(color: color, fraccion: fraccion, alpha: alpha),
         ),
         const SizedBox(width: AppSpacing.sm),
-        Flexible(
+        SizedBox(
+          width: 76,
           child: Text(
             formatCOP(monto),
             style: monoStyle(fontSize: 12, fontWeight: FontWeight.w600),
             textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

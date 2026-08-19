@@ -349,6 +349,7 @@ class _PrestamoCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.primary,
                       ),
+                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
                     ),
                   ),
@@ -499,6 +500,7 @@ class _PrestamoCard extends StatelessWidget {
                             ? AppColors.alerta
                             : AppColors.positivo,
                       ),
+                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
                     ),
                   ),
