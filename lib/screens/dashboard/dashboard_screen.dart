@@ -835,7 +835,6 @@ class _FilaMonto extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: color,
             ),
-            overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.end,
           ),
         ),

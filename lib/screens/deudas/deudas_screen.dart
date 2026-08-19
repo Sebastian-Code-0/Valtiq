@@ -344,8 +344,7 @@ class _DeudaCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 150),
+                  Expanded(
                     child: Text(
                       formatCOP(deuda.montoOriginal),
                       style: monoStyle(
@@ -353,7 +352,6 @@ class _DeudaCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: AppColors.alerta,
                       ),
-                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
                     ),
                   ),
@@ -497,7 +495,6 @@ class _DeudaCard extends StatelessWidget {
                             ? AppColors.alerta
                             : AppColors.positivo,
                       ),
-                      overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
                     ),
                   ),
