@@ -2,6 +2,129 @@
 
 ## Ciclo de estabilización post-Fase 7, continuación (2026-07 a 2026-08) — v1.2.0+3
 
+### Presupuestos por categoría — límites mensuales de gasto
+Funcionalidad nueva completa: tabla, pantalla de configuración,
+progreso en el Dashboard y aviso al superar el límite.
+- schemaVersion 8 → 9: nueva tabla `PresupuestosCategorias` (id,
+  categoria, limiteMensual, creadoEn, actualizadoEn) con restricción
+  `UNIQUE` en `categoria` (una sola fila de límite por categoría);
+  migración `if (from < 9)` crea la tabla en bases existentes
+- De paso se resuelven los dos `TODO` pendientes desde el ciclo
+  anterior: `@TableIndex` en `PagosRecibidos.prestamoId` y
+  `PagosDeuda.deudaId`; la migración también los crea vía
+  `CREATE INDEX IF NOT EXISTS` para instalaciones que ya existían (las
+  nuevas los reciben gratis por `onCreate`)
+- Nuevo `PresupuestosCategoriasDao`: `watchPresupuestos`,
+  `getAllPresupuestos` (para el backup), `getPresupuestoPorCategoria`,
+  `upsertPresupuesto`, `eliminarPresupuesto`
+- Nueva pantalla `PresupuestosScreen` (Ajustes → "Presupuestos por
+  categoría"): lista las 8 categorías de `CategoriaGasto` con su
+  límite actual o "Sin límite"; tocar una abre un diálogo para
+  definir/editar el monto o quitar el límite existente
+- Fix: el diálogo de edición creaba y destruía a mano un
+  `TextEditingController` justo después de `Navigator.pop`, pero el
+  `TextFormField` seguía vivo durante la animación de cierre del
+  diálogo — reconstruirlo con el controller ya destruido lanzaba
+  `A TextEditingController was used after being disposed`. Solucionado
+  extrayendo el contenido del diálogo a su propio `StatefulWidget`
+  (`_EditarPresupuestoDialog`), que crea y destruye su controller en su
+  propio ciclo de vida (`initState`/`dispose`) en vez de manejarlo a
+  mano desde la pantalla contenedora
+- Fix: `upsertPresupuesto` usaba `insertOnConflictUpdate`, que por
+  defecto resuelve conflictos contra la primary key (`id`) — como la
+  pantalla nunca envía el `id` (no lo conoce de antemano si es la
+  primera vez), SQLite intentaba insertar una fila nueva en vez de
+  actualizar, chocando con la restricción `UNIQUE` de `categoria` y
+  lanzando `UNIQUE constraint failed`. Ahora el conflicto apunta
+  explícitamente a `categoria`
+  (`onConflict: DoUpdate(..., target: [presupuestosCategorias.categoria])`)
+- Nueva card `_PresupuestosCard` en el Dashboard (después del
+  comparativo por categorías): por cada categoría con límite definido,
+  reutiliza `BarraCategoria` (que ahora acepta un `colorOverride`
+  opcional) para mostrar el gasto del mes vs. el límite, ordenadas de
+  mayor a menor porcentaje usado; si no hay ningún límite definido, la
+  card no se muestra. Si el gasto supera el límite, la barra se pinta
+  en `AppColors.alerta` y aparece un ícono de advertencia + texto
+  "Superado"
+- Al registrar (no editar) un gasto variable que deja su categoría por
+  encima del límite mensual, se muestra un aviso; el cálculo
+  predictivo suma el monto nuevo al total ya gastado ese mes en la
+  categoría antes de guardar
+- Fix: ese aviso se disparaba también al editar un gasto ya existente
+  cuya categoría estaba sobre el límite por otros gastos, sin relación
+  con el campo que se estaba editando. Ahora el cálculo solo corre
+  para gastos nuevos (`widget.gasto == null`)
+- `BackupService` actualizado para incluir `presupuestosCategorias` en
+  la exportación e importación (agregado en un fix aparte, apenas
+  después de crear la tabla)
+
+### Exportación e importación de datos (copia de seguridad en JSON)
+- Nuevo `BackupService` (`services/backup_service.dart`):
+  `exportarDatos()` arma un JSON con versión de formato, schemaVersion,
+  fecha y versión de la app, más todas las tablas de datos del usuario
+  (deudas, pagosDeuda, prestamos, pagosRecibidos, ingresos, gastosFijos,
+  gastosVariables, recordatorios, presupuestosCategorias);
+  `importarDatos()` borra y reinserta todo dentro de una sola
+  `transaction()`, respetando el orden de FK (hijos antes que padres al
+  borrar, padres antes que hijos al reinsertar) y preservando los ids
+  originales del archivo
+- `ConfigSmtps` se excluye a propósito del backup — nunca debe salir
+  del dispositivo (evita filtrar la contraseña SMTP encriptada o el
+  servidor de correo en un archivo compartido)
+- Nuevos métodos `getAllX()` sin filtro (para exportar todo) agregados
+  a los DAOs que solo tenían streams/queries filtradas:
+  `GastosFijosDao`, `GastosVariablesDao`, `PagosDeudaDao`,
+  `PrestamosDao.getAllPagosRecibidos`, `RecordatoriosDao`
+- Nueva pantalla `RespaldoScreen` (Ajustes → "Copia de seguridad"),
+  usando `file_selector` para elegir dónde guardar o desde dónde leer
+  el archivo `.json` (multiplataforma: Linux, Windows, Android);
+  diálogo de confirmación antes de importar (reemplaza TODOS los datos
+  actuales, acción irreversible)
+- Backups viejos o parciales no fallan si les falta alguna clave: se
+  tratan como lista vacía en vez de lanzar excepción
+- Validación mínima del archivo antes de tocar la base de datos: si
+  `datos` no es un `Map`, lanza `FormatException` con mensaje claro en
+  vez de un error críptico de parseo
+
+### Sistema unificado de notificaciones (SnackBar)
+- Nuevo `utils/notificaciones.dart`: `mostrarExito`, `mostrarAlerta`,
+  `mostrarInfo`, cada una con su ícono (`check_circle_outline`,
+  `error_outline`, `info_outline`) y color (`AppColors.positivo`,
+  `AppColors.alerta`, el acento dinámico del usuario vía
+  `Theme.of(context).colorScheme.primary`) consistentes
+- `SnackBarThemeData` agregado al tema claro y oscuro:
+  `SnackBarBehavior.floating`, esquinas redondeadas
+  (`AppSpacing.radiusMd`), texto blanco
+- Reemplazadas las 28 llamadas sueltas a
+  `ScaffoldMessenger.of(context).showSnackBar(...)` repartidas en 15
+  archivos (formularios de deuda/préstamo/ingreso/gasto, pantallas de
+  deudas/préstamos/finanzas/recordatorios/config SMTP/respaldo) por la
+  función que corresponde según el tipo de mensaje, sin cambiar el
+  texto de ningún mensaje existente
+
+### Barra de progreso de pago en Deudas y Préstamos
+- Nuevo widget `BarraProgreso` en `form_widgets.dart`: envoltorio de
+  `_PistaBarra` (ya usado por `BarraCategoria`/`BarraCategoriaComparada`)
+  que recibe una `fraccion` ya calculada por quien llama y la satura a
+  [0, 1] si no es finita
+- Cada tarjeta de Deudas y Préstamos (`_DeudaCard`/`_PrestamoCard`)
+  muestra ahora, debajo del saldo, una barra de progreso + porcentaje:
+  "% pagado" en Deudas, "% cobrado" en Préstamos, calculado como
+  `abonado / (abonado + saldoConInteres)`
+
+### Fix: las pestañas del Shell se construyen recién al visitarlas
+- `ShellScreen` mantenía las 5 pantallas dentro de un único
+  `IndexedStack`, que las construye a todas de entrada aunque solo una
+  sea visible — cualquier animación de entrada (el fundido de
+  `AnimatedSwitcher`, el crecimiento de las barras con
+  `TweenAnimationBuilder`) ya había terminado de correr antes de que el
+  usuario llegara a ver esa pestaña por primera vez
+- Ahora cada pantalla se reemplaza por un `SizedBox.shrink()` hasta que
+  se visita por primera vez (lista `_visitada` por índice, actualizada
+  en `_cambiarIndice`); a partir de ahí queda montada permanentemente,
+  igual que antes (el `IndexedStack` sigue evitando reconstruir al
+  volver a una pestaña ya visitada)
+
 ### Finanzas variables y Dashboard — navegación mensual y comparativos por categoría
 - `CategoriaGasto` gana un color fijo por categoría (campo `color` +
   helper `colorPara`), independiente del acento personalizable y de

@@ -1,6 +1,6 @@
 # Arquitectura de Valtiq
 
-## Base de datos (SQLite vía drift, schemaVersion 8)
+## Base de datos (SQLite vía drift, schemaVersion 9)
 
 ### Tablas
 
@@ -130,6 +130,19 @@
 | habilitado           | BOOLEAN  | default false      |
 | actualizadoEn        | DATETIME | default now        |
 
+**PresupuestosCategorias** — límite mensual de gasto por categoría
+| Columna       | Tipo     | Notas                                |
+|---------------|----------|---------------------------------------|
+| id            | INTEGER  | PK autoincrement                     |
+| categoria     | TEXT     | UNIQUE — mismo texto que CategoriaGasto.nombre |
+| limiteMensual | REAL     |                                       |
+| creadoEn      | DATETIME | default now                          |
+| actualizadoEn | DATETIME | default now                          |
+
+### Índices
+- `idx_pagos_recibidos_prestamo_id` en `PagosRecibidos.prestamoId`
+- `idx_pagos_deuda_deuda_id` en `PagosDeuda.deudaId`
+
 ### Migraciones
 - v1 → v2: crear ConfigSmtps, insertar fila id=1
 - v2 → v3: migrar contrasena a tieneContrasena; crear PagosDeuda
@@ -139,6 +152,10 @@
 - v5 → v6: agregar Recordatorios.horaAviso, minutoAviso
 - v6 → v7: crear GastosVariables
 - v7 → v8: añadir Deudas.modalidadCalculo (default 'simple')
+- v8 → v9: crear PresupuestosCategorias; agregar los índices
+           idx_pagos_recibidos_prestamo_id e idx_pagos_deuda_deuda_id
+           (instalaciones nuevas ya los reciben por onCreate vía
+           @TableIndex; esta migración solo cubre bases existentes)
 
 ### Ubicación de archivos
 
@@ -157,13 +174,15 @@ dispositivo).
 | Pantalla      | Archivo                   | Descripción                           |
 |---------------|---------------------------|---------------------------------------|
 | Dashboard     | dashboard_screen.dart     | Resumen financiero con saldos reales  |
-| Deudas        | deudas_screen.dart        | Lista con saldo pendiente por deuda   |
-| Préstamos     | prestamos_screen.dart     | Lista con saldo pendiente por préstamo|
+| Deudas        | deudas_screen.dart        | Lista con saldo pendiente y % pagado por deuda |
+| Préstamos     | prestamos_screen.dart     | Lista con saldo pendiente y % cobrado por préstamo |
 | Finanzas      | finanzas_screen.dart      | Ingresos, gastos fijos y variables    |
 | Recordatorios | recordatorios_screen.dart | Lista y gestión de recordatorios      |
 | Ajustes       | settings_screen.dart      | Navegación a sub-pantallas            |
 | Apariencia    | apariencia_screen.dart    | Tema claro/oscuro y color de acento   |
 | Config SMTP   | config_smtp_screen.dart   | Configuración de correo saliente      |
+| Copia de seguridad | respaldo_screen.dart | Exportar/importar todos los datos a JSON |
+| Presupuestos por categoría | presupuestos_screen.dart | Límite mensual de gasto por categoría |
 | Acerca de     | acerca_de_screen.dart     | Versión, licencia y repositorio       |
 
 ## Servicios
@@ -203,6 +222,21 @@ fallo en vez de crashear. La clave se genera al primer uso y se
 persiste en valtiq_key.bin junto a la base de datos (ver
 "Ubicación de archivos" arriba).
 
+**BackupService** (`services/backup_service.dart`)
+Exporta e importa todos los datos del usuario como un único archivo
+JSON. `exportarDatos()` arma un mapa con metadatos (versión de
+formato, schemaVersion, fecha, versión de la app) y una clave `datos`
+con todas las tablas de contenido del usuario (deudas, pagosDeuda,
+prestamos, pagosRecibidos, ingresos, gastosFijos, gastosVariables,
+recordatorios, presupuestosCategorias) serializadas vía `toJson()`.
+`ConfigSmtps` se excluye a propósito — nunca debe salir del
+dispositivo. `importarDatos()` valida el formato mínimo, y dentro de
+una sola `transaction()` borra todo (hijas antes que padres, por FK) y
+reinserta en batch (padres antes que hijas), preservando los ids
+originales del archivo para que las referencias entre tablas sigan
+siendo válidas. Usado por `RespaldoScreen` (Ajustes → "Copia de
+seguridad"), que delega la elección de archivo a `file_selector`.
+
 ## Ciclo de vida de recordatorios ligados
 
 Cuando un Recordatorio tiene `referenciaTabla`/`referenciaId`, su
@@ -239,12 +273,22 @@ transaccional y respeta integridad referencial (FK enforcement).
   llevaría a un mes concreto; el texto es responsivo — nombre completo
   del mes en pantallas ≥600px de ancho, abreviado "Jul 26" en
   celulares, para no desbordar cuando hay dos selectores lado a lado),
-  `BarraCategoria` (barra proporcional por categoría) y
+  `BarraCategoria` (barra proporcional por categoría, con
+  `colorOverride` opcional para pintarla de otro color — usado por el
+  progreso de presupuestos cuando se supera el límite) y
   `BarraCategoriaComparada` (dos mini-barras apiladas + insignia de
   variación entre dos meses), ambas apoyadas en el widget privado
   compartido `_PistaBarra`, que anima el crecimiento del ancho con
   `TweenAnimationBuilder` (600ms, `Curves.easeOutCubic`) cada vez que
-  cambia `fraccion`.
+  cambia `fraccion`. `BarraProgreso` es un envoltorio más simple de
+  `_PistaBarra` para cuando la fracción ya viene calculada por quien
+  llama (usado en el % pagado/cobrado de Deudas y Préstamos).
+- `utils/notificaciones.dart` — `mostrarExito`, `mostrarAlerta`,
+  `mostrarInfo`: wrapper único sobre
+  `ScaffoldMessenger.of(context).showSnackBar` con ícono y color
+  consistentes según el tipo de mensaje (éxito, alerta, informativo
+  con el acento dinámico del usuario). Reemplaza las 28 llamadas
+  sueltas a `showSnackBar` que existían repartidas en 15 archivos.
 - `utils/categoria_gasto.dart` — `CategoriaGasto`, origen único de
   nombre+ícono+color por categoría de gasto variable, con fallback a
   "otros" para valores libres no listados. El color es fijo por
@@ -267,7 +311,11 @@ listas reactivas: cualquier insert/update/delete reconstruye
 automáticamente los widgets suscritos.
 
 El Shell de navegación no anima el cambio de pestaña con fade
-(se quitó: reconstruía las 5 pantallas en cada cambio).
+(se quitó: reconstruía las 5 pantallas en cada cambio). Cada pestaña
+del `IndexedStack` se reemplaza por un `SizedBox.shrink()` hasta que
+se visita por primera vez, para que las animaciones de entrada de esa
+pantalla (fundidos, barras que crecen) corran recién cuando el usuario
+la ve, no en segundo plano desde el arranque de la app.
 
 ### Navegación mensual y comparativos de gastos variables
 
