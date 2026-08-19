@@ -1,6 +1,6 @@
 # Changelog
 
-## Ciclo de estabilización post-Fase 7, continuación (2026-07 a 2026-08) — v1.2.0+3
+## Ciclo de estabilización post-Fase 7, continuación (2026-07 a 2026-08) — v1.3.0+4
 
 ### Presupuestos por categoría — límites mensuales de gasto
 Funcionalidad nueva completa: tabla, pantalla de configuración,
