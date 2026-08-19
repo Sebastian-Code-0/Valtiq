@@ -120,8 +120,8 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
         if (mounted) {
           mostrarExito(
             context,
-            'Préstamo a nombre de "${prestamo.deudorNombre}" ha sido pagado '
-            'por completo y se movió a pagados.',
+            'Préstamo "${prestamo.deudorNombre}" ha sido pagado por completo '
+            'y se movió a pagados.',
           );
           Navigator.pop(context);
         }
@@ -535,6 +535,7 @@ class _PagosSection extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: InkWell(
                     onLongPress: () => onEliminar(p),
+                    onSecondaryTap: () => onEliminar(p),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(

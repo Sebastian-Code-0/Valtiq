@@ -502,6 +502,7 @@ class _AbonosSection extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: InkWell(
                     onLongPress: () => onEliminar(p),
+                    onSecondaryTap: () => onEliminar(p),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
