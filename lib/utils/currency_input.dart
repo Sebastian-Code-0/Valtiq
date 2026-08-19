@@ -13,7 +13,9 @@ double? parseCOP(String input) {
 }
 
 String formatCOPInput(double value) {
-  final digitos = value.abs().toStringAsFixed(0);
+  final abs = value.abs();
+  final acotado = abs > maxCoeficiente ? maxCoeficiente : abs;
+  final digitos = acotado.toStringAsFixed(0);
   final agrupado = agruparMiles(digitos);
   return value < 0 ? '-$agrupado' : agrupado;
 }
