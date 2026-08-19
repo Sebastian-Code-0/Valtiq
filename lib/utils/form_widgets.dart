@@ -318,28 +318,31 @@ class BarraCategoria extends StatelessWidget {
         : (monto / montoMaximo).clamp(0.0, 1.0);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(CategoriaGasto.iconoPara(categoria), size: 16, color: color),
-          const SizedBox(width: AppSpacing.sm),
-          SizedBox(
-            width: 96,
-            child: Text(
-              categoria,
-              style: theme.textTheme.bodySmall,
-              overflow: TextOverflow.ellipsis,
-            ),
+          Row(
+            children: [
+              Icon(CategoriaGasto.iconoPara(categoria), size: 16, color: color),
+              const SizedBox(width: AppSpacing.sm),
+              SizedBox(
+                width: 96,
+                child: Text(
+                  categoria,
+                  style: theme.textTheme.bodySmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                formatCOP(monto),
+                style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: _PistaBarra(color: color, fraccion: fraccion),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            formatCOP(monto),
-            style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
+          const SizedBox(height: AppSpacing.xs),
+          _PistaBarra(color: color, fraccion: fraccion),
         ],
       ),
     );
