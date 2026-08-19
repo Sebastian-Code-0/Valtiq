@@ -63,9 +63,17 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   build_runner: ^2.4.13
   drift_dev: ^2.31.0
+  flutter_native_splash: ^2.4.7
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+flutter_native_splash:
+  color: "#121212"
+  image: assets/logo_icono.png
+  android_12:
+    color: "#121212"
+    image: assets/logo_icono.png
 
 # The following section is specific to Flutter packages.
 flutter:

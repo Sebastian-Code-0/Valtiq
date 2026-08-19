@@ -174,7 +174,7 @@ class _FilaPrivacidad extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: [
-          Icon(icono, size: 16, color: AppColors.positivo),
+          Icon(icono, size: 16, color: theme.colorScheme.primary),
           const SizedBox(width: AppSpacing.sm),
           Flexible(child: Text(texto, style: theme.textTheme.bodyMedium)),
         ],
