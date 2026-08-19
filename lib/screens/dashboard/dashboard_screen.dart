@@ -920,17 +920,7 @@ class _BalanceDonut extends StatelessWidget {
       fraccionDisponible = disponible / ingresos;
     }
 
-    final textoDisponible = formatCOP(disponible);
-    // Montos muy largos ya no caben legibles dentro del anillo aunque
-    // FittedBox los achique; en ese caso se muestran debajo en su lugar.
-    final textoLargo = textoDisponible.length > 10;
-    final estiloTexto = monoStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.bold,
-      color: disponibleColor,
-    );
-
-    final anillo = SizedBox(
+    return SizedBox(
       width: diametro,
       height: diametro,
       child: Stack(
@@ -954,28 +944,21 @@ class _BalanceDonut extends StatelessWidget {
               ),
             ),
           ),
-          if (!textoLargo)
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(textoDisponible, style: estiloTexto, maxLines: 1),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                formatCOP(disponible),
+                style: monoStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: disponibleColor,
+                ),
+                maxLines: 1,
               ),
             ),
-        ],
-      ),
-    );
-
-    if (!textoLargo) return anillo;
-
-    return SizedBox(
-      width: diametro,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          anillo,
-          const SizedBox(height: AppSpacing.xs),
-          Text(textoDisponible, style: estiloTexto, textAlign: TextAlign.center),
+          ),
         ],
       ),
     );

@@ -13,8 +13,8 @@ double? parseCOP(String input) {
 }
 
 String formatCOPInput(double value) {
-  final entero = value.abs().round();
-  final agrupado = agruparMiles(entero.toString());
+  final digitos = value.abs().toStringAsFixed(0);
+  final agrupado = agruparMiles(digitos);
   return value < 0 ? '-$agrupado' : agrupado;
 }
 
