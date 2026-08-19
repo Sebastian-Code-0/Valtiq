@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:drift/drift.dart' hide Column, Table;
 import 'package:flutter/material.dart';
@@ -180,7 +181,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: AppSpacing.md),
               GridView.count(
                 crossAxisCount: 2,
-                childAspectRatio: 1.6,
+                childAspectRatio: 1.25,
                 crossAxisSpacing: AppSpacing.md,
                 mainAxisSpacing: AppSpacing.md,
                 shrinkWrap: true,
@@ -210,25 +211,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     colorIcono: AppColors.alerta,
                     stream: _streamGastos,
                   ),
-                  _ResumenCard(
-                    titulo: 'Gastos variables (mes)',
-                    icono: Icons.shopping_bag_outlined,
-                    colorIcono: AppColors.alerta,
-                    stream: _streamGastosVariables,
-                  ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.lg),
-              _BalanceMensualCard(streamBalance: _streamBalance),
               const SizedBox(height: AppSpacing.md),
-              _ComparativoCategorias(db: widget.db),
-              const SizedBox(height: AppSpacing.md),
-              _PresupuestosCard(db: widget.db),
+              Builder(
+                builder: (context) {
+                  final anchoDisponible =
+                      MediaQuery.sizeOf(context).width - AppSpacing.md * 2;
+                  final anchoCelda = (anchoDisponible - AppSpacing.md) / 2;
+                  final altoFila = anchoCelda / 1.25;
+                  return SizedBox(
+                    width: double.infinity,
+                    height: altoFila,
+                    child: _ResumenCard(
+                      titulo: 'Gastos variables (mes)',
+                      icono: Icons.shopping_bag_outlined,
+                      colorIcono: AppColors.alerta,
+                      stream: _streamGastosVariables,
+                    ),
+                  );
+                },
+              ),
               const SizedBox(height: AppSpacing.md),
               _PosicionPrestamosCard(
                 streamPrestamos: _streamPrestamos,
                 streamDeudas: _streamDeudas,
               ),
+              const SizedBox(height: AppSpacing.md),
+              _BalanceMensualCard(streamBalance: _streamBalance),
+              const SizedBox(height: AppSpacing.md),
+              _ComparativoCategorias(db: widget.db),
+              const SizedBox(height: AppSpacing.md),
+              _PresupuestosCard(db: widget.db),
             ],
           ),
         ),
@@ -344,22 +358,42 @@ class _BalanceMensualCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    _FilaMonto(
-                      label: 'Ingresos',
-                      valor: formatCOP(ingresos),
-                      color: AppColors.positivo,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _FilaMonto(
-                      label: 'Gastos fijos',
-                      valor: '-${formatCOP(gastos)}',
-                      color: AppColors.alerta,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _FilaMonto(
-                      label: 'Gastos variables',
-                      valor: '-${formatCOP(gastosVariables)}',
-                      color: AppColors.alerta,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _BalanceDonut(
+                          ingresos: ingresos,
+                          gastos: gastos,
+                          gastosVariables: gastosVariables,
+                          disponible: disponible,
+                          disponibleColor: disponibleColor,
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _FilaMonto(
+                                label: 'Ingresos',
+                                valor: formatCOP(ingresos),
+                                color: AppColors.positivo,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              _FilaMonto(
+                                label: 'Gastos fijos',
+                                valor: '-${formatCOP(gastos)}',
+                                color: AppColors.alerta,
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              _FilaMonto(
+                                label: 'Gastos variables',
+                                valor: '-${formatCOP(gastosVariables)}',
+                                color: AppColors.alerta,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const Divider(height: AppSpacing.lg),
                     Row(
@@ -435,6 +469,13 @@ class _PosicionPrestamosCard extends StatelessWidget {
                 }
                 final prestado = snapPres.data ?? 0.0;
                 final deudas = snapDeu.data ?? 0.0;
+                final totalPosicion = prestado + deudas;
+                final fraccionPrestado = totalPosicion == 0
+                    ? 0.0
+                    : prestado / totalPosicion;
+                final fraccionDeudas = totalPosicion == 0
+                    ? 0.0
+                    : deudas / totalPosicion;
                 final neto = prestado - deudas;
                 final netoColor = neto >= 0
                     ? AppColors.positivo
@@ -454,10 +495,20 @@ class _PosicionPrestamosCard extends StatelessWidget {
                       valor: formatCOP(prestado),
                       color: AppColors.positivo,
                     ),
+                    const SizedBox(height: AppSpacing.xs),
+                    BarraProgreso(
+                      fraccion: fraccionPrestado,
+                      color: AppColors.positivo,
+                    ),
                     const SizedBox(height: AppSpacing.sm),
                     _FilaMonto(
                       label: 'Total deudas',
                       valor: formatCOP(deudas),
+                      color: AppColors.alerta,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    BarraProgreso(
+                      fraccion: fraccionDeudas,
                       color: AppColors.alerta,
                     ),
                     const Divider(height: AppSpacing.lg),
@@ -793,6 +844,170 @@ class _FilaMonto extends StatelessWidget {
   }
 }
 
+/// Donut de composición del balance mensual: gastos fijos, gastos variables
+/// y disponible como fracciones de ingresos. Si gastos + variables superan
+/// los ingresos, se reescalan entre sí para llenar el anillo completo (sin
+/// porción de "disponible"), evitando arcos que se solapen más allá de 360°.
+class _BalanceDonut extends StatelessWidget {
+  const _BalanceDonut({
+    required this.ingresos,
+    required this.gastos,
+    required this.gastosVariables,
+    required this.disponible,
+    required this.disponibleColor,
+  });
+
+  final double ingresos;
+  final double gastos;
+  final double gastosVariables;
+  final double disponible;
+  final Color disponibleColor;
+
+  static const _diametro = 100.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (ingresos <= 0) {
+      return SizedBox(
+        width: _diametro,
+        height: _diametro,
+        child: Center(
+          child: Icon(
+            Icons.donut_large_outlined,
+            size: 32,
+            color: theme.colorSecundario,
+          ),
+        ),
+      );
+    }
+
+    final gastosTotal = gastos + gastosVariables;
+    double fraccionGastos;
+    double fraccionVariables;
+    double fraccionDisponible;
+    if (gastosTotal >= ingresos) {
+      fraccionGastos = gastosTotal <= 0 ? 0.0 : gastos / gastosTotal;
+      fraccionVariables = gastosTotal <= 0
+          ? 0.0
+          : gastosVariables / gastosTotal;
+      fraccionDisponible = 0.0;
+    } else {
+      fraccionGastos = gastos / ingresos;
+      fraccionVariables = gastosVariables / ingresos;
+      fraccionDisponible = disponible / ingresos;
+    }
+
+    return SizedBox(
+      width: _diametro,
+      height: _diametro,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOutCubic,
+            builder: (context, progreso, child) => CustomPaint(
+              size: const Size(_diametro, _diametro),
+              painter: _BalanceDonutPainter(
+                fraccionGastos: fraccionGastos,
+                fraccionVariables: fraccionVariables,
+                fraccionDisponible: fraccionDisponible,
+                colorGastos: AppColors.alerta,
+                colorVariables: AppColors.alerta.withValues(alpha: 0.35),
+                colorDisponible: disponibleColor,
+                colorPista: theme.dividerColor,
+                progreso: progreso,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                formatCOP(disponible),
+                style: monoStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: disponibleColor,
+                ),
+                maxLines: 1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BalanceDonutPainter extends CustomPainter {
+  _BalanceDonutPainter({
+    required this.fraccionGastos,
+    required this.fraccionVariables,
+    required this.fraccionDisponible,
+    required this.colorGastos,
+    required this.colorVariables,
+    required this.colorDisponible,
+    required this.colorPista,
+    required this.progreso,
+  });
+
+  final double fraccionGastos;
+  final double fraccionVariables;
+  final double fraccionDisponible;
+  final Color colorGastos;
+  final Color colorVariables;
+  final Color colorDisponible;
+  final Color colorPista;
+  final double progreso;
+
+  static const _grosor = 12.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centro = size.center(Offset.zero);
+    final radio = (size.shortestSide - _grosor) / 2;
+    final arcoRect = Rect.fromCircle(center: centro, radius: radio);
+
+    final pistaPaint = Paint()
+      ..color = colorPista
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _grosor;
+    canvas.drawCircle(centro, radio, pistaPaint);
+
+    var anguloActual = -math.pi / 2;
+
+    void dibujarArco(double fraccion, Color color) {
+      final barrido = 2 * math.pi * fraccion * progreso;
+      if (barrido > 0) {
+        final paint = Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _grosor;
+        canvas.drawArc(arcoRect, anguloActual, barrido, false, paint);
+      }
+      anguloActual += 2 * math.pi * fraccion;
+    }
+
+    dibujarArco(fraccionGastos, colorGastos);
+    dibujarArco(fraccionVariables, colorVariables);
+    dibujarArco(fraccionDisponible, colorDisponible);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BalanceDonutPainter oldDelegate) {
+    return oldDelegate.fraccionGastos != fraccionGastos ||
+        oldDelegate.fraccionVariables != fraccionVariables ||
+        oldDelegate.fraccionDisponible != fraccionDisponible ||
+        oldDelegate.colorDisponible != colorDisponible ||
+        oldDelegate.progreso != progreso;
+  }
+}
+
 class _PresupuestosCard extends StatelessWidget {
   const _PresupuestosCard({required this.db});
   final AppDatabase db;
@@ -815,11 +1030,12 @@ class _PresupuestosCard extends StatelessWidget {
           ),
           builder: (context, gastosSnap) {
             final gastos = gastosSnap.data ?? const {};
-            final filas = [...presupuestos]..sort((a, b) {
-              final pa = (gastos[a.categoria] ?? 0) / a.limiteMensual;
-              final pb = (gastos[b.categoria] ?? 0) / b.limiteMensual;
-              return pb.compareTo(pa);
-            });
+            final filas = [...presupuestos]
+              ..sort((a, b) {
+                final pa = (gastos[a.categoria] ?? 0) / a.limiteMensual;
+                final pb = (gastos[b.categoria] ?? 0) / b.limiteMensual;
+                return pb.compareTo(pa);
+              });
 
             return Card(
               child: Padding(
