@@ -155,10 +155,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
 }
 
 const _coloresAcento = [
-  (color: Color(0xFF2DD4A0), nombre: 'Menta'),
-  (color: Color(0xFF6366F1), nombre: 'Índigo'),
-  (color: Color(0xFFF59E0B), nombre: 'Ámbar'),
-  (color: Color(0xFFEC4899), nombre: 'Rosa'),
-  (color: Color(0xFF38BDF8), nombre: 'Cielo'),
-  (color: Color(0xFFF97316), nombre: 'Coral'),
+  (color: Color(0xFF1E8A63), nombre: 'Esmeralda oscuro'),
+  (color: Color(0xFFB08D3E), nombre: 'Dorado'),
+  (color: Color(0xFF8B3A46), nombre: 'Vino'),
 ];

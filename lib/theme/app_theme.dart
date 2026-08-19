@@ -70,7 +70,7 @@ abstract class AppTheme {
         ),
       ),
       dividerTheme: const DividerThemeData(
-        color: Color(0xFFE5E7EB),
+        color: Color(0xFFE4DECF),
         thickness: 0.5,
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -130,7 +130,7 @@ abstract class AppTheme {
         ),
       ),
       dividerTheme: const DividerThemeData(
-        color: Color(0xFF334155),
+        color: Color(0xFF262E2A),
         thickness: 0.5,
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
