@@ -335,9 +335,15 @@ class BarraCategoria extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Text(
-                formatCOP(monto),
-                style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    formatCOP(monto),
+                    style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
               ),
             ],
           ),
