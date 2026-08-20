@@ -953,6 +953,7 @@ class _BalanceDonut extends StatelessWidget {
                 colorDisponible: disponibleColor,
                 colorPista: theme.dividerColor,
                 progreso: progreso,
+                relleno: !cabeAdentro,
               ),
             ),
           ),
@@ -1007,6 +1008,7 @@ class _BalanceDonutPainter extends CustomPainter {
     required this.colorDisponible,
     required this.colorPista,
     required this.progreso,
+    required this.relleno,
   });
 
   final double fraccionGastos;
@@ -1017,18 +1019,22 @@ class _BalanceDonutPainter extends CustomPainter {
   final Color colorDisponible;
   final Color colorPista;
   final double progreso;
+  final bool relleno;
 
   static const _grosor = 12.0;
 
   @override
   void paint(Canvas canvas, Size size) {
     final centro = size.center(Offset.zero);
-    final radio = (size.shortestSide - _grosor) / 2;
+    final radio = relleno
+        ? size.shortestSide / 2
+        : (size.shortestSide - _grosor) / 2;
     final arcoRect = Rect.fromCircle(center: centro, radius: radio);
+    final estilo = relleno ? PaintingStyle.fill : PaintingStyle.stroke;
 
     final pistaPaint = Paint()
       ..color = colorPista
-      ..style = PaintingStyle.stroke
+      ..style = estilo
       ..strokeWidth = _grosor
       ..isAntiAlias = true;
     canvas.drawCircle(centro, radio, pistaPaint);
@@ -1040,13 +1046,19 @@ class _BalanceDonutPainter extends CustomPainter {
       if (barrido > 0) {
         final paint = Paint()
           ..color = color
-          ..style = PaintingStyle.stroke
+          ..style = estilo
           ..strokeWidth = _grosor
           ..isAntiAlias = true;
         // Solape leve para que segmentos consecutivos se toquen de más en
         // vez de dejar una línea/gap visible entre colores.
         const solape = 0.025;
-        canvas.drawArc(arcoRect, anguloActual, barrido + solape, false, paint);
+        canvas.drawArc(
+          arcoRect,
+          anguloActual,
+          barrido + solape,
+          relleno,
+          paint,
+        );
       }
       anguloActual += 2 * math.pi * fraccion;
     }
@@ -1062,7 +1074,8 @@ class _BalanceDonutPainter extends CustomPainter {
         oldDelegate.fraccionVariables != fraccionVariables ||
         oldDelegate.fraccionDisponible != fraccionDisponible ||
         oldDelegate.colorDisponible != colorDisponible ||
-        oldDelegate.progreso != progreso;
+        oldDelegate.progreso != progreso ||
+        oldDelegate.relleno != relleno;
   }
 }
 
