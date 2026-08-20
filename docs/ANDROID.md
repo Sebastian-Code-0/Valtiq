@@ -28,6 +28,23 @@ flutter run
 
 El APK de debug se genera en: `build/app/outputs/flutter-apk/app-debug.apk`
 
+## Splash nativo
+
+El proyecto usa `flutter_native_splash` (configurado en el bloque
+`flutter_native_splash:` de `pubspec.yaml`) para el splash nativo de
+Android, en vez del blanco por defecto de Flutter. Después de correr
+`flutter pub get` — o cada vez que cambie la config de
+`flutter_native_splash` en `pubspec.yaml` — hay que regenerar los
+recursos nativos una vez:
+
+```bash
+dart run flutter_native_splash:create
+```
+
+Esto reescribe `android/app/src/main/res/drawable*/` y
+`values*/styles.xml` con el color e imagen configurados. No es un paso
+automático de `flutter pub get` ni de `flutter build`.
+
 ## Firma de release
 
 `android/app/build.gradle.kts` define `signingConfigs.release` leyendo

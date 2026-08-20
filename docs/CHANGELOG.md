@@ -1,5 +1,162 @@
 # Changelog
 
+## Rebrand visual, dashboard rediseñado y auto-pago (2026-08-18 a 2026-08-19) — v1.4.0+5
+
+schemaVersion **sin cambios** este ciclo (sigue en 9) — no hay tablas,
+columnas ni migraciones nuevas.
+
+### Rebrand: paleta casi-negro/hueso y 4 acentos (antes 6)
+- `AppColors` (`theme/app_colors.dart`): fondo/superficie oscuros pasan de
+  azulados (`#121820`/`#1E2530`) a casi-negro neutro
+  `fondoOscuro = #121212` / `superficieOscuro = #1C1C1C`; fondo/superficie
+  claros pasan de blanco puro a hueso cálido
+  `fondoClaro = #F5F0E6` / `superficieClaro = #FAF6ED`; texto/texto
+  secundario ajustados a juego (`textoClaro #211E19`,
+  `textoSecundarioClaro #756F63`, `textoOscuro #F1EFE9`,
+  `textoSecundarioOscuro #9A9D97`). `acento`/`positivo` por defecto pasan de
+  menta (`#2DD4A0`) a esmeralda oscuro (`#1E8A63`)
+- `apariencia_screen.dart`: los 6 acentos predefinidos (Menta, Índigo,
+  Ámbar, Rosa, Cielo, Coral) se reemplazan por 4: **Esmeralda oscuro**
+  (`#1E8A63`, default), **Dorado** (`#B08D3E`), **Vino** (`#8B3A46`),
+  **Morado** (`#6B4E8C`)
+- `app_theme.dart`: `CardTheme` gana un borde sutil
+  (`textoSecundario.withValues(alpha: 0.12)`) en ambos temas para separar
+  las cards del fondo ahora que ya no hay contraste blanco/gris; colores de
+  `DividerThemeData` ajustados a la nueva paleta
+- Fix: ~13 lugares usaban `AppColors.acento`/`AppColors.positivo` fijos en
+  vez de `Theme.of(context).colorScheme.primary`, así que no seguían el
+  acento dinámico elegido por el usuario. 12 usos de `AppColors.acento` en
+  `acerca_de_screen.dart` (tinte del logo, ícono de escudo),
+  `dashboard_screen.dart` (tinte del logo, ícono "Prestado activo"),
+  `deudas_screen.dart`/`prestamos_screen.dart` (ícono "Reactivar"),
+  `prestamo_detalle.dart` (interés acumulado y diferencia por interés),
+  `recordatorios_screen.dart` (ícono "Probar notificación") y
+  `form_widgets.dart` → `FormSection` (ícono + fondo del contenedor) se
+  corrigieron a `theme.colorScheme.primary`. El lugar #13 era distinto: los
+  4 íconos del checklist de privacidad en `_FilaPrivacidad`
+  (`acerca_de_screen.dart`) usaban `AppColors.positivo` fijo — también se
+  cambió al acento dinámico, ya que aquí no aplica el significado semántico
+  de "éxito" que sí justifica mantener `AppColors.positivo` fijo en el
+  resto de la app
+
+### Dashboard rediseñado: cards más altas, donut animado, barras de posición
+- `GridView` de resumen: `childAspectRatio` 1.6 → 1.25 (cards más altas)
+- La 5ª card ("Gastos variables (mes)") pasa de compartir grid 2×3 a
+  ocupar el ancho completo en su propia fila, con alto calculado a partir
+  del ancho de una celda del grid (`Builder` + `MediaQuery.sizeOf`) para
+  mantener las mismas proporciones que las otras 4
+- Espaciado normalizado a `AppSpacing.md` en todo el Dashboard (antes había
+  un salto a `AppSpacing.lg` antes de Balance Mensual)
+- `_PosicionPrestamosCard` se mueve arriba de Balance Mensual y gana una
+  `BarraProgreso` bajo cada monto (prestado y deudas), mostrando la
+  fracción de la posición total que representa cada uno
+- Nuevo donut/pie animado en `_BalanceMensualCard`:
+  `_BalanceDonut`/`_BalanceDonutPainter` (`dashboard_screen.dart`)
+  reemplazan la lista simple de `_FilaMonto` por un anillo proporcional
+  (gastos fijos / gastos variables / disponible), animado con
+  `TweenAnimationBuilder` (600ms, `Curves.easeOutCubic`); si gastos +
+  variables superan los ingresos, se reescalan entre sí para llenar el
+  anillo sin la porción "disponible" (evita solapar arcos más allá de
+  360°). Iteraciones dentro del mismo ciclo:
+  - diámetro fijo (100) → parametrizado (`diametro`), con layout
+    responsivo vía `LayoutBuilder`: apilado (donut 160 centrado arriba,
+    montos abajo) en pantallas < 360px de ancho; lado a lado (donut 130)
+    en pantallas más anchas
+  - fix de costura visual entre segmentos: `dibujarArco` extiende el
+    `sweepAngle` en 0.025 radianes de solape y fija `isAntiAlias = true`
+    en todos los `Paint`, para que los colores se toquen de más en vez de
+    dejar una línea/gap
+  - el monto "Disponible" se mide con `TextPainter` antes de dibujar: si
+    cabe legible dentro del anillo (`cabeAdentro`, ancho ≤ 78% del
+    diámetro interior a tamaño 10) se muestra centrado con
+    `FittedBox(scaleDown)` como antes; si no cabe, el anillo — que sigue
+    dibujándose siempre con las fracciones reales, nunca vacío ni parcial
+    — pasa a rellenarse como una torta sólida (`relleno: true` en
+    `_BalanceDonutPainter`: radio completo, `PaintingStyle.fill`,
+    `useCenter: true` en `drawArc`, mismos colores proporcionales) y el
+    monto se muestra debajo en su propia línea
+
+### Bug de formateo de montos: overflow de Int64 en formatCOP/formatCOPInput
+- Causa raíz: `monto.abs().round()` sobre un `double` gigantesco se
+  satura silenciosamente en `Int64.max` (`9223372036854775807`) en vez de
+  lanzar error, mostrando un número mucho más chico e incorrecto en vez
+  del monto real
+- Fix: conversión basada en `String` (`abs.toStringAsFixed(0)`) que nunca
+  pasa por `int`, en `formatCOP` (`utils/format.dart`) y `formatCOPInput`
+  (`utils/currency_input.dart`)
+- Notación compacta agregada en `formatCOP` para magnitudes extremas:
+  `abs >= 1e12` → "X,XX billones" (÷1e12), `abs >= 1e18` → "X,XX
+  trillones" (÷1e18), coma decimal (es_CO); así un monto nunca produce una
+  cadena de 15+ dígitos que rompa layouts
+- Endurecido contra un segundo borde: `toStringAsFixed` de Dart cae a
+  notación exponencial (`"1e+21"`) en magnitudes ≥ 1e21, y el coeficiente
+  ya dividido por 1e12/1e18 puede seguir alcanzando ese umbral si el monto
+  original es lo bastante extremo. `numero_utils.dart` define
+  `maxCoeficiente = 999999999999999.0`, usado por `format.dart`'s
+  `_formatEscala` para acotar el coeficiente antes de formatear (agrega
+  un `+` cuando el clamp se activa, y recorta un `,00` final si aplica)
+- `formatCOPInput` necesitaba la misma protección pero debe preservar los
+  dígitos exactos (es el formateador de edición en vivo, sin notación
+  compacta), así que usa su propio clamp local en `currency_input.dart`:
+  `_maxValorEdicion = 999999999999999868928.0` — no un literal de 21
+  nueves, que como `double` se redondea exactamente a `1e21` (el propio
+  umbral a evitar) y seguiría cayendo en notación exponencial; este es el
+  `double` representable más grande estrictamente menor a `1e21`
+
+### BarraCategoria: layout en dos líneas
+- `BarraCategoria` (`utils/form_widgets.dart`), usado en Finanzas →
+  Gastos Variables y en el Dashboard → Presupuestos, pasa de una sola
+  `Row` (ícono + categoría + barra + monto) a dos líneas: fila superior
+  con ícono + categoría + monto (alineado a la derecha), `_PistaBarra` en
+  su propia fila de ancho completo debajo — la barra ya no se comprime
+  casi a cero cuando el monto es largo. Padding vertical exterior
+  `AppSpacing.xs` → `AppSpacing.sm`, con un nuevo espacio `AppSpacing.xs`
+  entre ambas filas
+- El monto se envuelve además en `Flexible` +
+  `FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerRight)`
+  para que strings compactos largos (ej. "X,XX trillones") se encojan en
+  vez de desbordar, sin truncar ni abreviar el texto
+
+### Nuevo: marcar deuda/préstamo como pagado automáticamente al saldar
+- `_registrarAbono` (`deuda_detalle.dart`) y `_registrarPago`
+  (`prestamo_detalle.dart`): tras guardar un abono/pago exitosamente,
+  recalculan el saldo pendiente real con el total actualizado
+  (`pagosDeudaDao.getTotalAbonado` / `prestamosDao.getTotalAbonado` +
+  `InteresCalculator.resumenPrestamo`); si el saldo resultante es ≤ 1
+  (tolerancia de redondeo), llaman automáticamente a
+  `DeudasDao.marcarComoPagada` / `PrestamosDao.marcarComoPagado`,
+  muestran `mostrarExito` con el nombre del acreedor/deudor y vuelven a
+  la lista (`Navigator.pop`)
+- Siempre resuelto por `id` (`widget.deudaId` / `widget.prestamoId`) —
+  nunca busca por `acreedorNombre`/`deudorNombre`, porque puede haber
+  varios registros con el mismo nombre
+- Mensaje de préstamo simplificado para calzar con el de deuda:
+  `'Préstamo "${nombre}" ha sido pagado por completo y se movió a
+  pagados.'`
+
+### Splash nativo (Android)
+- `flutter_native_splash: ^2.4.7` agregado como dev dependency (2.4.8
+  existe pero requiere `meta: ^1.18.0`, incompatible con el `meta: 1.16.0`
+  que el SDK de Flutter pinea vía `flutter_test`)
+- `color`/`android_12.color` fijos en `"#121212"` — igual en modo claro y
+  oscuro del SO, ya que el `SplashScreen` widget propio siempre usa
+  `AppColors.fondoOscuro` sin importar el tema
+- La imagen pasó por 3 iteraciones antes de quedar bien: el logo completo
+  sin recortar (se veía distorsionado/mal encuadrado) → una imagen en
+  blanco transparente (`assets/splash_blank.png`, ocultaba el ícono por
+  completo) → versión final `assets/splash_icon.png`: canvas RGBA
+  1152×1152 totalmente transparente con `logo_icono.png` redimensionado a
+  672×672 (`LANCZOS`) y pegado centrado
+- Tras cambiar la config hay que correr `dart run
+  flutter_native_splash:create` para regenerar los recursos nativos de
+  Android (`android/app/src/main/res/drawable*`, `values*/styles.xml`)
+
+### Click derecho para eliminar abonos/pagos en escritorio
+- `onSecondaryTap` agregado junto a `onLongPress` en los ítems de lista
+  de abonos (`deuda_detalle.dart`) y pagos (`prestamo_detalle.dart`),
+  ambos disparando `onEliminar` — antes solo se podía eliminar con
+  long-press, poco natural con mouse en Linux/Windows
+
 ## Ciclo de estabilización post-Fase 7, continuación (2026-07 a 2026-08) — v1.3.0+4
 
 ### Presupuestos por categoría — límites mensuales de gasto

@@ -237,6 +237,24 @@ originales del archivo para que las referencias entre tablas sigan
 siendo válidas. Usado por `RespaldoScreen` (Ajustes → "Copia de
 seguridad"), que delega la elección de archivo a `file_selector`.
 
+## Donut de balance mensual
+
+`_BalanceDonut` / `_BalanceDonutPainter` (`dashboard_screen.dart`, dentro
+de `_BalanceMensualCard`): anillo proporcional (gastos fijos / gastos
+variables / disponible) pintado a mano con `CustomPainter`, animado con
+`TweenAnimationBuilder` (600ms). Los arcos se dibujan con un solape fijo
+de 0.025 radianes y `isAntiAlias = true` para que los colores se toquen
+de más en vez de dejar una costura visible entre segmentos. `_BalanceDonut`
+recibe un `diametro` parametrizable (`_BalanceMensualCard` lo elige según
+un `LayoutBuilder`: apilado con donut más grande en pantallas angostas,
+lado a lado con donut más chico en pantallas anchas) y mide el monto
+"Disponible" formateado con `TextPainter` antes de decidir dónde
+mostrarlo: si cabe legible dentro del anillo a tamaño mínimo, va centrado
+con `FittedBox(scaleDown)`; si no, el `_BalanceDonutPainter` recibe
+`relleno: true` y pinta una torta sólida (mismas fracciones y colores,
+`PaintingStyle.fill`) en vez de un anillo — nunca se muestra vacío o
+parcial — y el monto se ubica debajo en su propia línea.
+
 ## Ciclo de vida de recordatorios ligados
 
 Cuando un Recordatorio tiene `referenciaTabla`/`referenciaId`, su
@@ -250,6 +268,16 @@ pantallas), dentro de la misma `transaction()`:
   `deleteGastoFijoConRecordatorios` desactivan (no borran) el
   recordatorio vinculado al eliminar el registro original
 
+`DeudasDao.marcarComoPagada` / `PrestamosDao.marcarComoPagado` tienen dos
+caminos de entrada: el botón manual "Marcar como pagada/o" (menú de la
+pantalla de detalle) y, desde este ciclo, automático — `_registrarAbono`
+(`deuda_detalle.dart`) / `_registrarPago` (`prestamo_detalle.dart`)
+recalculan el saldo pendiente tras guardar un abono/pago y llaman al
+mismo método del DAO si el saldo queda en ≤ 1 (tolerancia de redondeo),
+siempre por `id`, nunca por nombre. Ambos caminos terminan en el mismo
+método del DAO, así que la sincronización del recordatorio vinculado
+descrita arriba aplica igual sin importar cuál disparó el cambio.
+
 `RecordatoriosDao` expone `reactivarRecordatoriosPorReferencia`
 (reactiva y resetea `ultimaNotificacion`/`ultimoEnvioCorreo` para que
 vuelva a notificar limpio) y `eliminarRecordatoriosInactivos`
@@ -259,6 +287,24 @@ transaccional y respeta integridad referencial (FK enforcement).
 
 ## Utilidades compartidas
 
+- `utils/format.dart` — `formatCOP(double)`: formatea un monto en pesos
+  colombianos (`$1.234.567`) vía conversión basada en `String`
+  (`toStringAsFixed(0)` + agrupación de miles), nunca pasa por `int` para
+  evitar el overflow de `Int64.max` que producía `.round()` en montos
+  extremos. Para `abs >= 1e12`/`1e18` usa notación compacta en escala
+  larga (es_CO): "X,XX billones"/"X,XX trillones", acotando el coeficiente
+  a `numero_utils.maxCoeficiente` (`999999999999999.0`, con sufijo `+`
+  cuando el clamp se activa) para que ni siquiera esas divisiones puedan
+  caer en la notación exponencial de Dart (`"1e+21"`, umbral en
+  magnitudes ≥ 1e21).
+- `utils/currency_input.dart` — `formatCOPInput(double)`: formateador
+  para el campo en edición (agrupa miles pero sin notación compacta,
+  debe mostrar los dígitos exactos); tiene su propio clamp local
+  (`_maxValorEdicion = 999999999999999868928.0`, el `double`
+  representable más grande estrictamente menor a `1e21`) para la misma
+  protección contra notación exponencial en valores extremos.
+  `CopInputFormatter`: `TextInputFormatter` que reformatea el texto del
+  campo (agrupación de miles) en cada tecla mientras se edita un monto.
 - `utils/formulario_guardado_mixin.dart` — `FormularioGuardadoMixin`:
   valida, marca estado de guardando, persiste y maneja error/snackbar
   de forma uniforme; usado por los 6 formularios principales y los
@@ -275,7 +321,12 @@ transaccional y respeta integridad referencial (FK enforcement).
   celulares, para no desbordar cuando hay dos selectores lado a lado),
   `BarraCategoria` (barra proporcional por categoría, con
   `colorOverride` opcional para pintarla de otro color — usado por el
-  progreso de presupuestos cuando se supera el límite) y
+  progreso de presupuestos cuando se supera el límite; layout en dos
+  líneas: fila superior con ícono + nombre de categoría + monto
+  —envuelto en `Flexible` + `FittedBox(scaleDown)` para que strings
+  compactos largos como "X,XX trillones" se encojan en vez de
+  desbordar—, `_PistaBarra` en su propia fila de ancho completo debajo
+  para que nunca se comprima por un monto largo) y
   `BarraCategoriaComparada` (dos mini-barras apiladas + insignia de
   variación entre dos meses), ambas apoyadas en el widget privado
   compartido `_PistaBarra`, que anima el crecimiento del ancho con
