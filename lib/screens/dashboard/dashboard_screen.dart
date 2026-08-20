@@ -920,7 +920,19 @@ class _BalanceDonut extends StatelessWidget {
       fraccionDisponible = disponible / ingresos;
     }
 
-    return SizedBox(
+    final texto = formatCOP(disponible);
+    final painter = TextPainter(
+      text: TextSpan(
+        text: texto,
+        style: monoStyle(fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final diametroInterior = diametro - 24 - AppSpacing.sm;
+    final cabeAdentro = painter.width <= diametroInterior * 0.78;
+
+    final anillo = SizedBox(
       width: diametro,
       height: diametro,
       child: Stack(
@@ -944,23 +956,43 @@ class _BalanceDonut extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                formatCOP(disponible),
-                style: monoStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: disponibleColor,
+          if (cabeAdentro)
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  texto,
+                  style: monoStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: disponibleColor,
+                  ),
+                  maxLines: 1,
                 ),
-                maxLines: 1,
               ),
             ),
-          ),
         ],
       ),
+    );
+
+    if (cabeAdentro) return anillo;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        anillo,
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          texto,
+          style: monoStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: disponibleColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }
