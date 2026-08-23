@@ -199,13 +199,15 @@ de préstamos y deudas.
 
 **NotificationService** (`services/notification_service.dart`)
 Inicializa flutter_local_notifications en Linux, Android y Windows.
-Ejecuta revisarRecordatorios() al arrancar la app: evalúa cada
-recordatorio activo, aplica deduplicación por frecuencia
-(unica/diaria) y canal (sistema/correo), y dispara las
-notificaciones que correspondan. En Android programa notificaciones
-futuras con AndroidScheduleMode.inexact. Las referencias de
-deuda/préstamo/gasto de los recordatorios se cargan en batch (no una
-query por recordatorio).
+Ejecuta revisarRecordatorios() al arrancar o reanudar la app: evalúa
+cada recordatorio activo, aplica deduplicación por frecuencia
+(unica/diaria) y canal (sistema/correo), y dispara de inmediato
+(`show()`) las notificaciones que correspondan. No hay scheduling de
+notificaciones futuras (no se usa `zonedSchedule`/
+`AndroidScheduleMode`): si el usuario no abre la app, no llega ningún
+aviso hasta que vuelva a abrirla. Las referencias de deuda/préstamo/
+gasto de los recordatorios se cargan en batch (no una query por
+recordatorio).
 
 **SmtpService** (`services/smtp_service.dart`)
 Envía correos usando mailer con la configuración de ConfigSmtps.

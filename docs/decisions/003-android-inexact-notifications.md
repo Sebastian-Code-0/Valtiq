@@ -2,7 +2,13 @@
 
 ## Estado
 
-Aceptada — 2026-06
+Aceptada — 2026-06. **No implementada en el código actual** (verificado
+2026-08-22: `lib/services/notification_service.dart` no llama a
+`zonedSchedule` ni usa `AndroidScheduleMode` en ningún punto). El
+comportamiento real vigente es el descrito en
+`docs/background-notifications-android.md`: revisión síncrona de
+recordatorios al abrir/reanudar la app, sin ningún scheduling de
+notificaciones futuras.
 
 ## Contexto
 
@@ -26,8 +32,10 @@ inaceptable para recordatorios financieros.
 
 ## Decisión
 
-Se usa AndroidScheduleMode.inexact de
-flutter_local_notifications.
+Se decidió usar AndroidScheduleMode.inexact de
+flutter_local_notifications como mecanismo de scheduling. Esta
+decisión quedó documentada pero no se implementó (ver "Estado"
+arriba) — el código nunca llegó a programar notificaciones futuras.
 
 ## Razones
 
@@ -37,13 +45,16 @@ flutter_local_notifications.
 - Para recordatorios de pagos, 15 minutos de margen es
   completamente aceptable.
 
-## Consecuencias
+## Consecuencias (de la decisión tal como quedó realmente implementada)
 
-- Las notificaciones pueden llegar hasta ~15 minutos tarde.
-- No hay garantía de entrega si el dispositivo está apagado.
-- La notificación se programa al abrir la app. Si el usuario
-  no abre la app antes de la fecha del recordatorio, la
-  notificación no se programará.
+- No hay ningún scheduling: la notificación no se programa en
+  ningún momento, ni siquiera al abrir la app.
+- El recordatorio solo se evalúa y dispara (inmediato, vía `show()`)
+  cuando el usuario abre o reanuda la app — nunca con la app cerrada.
+- Si el usuario no abre la app en la fecha del recordatorio, no
+  recibe ningún aviso hasta que vuelva a abrirla, sin límite de
+  tiempo (la ventana de gracia y reprogramación mensual de
+  `revisarRecordatorios()` cubren ese caso una vez la app se abre).
 
 ## Mejora futura posible
 
