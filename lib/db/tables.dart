@@ -3,14 +3,14 @@ import 'package:drift/drift.dart';
 class Deudas extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get acreedorNombre => text()();
-  RealColumn get montoOriginal => real()();
+  IntColumn get montoOriginal => integer()();
   RealColumn get tasaInteres => real().withDefault(const Constant(0))();
   TextColumn get tipoInteres => text().withDefault(const Constant('ninguno'))();
   TextColumn get modalidadCalculo =>
       text().withDefault(const Constant('simple'))();
   DateTimeColumn get fechaPrestamo => dateTime()();
   DateTimeColumn get fechaLimite => dateTime().nullable()();
-  RealColumn get cuotaMensual => real().nullable()();
+  IntColumn get cuotaMensual => integer().nullable()();
   TextColumn get notas => text().withDefault(const Constant(''))();
   TextColumn get estado => text().withDefault(const Constant('activa'))();
   DateTimeColumn get fechaPagoReal => dateTime().nullable()();
@@ -23,7 +23,7 @@ class Prestamos extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get deudorNombre => text()();
   TextColumn get deudorContacto => text().withDefault(const Constant(''))();
-  RealColumn get montoPrestado => real()();
+  IntColumn get montoPrestado => integer()();
   RealColumn get tasaInteres => real().withDefault(const Constant(0))();
   TextColumn get tipoInteres => text().withDefault(const Constant('ninguno'))();
   TextColumn get modalidadCalculo =>
@@ -41,7 +41,7 @@ class Prestamos extends Table {
 class PagosRecibidos extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get prestamoId => integer().references(Prestamos, #id)();
-  RealColumn get montoAbonado => real()();
+  IntColumn get montoAbonado => integer()();
   DateTimeColumn get fechaPago => dateTime()();
   TextColumn get notas => text().withDefault(const Constant(''))();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
@@ -51,7 +51,7 @@ class PagosRecibidos extends Table {
 class PagosDeuda extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get deudaId => integer().references(Deudas, #id)();
-  RealColumn get montoAbonado => real()();
+  IntColumn get montoAbonado => integer()();
   DateTimeColumn get fechaPago => dateTime()();
   TextColumn get notas => text().withDefault(const Constant(''))();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
@@ -60,7 +60,7 @@ class PagosDeuda extends Table {
 class Ingresos extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get concepto => text()();
-  RealColumn get monto => real()();
+  IntColumn get monto => integer()();
   TextColumn get frecuencia => text().withDefault(const Constant('mensual'))();
   DateTimeColumn get fecha => dateTime()();
   TextColumn get notas => text().withDefault(const Constant(''))();
@@ -73,7 +73,7 @@ class Ingresos extends Table {
 class GastosFijos extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get concepto => text()();
-  RealColumn get monto => real()();
+  IntColumn get monto => integer()();
   TextColumn get frecuencia => text().withDefault(const Constant('mensual'))();
   IntColumn get diaCobro => integer().nullable()();
   TextColumn get notas => text().withDefault(const Constant(''))();
@@ -127,7 +127,7 @@ class ConfigSmtps extends Table {
 class GastosVariables extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get descripcion => text()();
-  RealColumn get monto => real()();
+  IntColumn get monto => integer()();
   TextColumn get categoria => text()();
   DateTimeColumn get fecha => dateTime()();
   TextColumn get notas => text().nullable()();
@@ -137,7 +137,7 @@ class GastosVariables extends Table {
 class PresupuestosCategorias extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get categoria => text()();
-  RealColumn get limiteMensual => real()();
+  IntColumn get limiteMensual => integer()();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get actualizadoEn =>
       dateTime().withDefault(currentDateAndTime)();

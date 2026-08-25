@@ -3,20 +3,20 @@ import 'package:valtiq/utils/currency_input.dart';
 
 void main() {
   group('parseCOP', () {
-    test(r'$1.000 → 1000.0', () {
-      expect(parseCOP(r'$1.000'), 1000.0);
+    test(r'$1.000 → 1000', () {
+      expect(parseCOP(r'$1.000'), 1000);
     });
 
-    test(r'$1.500.000 → 1500000.0', () {
-      expect(parseCOP(r'$1.500.000'), 1500000.0);
+    test(r'$1.500.000 → 1500000', () {
+      expect(parseCOP(r'$1.500.000'), 1500000);
     });
 
-    test('sin símbolo: "1000" → 1000.0', () {
-      expect(parseCOP('1000'), 1000.0);
+    test('sin símbolo: "1000" → 1000', () {
+      expect(parseCOP('1000'), 1000);
     });
 
-    test(r'$0 → 0.0', () {
-      expect(parseCOP(r'$0'), 0.0);
+    test(r'$0 → 0', () {
+      expect(parseCOP(r'$0'), 0);
     });
 
     test('cadena vacía → null', () {
@@ -28,19 +28,21 @@ void main() {
     });
 
     test('espacios extra alrededor se ignoran', () {
-      expect(parseCOP(r'  $1.000  '), 1000.0);
+      expect(parseCOP(r'  $1.000  '), 1000);
     });
 
     test(
-      'valor con coma decimal (formato europeo) → interpretado como decimal',
+      'valor con coma decimal (formato europeo) → se redondea al peso',
       () {
-        // La función reemplaza ',' por '.' → '1000,50' se convierte a 1000.5
-        expect(parseCOP('1000,50'), closeTo(1000.5, 0.001));
+        // La función reemplaza ',' por '.' → '1000,50' se interpreta como
+        // 1000.5 y se redondea al peso más cercano (money = int, sin
+        // centavos) → 1001.
+        expect(parseCOP('1000,50'), 1001);
       },
     );
 
-    test(r'$100.000.000 (cien millones) → 100000000.0', () {
-      expect(parseCOP(r'$100.000.000'), 100000000.0);
+    test(r'$100.000.000 (cien millones) → 100000000', () {
+      expect(parseCOP(r'$100.000.000'), 100000000);
     });
   });
 

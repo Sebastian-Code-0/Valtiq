@@ -14,7 +14,7 @@ import 'deuda_form.dart';
 class _DeudaConAbonos {
   _DeudaConAbonos(this.deuda, this.abonado);
   final Deuda deuda;
-  final double abonado;
+  final int abonado;
 }
 
 class DeudasScreen extends StatefulWidget {
@@ -48,7 +48,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
       (rows) => rows
           .map(
             (row) =>
-                _DeudaConAbonos(row.readTable(d), row.read(sumExpr) ?? 0.0),
+                _DeudaConAbonos(row.readTable(d), row.read(sumExpr) ?? 0),
           )
           .toList(),
     );
@@ -285,7 +285,7 @@ class _DeudaCard extends StatelessWidget {
   });
 
   final Deuda deuda;
-  final double abonado;
+  final int abonado;
   final bool atenuada;
   final Color colorSec;
   final VoidCallback onTap;

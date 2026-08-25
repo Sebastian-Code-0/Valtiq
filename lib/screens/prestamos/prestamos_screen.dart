@@ -23,7 +23,7 @@ class PrestamosScreen extends StatefulWidget {
 class _PrestamoConAbonos {
   _PrestamoConAbonos(this.prestamo, this.abonado);
   final Prestamo prestamo;
-  final double abonado;
+  final int abonado;
 }
 
 class _PrestamosScreenState extends State<PrestamosScreen> {
@@ -48,7 +48,7 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
       (rows) => rows
           .map(
             (row) =>
-                _PrestamoConAbonos(row.readTable(p), row.read(sumExpr) ?? 0.0),
+                _PrestamoConAbonos(row.readTable(p), row.read(sumExpr) ?? 0),
           )
           .toList(),
     );
@@ -282,7 +282,7 @@ class _PrestamoCard extends StatelessWidget {
   });
 
   final Prestamo prestamo;
-  final double abonado;
+  final int abonado;
   final bool atenuada;
   final Color colorSec;
   final VoidCallback onTap;

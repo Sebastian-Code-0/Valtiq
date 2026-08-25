@@ -78,7 +78,7 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
     if (mounted) Navigator.pop(context);
   }
 
-  Future<void> _registrarPago(Prestamo prestamo, double totalAbonado) async {
+  Future<void> _registrarPago(Prestamo prestamo, int totalAbonado) async {
     final resumen = InteresCalculator.resumenPrestamo(
       montoPrestado: prestamo.montoPrestado,
       tasaInteres: prestamo.tasaInteres,
@@ -219,7 +219,7 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
                 );
               }
               final pagos = pagosSnap.data ?? const <PagosRecibido>[];
-              final totalAbonado = pagos.fold<double>(
+              final totalAbonado = pagos.fold<int>(
                 0,
                 (sum, p) => sum + p.montoAbonado,
               );
@@ -255,7 +255,7 @@ class _ResumenCard extends StatelessWidget {
   const _ResumenCard({required this.prestamo, required this.totalAbonado});
 
   final Prestamo prestamo;
-  final double totalAbonado;
+  final int totalAbonado;
 
   @override
   Widget build(BuildContext context) {
@@ -352,7 +352,7 @@ class _ResumenCard extends StatelessWidget {
 
   Widget _filaResumen({
     required String label,
-    required double valor,
+    required int valor,
     required Color colorSec,
     Color? colorValor,
     bool negrita = false,
@@ -602,7 +602,7 @@ class _RegistrarPagoDialog extends StatefulWidget {
 
   final AppDatabase db;
   final int prestamoId;
-  final double saldoPendiente;
+  final int saldoPendiente;
 
   @override
   State<_RegistrarPagoDialog> createState() => _RegistrarPagoDialogState();

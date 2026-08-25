@@ -23,7 +23,7 @@ sin servidores, sin nube, sin cuentas de usuario.
 | Componente     | Tecnología                          |
 |----------------|--------------------------------------|
 | Framework      | Flutter 3.32.1 / Dart                |
-| Base de datos  | SQLite vía drift ORM (schemaVersion 9) |
+| Base de datos  | SQLite vía drift ORM (schemaVersion 10) |
 | Notificaciones | flutter_local_notifications          |
 | Correo         | mailer + encrypt (AES-256)           |
 | Plataformas    | Linux, Android (API 21+), Windows    |

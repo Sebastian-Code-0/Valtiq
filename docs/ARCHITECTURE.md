@@ -1,6 +1,6 @@
 # Arquitectura de Valtiq
 
-## Base de datos (SQLite vía drift, schemaVersion 9)
+## Base de datos (SQLite vía drift, schemaVersion 10)
 
 ### Tablas
 
@@ -9,13 +9,13 @@
 |----------------|----------|---------------------------------|
 | id             | INTEGER  | PK autoincrement                |
 | acreedorNombre | TEXT     |                                 |
-| montoOriginal  | REAL     |                                 |
-| tasaInteres    | REAL     | default 0                       |
+| montoOriginal  | INTEGER  | pesos enteros, sin centavos      |
+| tasaInteres    | REAL     | default 0 — porcentaje, no dinero |
 | tipoInteres      | TEXT     | 'ninguno' / 'mensual' / 'anual'          |
 | modalidadCalculo | TEXT     | 'simple' / 'compuesto', default 'simple' |
 | fechaPrestamo  | DATETIME |                                 |
 | fechaLimite    | DATETIME | nullable                        |
-| cuotaMensual   | REAL     | nullable                        |
+| cuotaMensual   | INTEGER  | nullable, pesos enteros          |
 | notas          | TEXT     | default ''                      |
 | estado         | TEXT     | 'activa' / 'pagada'             |
 | fechaPagoReal  | DATETIME | nullable                        |
@@ -27,7 +27,7 @@
 |--------------|----------|------------------|
 | id           | INTEGER  | PK autoincrement |
 | deudaId      | INTEGER  | FK → Deudas.id   |
-| montoAbonado | REAL     |                  |
+| montoAbonado | INTEGER  | pesos enteros    |
 | fechaPago    | DATETIME |                  |
 | notas        | TEXT     | default ''       |
 | creadoEn     | DATETIME | default now      |
@@ -38,8 +38,8 @@
 | id               | INTEGER  | PK autoincrement                |
 | deudorNombre     | TEXT     |                                 |
 | deudorContacto   | TEXT     | default ''                      |
-| montoPrestado    | REAL     |                                 |
-| tasaInteres      | REAL     | default 0                       |
+| montoPrestado    | INTEGER  | pesos enteros, sin centavos     |
+| tasaInteres      | REAL     | default 0 — porcentaje, no dinero |
 | tipoInteres      | TEXT     | 'ninguno' / 'mensual' / 'anual' |
 | modalidadCalculo | TEXT     | 'simple' / 'compuesto'          |
 | fechaPrestamo    | DATETIME |                                 |
@@ -54,7 +54,7 @@
 |--------------|----------|---------------------|
 | id           | INTEGER  | PK autoincrement    |
 | prestamoId   | INTEGER  | FK → Prestamos.id   |
-| montoAbonado | REAL     |                     |
+| montoAbonado | INTEGER  | pesos enteros       |
 | fechaPago    | DATETIME |                     |
 | notas        | TEXT     | default ''          |
 | creadoEn     | DATETIME | default now         |
@@ -64,7 +64,7 @@
 |---------------|----------|-------------------------------------|
 | id            | INTEGER  | PK autoincrement                    |
 | concepto      | TEXT     |                                     |
-| monto         | REAL     |                                     |
+| monto         | INTEGER  | pesos enteros                       |
 | frecuencia    | TEXT     | 'mensual' / 'quincenal' / 'semanal' |
 | fecha         | DATETIME |                                     |
 | notas         | TEXT     | default ''                          |
@@ -77,7 +77,7 @@
 |---------------|----------|-------------------------------------|
 | id            | INTEGER  | PK autoincrement                    |
 | concepto      | TEXT     |                                     |
-| monto         | REAL     |                                     |
+| monto         | INTEGER  | pesos enteros                       |
 | frecuencia    | TEXT     | 'mensual' / 'quincenal' / 'semanal' |
 | diaCobro      | INTEGER  | nullable                            |
 | notas         | TEXT     | default ''                          |
@@ -109,7 +109,7 @@
 |-------------|----------|------------------|
 | id          | INTEGER  | PK autoincrement |
 | descripcion | TEXT     |                  |
-| monto       | REAL     |                  |
+| monto       | INTEGER  | pesos enteros    |
 | categoria   | TEXT     |                  |
 | fecha       | DATETIME |                  |
 | notas       | TEXT     | nullable         |
@@ -135,7 +135,7 @@
 |---------------|----------|---------------------------------------|
 | id            | INTEGER  | PK autoincrement                     |
 | categoria     | TEXT     | UNIQUE — mismo texto que CategoriaGasto.nombre |
-| limiteMensual | REAL     |                                       |
+| limiteMensual | INTEGER  | pesos enteros                         |
 | creadoEn      | DATETIME | default now                          |
 | actualizadoEn | DATETIME | default now                          |
 
@@ -156,6 +156,18 @@
            idx_pagos_recibidos_prestamo_id e idx_pagos_deuda_deuda_id
            (instalaciones nuevas ya los reciben por onCreate vía
            @TableIndex; esta migración solo cubre bases existentes)
+- v9 → v10: todas las columnas de dinero pasan de REAL (double) a
+            INTEGER (peso colombiano entero, sin centavos): Deudas
+            (montoOriginal, cuotaMensual), Prestamos.montoPrestado,
+            PagosRecibidos/PagosDeuda.montoAbonado, Ingresos.monto,
+            GastosFijos.monto, GastosVariables.monto,
+            PresupuestosCategorias.limiteMensual. Los valores
+            existentes se redondean (`CAST(ROUND(col) AS INTEGER)`,
+            no se truncan). Las tasas de interés (porcentajes) no se
+            tocan, siguen en REAL. Motivo: evitar deriva de precisión
+            de punto flotante en interés compuesto y sumas de abonos
+            — la app ya mostraba y capturaba los montos como enteros,
+            así que el tipo de almacenamiento ahora coincide con eso.
 
 ### Ubicación de archivos
 
@@ -195,7 +207,13 @@ sobre 30 días. Aplica convención bancaria colombiana para préstamos
 que inician los días 29, 30 o 31: si el mes destino tiene menos
 días, el aniversario cae en el último día de ese mes (no se
 desborda al mes siguiente). Usado en dashboard, listas y detalles
-de préstamos y deudas.
+de préstamos y deudas. Los montos de entrada/salida son `int` (pesos
+enteros); el cálculo intermedio (interés compuesto, prorrateo de
+días) usa `double` porque la fórmula es continua, pero el resultado
+monetario final se redondea una sola vez al peso más cercano antes
+de devolverse — nunca se acumulan `double` sin redondear entre
+llamadas sucesivas. La tasa de interés (`tasaInteres`) sigue siendo
+`double` — es un porcentaje, no dinero.
 
 **NotificationService** (`services/notification_service.dart`)
 Inicializa flutter_local_notifications en Linux, Android y Windows.
@@ -238,6 +256,15 @@ reinserta en batch (padres antes que hijas), preservando los ids
 originales del archivo para que las referencias entre tablas sigan
 siendo válidas. Usado por `RespaldoScreen` (Ajustes → "Copia de
 seguridad"), que delega la elección de archivo a `file_selector`.
+
+Compatibilidad con backups viejos (pre-schemaVersion 10): un backup
+exportado antes de la migración de montos a entero serializa el
+dinero como `double` (ej. `500000.0`); `jsonDecode` lo decodifica como
+`double`, y el `fromJson` generado por drift para una columna `int` no
+acepta ese tipo. `importarDatos()` pasa cada fila por
+`_enteroEnClaves()`, que redondea (`.round()`) las claves monetarias
+conocidas de cada tabla antes de deserializar, así un backup viejo se
+sigue pudiendo restaurar sin fallar.
 
 ## Donut de balance mensual
 
@@ -289,22 +316,27 @@ transaccional y respeta integridad referencial (FK enforcement).
 
 ## Utilidades compartidas
 
-- `utils/format.dart` — `formatCOP(double)`: formatea un monto en pesos
+- `utils/format.dart` — `formatCOP(num)`: formatea un monto en pesos
   colombianos (`$1.234.567`) vía conversión basada en `String`
-  (`toStringAsFixed(0)` + agrupación de miles), nunca pasa por `int` para
-  evitar el overflow de `Int64.max` que producía `.round()` en montos
-  extremos. Para `abs >= 1e12`/`1e18` usa notación compacta en escala
-  larga (es_CO): "X,XX billones"/"X,XX trillones", acotando el coeficiente
-  a `numero_utils.maxCoeficiente` (`999999999999999.0`, con sufijo `+`
-  cuando el clamp se activa) para que ni siquiera esas divisiones puedan
-  caer en la notación exponencial de Dart (`"1e+21"`, umbral en
-  magnitudes ≥ 1e21).
-- `utils/currency_input.dart` — `formatCOPInput(double)`: formateador
+  (`toStringAsFixed(0)` + agrupación de miles). Acepta `num` (no solo
+  `int`) para seguir funcionando con cualquier `double` residual, aunque
+  desde la migración a montos enteros (ver schemaVersion 10 arriba) casi
+  todos los call sites ya pasan `int`. Para `abs >= 1e12`/`1e18` usa
+  notación compacta en escala larga (es_CO): "X,XX billones"/"X,XX
+  trillones", acotando el coeficiente a `numero_utils.maxCoeficiente`
+  (`999999999999999.0`, con sufijo `+` cuando el clamp se activa) para
+  que ni siquiera esas divisiones puedan caer en la notación exponencial
+  de Dart (`"1e+21"`, umbral en magnitudes ≥ 1e21).
+- `utils/currency_input.dart` — `formatCOPInput(num)`: formateador
   para el campo en edición (agrupa miles pero sin notación compacta,
   debe mostrar los dígitos exactos); tiene su propio clamp local
   (`_maxValorEdicion = 999999999999999868928.0`, el `double`
   representable más grande estrictamente menor a `1e21`) para la misma
   protección contra notación exponencial en valores extremos.
+  `parseCOP(String)` devuelve `int?` (antes `double?`): redondea
+  (`.round()`) si el texto trae parte decimal, aunque en la práctica
+  `CopInputFormatter` ya filtra la entrada a solo dígitos mientras el
+  usuario escribe, así que ese caso no ocurre desde la UI real.
   `CopInputFormatter`: `TextInputFormatter` que reformatea el texto del
   campo (agrupación de miles) en cada tecla mientras se edita un monto.
 - `utils/formulario_guardado_mixin.dart` — `FormularioGuardadoMixin`:

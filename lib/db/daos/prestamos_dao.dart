@@ -101,28 +101,28 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     return (delete(pagosRecibidos)..where((t) => t.id.equals(id))).go();
   }
 
-  Future<double> getTotalAbonado(int prestamoId) async {
+  Future<int> getTotalAbonado(int prestamoId) async {
     final sum = pagosRecibidos.montoAbonado.sum();
     final query = selectOnly(pagosRecibidos)
       ..addColumns([sum])
       ..where(pagosRecibidos.prestamoId.equals(prestamoId));
     final row = await query.getSingle();
-    return row.read(sum) ?? 0.0;
+    return row.read(sum) ?? 0;
   }
 
-  Future<double> getSaldoPendiente(int prestamoId) async {
+  Future<int> getSaldoPendiente(int prestamoId) async {
     final prestamo = await getPrestamoById(prestamoId);
-    if (prestamo == null) return 0.0;
+    if (prestamo == null) return 0;
     final abonado = await getTotalAbonado(prestamoId);
     return prestamo.montoPrestado - abonado;
   }
 
-  Future<double> getTotalPrestadoActivo() async {
+  Future<int> getTotalPrestadoActivo() async {
     final sum = prestamos.montoPrestado.sum();
     final query = selectOnly(prestamos)
       ..addColumns([sum])
       ..where(prestamos.estado.equals('activo'));
     final row = await query.getSingle();
-    return row.read(sum) ?? 0.0;
+    return row.read(sum) ?? 0;
   }
 }

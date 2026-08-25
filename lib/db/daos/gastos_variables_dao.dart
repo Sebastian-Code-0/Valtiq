@@ -30,7 +30,7 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
         .watch();
   }
 
-  Stream<Map<String, double>> watchTotalPorCategoria(int anio, int mes) {
+  Stream<Map<String, int>> watchTotalPorCategoria(int anio, int mes) {
     final inicio = DateTime(anio, mes, 1);
     final fin = DateTime(anio, mes + 1, 1);
     final sumMonto = gastosVariables.monto.sum();
@@ -43,17 +43,17 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
           ..groupBy([gastosVariables.categoria]))
         .watch()
         .map((rows) {
-          final mapa = <String, double>{};
+          final mapa = <String, int>{};
           for (final row in rows) {
             final cat = row.read(gastosVariables.categoria) ?? '';
-            final total = row.read(sumMonto) ?? 0.0;
+            final total = row.read(sumMonto) ?? 0;
             mapa[cat] = total;
           }
           return mapa;
         });
   }
 
-  Stream<double> watchTotalMes(int anio, int mes) {
+  Stream<int> watchTotalMes(int anio, int mes) {
     final inicio = DateTime(anio, mes, 1);
     final fin = DateTime(anio, mes + 1, 1);
     final sumMonto = gastosVariables.monto.sum();
@@ -64,7 +64,7 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
                 gastosVariables.fecha.isSmallerThanValue(fin),
           ))
         .watch()
-        .map((rows) => rows.isEmpty ? 0.0 : (rows.first.read(sumMonto) ?? 0.0));
+        .map((rows) => rows.isEmpty ? 0 : (rows.first.read(sumMonto) ?? 0));
   }
 
   Future<int> insertGastoVariable(GastosVariablesCompanion gasto) =>

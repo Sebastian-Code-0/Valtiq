@@ -1,6 +1,6 @@
 import 'numero_utils.dart';
 
-String formatCOP(double monto) {
+String formatCOP(num monto) {
   final esNegativo = monto < 0;
   final signo = esNegativo ? '-\$' : '\$';
   final abs = monto.abs();

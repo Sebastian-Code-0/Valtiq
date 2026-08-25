@@ -45,8 +45,13 @@ abstract class InteresCalculator {
     return mesesCompletos + diasParciales / _diasPorMes;
   }
 
-  static double calcularInteresSimple({
-    required double monto,
+  /// El monto de entrada es un peso entero (int); el cálculo intermedio usa
+  /// double porque la fórmula es continua (fracciones de mes, interés
+  /// compuesto), pero el resultado monetario final se redondea una sola vez
+  /// al peso más cercano antes de devolverse — nunca se acumulan doubles sin
+  /// redondear entre llamadas sucesivas.
+  static int calcularInteresSimple({
+    required int monto,
     required double tasaInteres,
     required String tipoInteres,
     required DateTime fechaInicio,
@@ -57,11 +62,11 @@ abstract class InteresCalculator {
     final meses = _mesesTranscurridos(fechaInicio, fin);
     if (meses <= 0) return 0;
     final tasaMensual = tipoInteres == 'anual' ? tasaInteres / 12 : tasaInteres;
-    return monto * (tasaMensual / 100) * meses;
+    return (monto * (tasaMensual / 100) * meses).round();
   }
 
-  static double calcularInteresCompuesto({
-    required double monto,
+  static int calcularInteresCompuesto({
+    required int monto,
     required double tasaInteres,
     required String tipoInteres,
     required DateTime fechaInicio,
@@ -75,16 +80,16 @@ abstract class InteresCalculator {
         ? tasaInteres / 12 / 100
         : tasaInteres / 100;
     final factor = math.pow(1 + tasaMensual, meses).toDouble();
-    return monto * (factor - 1);
+    return (monto * (factor - 1)).round();
   }
 
-  static double calcularDeudaTotal({
-    required double montoPrestado,
+  static int calcularDeudaTotal({
+    required int montoPrestado,
     required double tasaInteres,
     required String tipoInteres,
     required String modalidadCalculo,
     required DateTime fechaPrestamo,
-    required double totalAbonado,
+    required int totalAbonado,
   }) {
     final interes = modalidadCalculo == 'compuesto'
         ? calcularInteresCompuesto(
@@ -103,13 +108,13 @@ abstract class InteresCalculator {
     return total < 0 ? 0 : total;
   }
 
-  static Map<String, double> resumenPrestamo({
-    required double montoPrestado,
+  static Map<String, int> resumenPrestamo({
+    required int montoPrestado,
     required double tasaInteres,
     required String tipoInteres,
     required String modalidadCalculo,
     required DateTime fechaPrestamo,
-    required double totalAbonado,
+    required int totalAbonado,
   }) {
     final interes = modalidadCalculo == 'compuesto'
         ? calcularInteresCompuesto(

@@ -45,12 +45,12 @@ class IngresosDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
-  Future<double> getTotalIngresosActivos() async {
+  Future<int> getTotalIngresosActivos() async {
     final sum = ingresos.monto.sum();
     final query = selectOnly(ingresos)
       ..addColumns([sum])
       ..where(ingresos.activo.equals(true));
     final row = await query.getSingle();
-    return row.read(sum) ?? 0.0;
+    return row.read(sum) ?? 0;
   }
 }

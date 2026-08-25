@@ -40,7 +40,7 @@ class _PresupuestosScreenState extends State<PresupuestosScreen> {
 
     if (resultado == 'quitar' && actual != null) {
       await widget.db.presupuestosCategoriasDao.eliminarPresupuesto(actual.id);
-    } else if (resultado is double) {
+    } else if (resultado is int) {
       await widget.db.presupuestosCategoriasDao.upsertPresupuesto(
         PresupuestosCategoriasCompanion(
           categoria: Value(categoria.nombre),

@@ -6,7 +6,7 @@ import 'package:valtiq/db/database.dart';
 AppDatabase _createInMemoryDb() => AppDatabase(NativeDatabase.memory());
 
 GastosVariablesCompanion _gasto({
-  required double monto,
+  required int monto,
   required DateTime fecha,
   String descripcion = 'Test',
   String categoria = 'General',

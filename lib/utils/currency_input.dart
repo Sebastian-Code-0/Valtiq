@@ -15,17 +15,18 @@ import 'numero_utils.dart';
 // a 1e21 (1e21 - 1 ULP), que sí formatea en notación fija.
 const _maxValorEdicion = 999999999999999868928.0;
 
-double? parseCOP(String input) {
+int? parseCOP(String input) {
   var s = input.trim();
   if (s.isEmpty) return null;
   if (s.startsWith('\$')) s = s.substring(1).trim();
   s = s.replaceAll(' ', '');
   s = s.replaceAll('.', '');
   s = s.replaceAll(',', '.');
-  return double.tryParse(s);
+  final parsed = double.tryParse(s);
+  return parsed?.round();
 }
 
-String formatCOPInput(double value) {
+String formatCOPInput(num value) {
   final abs = value.abs();
   final acotado = abs > _maxValorEdicion ? _maxValorEdicion : abs;
   final digitos = acotado.toStringAsFixed(0);

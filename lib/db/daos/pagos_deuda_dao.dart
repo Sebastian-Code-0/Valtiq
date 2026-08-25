@@ -31,12 +31,12 @@ class PagosDeudaDao extends DatabaseAccessor<AppDatabase>
     return (delete(pagosDeuda)..where((t) => t.id.equals(id))).go();
   }
 
-  Future<double> getTotalAbonado(int deudaId) async {
+  Future<int> getTotalAbonado(int deudaId) async {
     final sum = pagosDeuda.montoAbonado.sum();
     final query = selectOnly(pagosDeuda)
       ..addColumns([sum])
       ..where(pagosDeuda.deudaId.equals(deudaId));
     final row = await query.getSingle();
-    return row.read(sum) ?? 0.0;
+    return row.read(sum) ?? 0;
   }
 }

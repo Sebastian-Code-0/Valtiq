@@ -54,7 +54,8 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
       _mesVariables.month,
     );
     _streamTotalPorCategoria = widget.db.gastosVariablesDao
-        .watchTotalPorCategoria(_mesVariables.year, _mesVariables.month);
+        .watchTotalPorCategoria(_mesVariables.year, _mesVariables.month)
+        .map((m) => m.map((k, v) => MapEntry(k, v.toDouble())));
   }
 
   void _cambiarMesVariables(DateTime nuevoMes) {

@@ -7,7 +7,7 @@ AppDatabase _createInMemoryDb() => AppDatabase(NativeDatabase.memory());
 
 PrestamosCompanion _prestamo({
   String deudorNombre = 'Juan Test',
-  double montoPrestado = 100000,
+  int montoPrestado = 100000,
   DateTime? fechaPrestamo,
 }) => PrestamosCompanion.insert(
   deudorNombre: deudorNombre,

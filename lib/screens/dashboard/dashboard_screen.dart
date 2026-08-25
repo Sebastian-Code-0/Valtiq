@@ -54,7 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       double total = 0;
       for (final row in rows) {
         final deuda = row.readTable(d);
-        final abonado = row.read(sumPagosDeuda) ?? 0.0;
+        final abonado = row.read(sumPagosDeuda) ?? 0;
         final saldo = InteresCalculator.calcularDeudaTotal(
           montoPrestado: deuda.montoOriginal,
           tasaInteres: deuda.tasaInteres,
@@ -81,7 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       double total = 0;
       for (final row in rows) {
         final prestamo = row.readTable(p);
-        final abonado = row.read(sumAbonosPrestamos) ?? 0.0;
+        final abonado = row.read(sumAbonosPrestamos) ?? 0;
         final saldo = InteresCalculator.calcularDeudaTotal(
           montoPrestado: prestamo.montoPrestado,
           tasaInteres: prestamo.tasaInteres,
@@ -101,7 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ..addColumns([sumIngresos])
               ..where(db.ingresos.activo.equals(true)))
             .watchSingle()
-            .map((row) => row.read(sumIngresos) ?? 0.0);
+            .map((row) => (row.read(sumIngresos) ?? 0).toDouble());
 
     final sumGastos = db.gastosFijos.monto.sum();
     _streamGastos =
@@ -109,13 +109,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ..addColumns([sumGastos])
               ..where(db.gastosFijos.activo.equals(true)))
             .watchSingle()
-            .map((row) => row.read(sumGastos) ?? 0.0);
+            .map((row) => (row.read(sumGastos) ?? 0).toDouble());
 
     final now = DateTime.now();
-    _streamGastosVariables = widget.db.gastosVariablesDao.watchTotalMes(
-      now.year,
-      now.month,
-    );
+    _streamGastosVariables = widget.db.gastosVariablesDao
+        .watchTotalMes(now.year, now.month)
+        .map((v) => v.toDouble());
 
     _balanceCtrl = StreamController.broadcast();
     _streamBalance = _balanceCtrl.stream;
@@ -600,10 +599,9 @@ class _ComparativoCategoriasState extends State<_ComparativoCategorias> {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: StreamBuilder<Map<String, double>>(
-          stream: widget.db.gastosVariablesDao.watchTotalPorCategoria(
-            _mesB.year,
-            _mesB.month,
-          ),
+          stream: widget.db.gastosVariablesDao
+              .watchTotalPorCategoria(_mesB.year, _mesB.month)
+              .map((m) => m.map((k, v) => MapEntry(k, v.toDouble()))),
           builder: (context, snapB) {
             if (snapB.hasError) {
               return Center(
@@ -614,10 +612,9 @@ class _ComparativoCategoriasState extends State<_ComparativoCategorias> {
               );
             }
             return StreamBuilder<Map<String, double>>(
-              stream: widget.db.gastosVariablesDao.watchTotalPorCategoria(
-                _mesA.year,
-                _mesA.month,
-              ),
+              stream: widget.db.gastosVariablesDao
+                  .watchTotalPorCategoria(_mesA.year, _mesA.month)
+                  .map((m) => m.map((k, v) => MapEntry(k, v.toDouble()))),
               builder: (context, snapA) {
                 if (snapA.hasError) {
                   return Center(
@@ -1095,10 +1092,9 @@ class _PresupuestosCard extends StatelessWidget {
         if (presupuestos.isEmpty) return const SizedBox.shrink();
 
         return StreamBuilder<Map<String, double>>(
-          stream: db.gastosVariablesDao.watchTotalPorCategoria(
-            now.year,
-            now.month,
-          ),
+          stream: db.gastosVariablesDao
+              .watchTotalPorCategoria(now.year, now.month)
+              .map((m) => m.map((k, v) => MapEntry(k, v.toDouble()))),
           builder: (context, gastosSnap) {
             final gastos = gastosSnap.data ?? const {};
             final filas = [...presupuestos]
@@ -1125,7 +1121,7 @@ class _PresupuestosCard extends StatelessWidget {
                       _FilaPresupuesto(
                         categoria: p.categoria,
                         gastado: gastos[p.categoria] ?? 0.0,
-                        limite: p.limiteMensual,
+                        limite: p.limiteMensual.toDouble(),
                       ),
                   ],
                 ),

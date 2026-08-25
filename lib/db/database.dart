@@ -45,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor openConnection() => conn.openValtiqConnection();
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -110,6 +110,96 @@ class AppDatabase extends _$AppDatabase {
         );
         await m.database.customStatement(
           'CREATE INDEX IF NOT EXISTS idx_pagos_recibidos_prestamo_id ON pagos_recibidos (prestamo_id)',
+        );
+      }
+      if (from < 10) {
+        // Todas las columnas de dinero pasan de REAL (double) a INTEGER
+        // (peso colombiano entero, sin centavos) para evitar deriva de
+        // precisión de punto flotante en cálculos de interés y sumas de
+        // abonos. Los valores existentes se redondean al peso más cercano
+        // (no se truncan). Las tasas de interés (porcentajes) no se tocan.
+        await m.alterTable(
+          TableMigration(
+            deudas,
+            columnTransformer: {
+              deudas.montoOriginal: const CustomExpression(
+                'CAST(ROUND(monto_original) AS INTEGER)',
+              ),
+              deudas.cuotaMensual: const CustomExpression(
+                'CAST(ROUND(cuota_mensual) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            prestamos,
+            columnTransformer: {
+              prestamos.montoPrestado: const CustomExpression(
+                'CAST(ROUND(monto_prestado) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            pagosRecibidos,
+            columnTransformer: {
+              pagosRecibidos.montoAbonado: const CustomExpression(
+                'CAST(ROUND(monto_abonado) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            pagosDeuda,
+            columnTransformer: {
+              pagosDeuda.montoAbonado: const CustomExpression(
+                'CAST(ROUND(monto_abonado) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            ingresos,
+            columnTransformer: {
+              ingresos.monto: const CustomExpression(
+                'CAST(ROUND(monto) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            gastosFijos,
+            columnTransformer: {
+              gastosFijos.monto: const CustomExpression(
+                'CAST(ROUND(monto) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            gastosVariables,
+            columnTransformer: {
+              gastosVariables.monto: const CustomExpression(
+                'CAST(ROUND(monto) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            presupuestosCategorias,
+            columnTransformer: {
+              presupuestosCategorias.limiteMensual: const CustomExpression(
+                'CAST(ROUND(limite_mensual) AS INTEGER)',
+              ),
+            },
+          ),
         );
       }
     },

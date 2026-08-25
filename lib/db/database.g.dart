@@ -36,11 +36,11 @@ class $DeudasTable extends Deudas with TableInfo<$DeudasTable, Deuda> {
     'montoOriginal',
   );
   @override
-  late final GeneratedColumn<double> montoOriginal = GeneratedColumn<double>(
+  late final GeneratedColumn<int> montoOriginal = GeneratedColumn<int>(
     'monto_original',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _tasaInteresMeta = const VerificationMeta(
@@ -106,11 +106,11 @@ class $DeudasTable extends Deudas with TableInfo<$DeudasTable, Deuda> {
     'cuotaMensual',
   );
   @override
-  late final GeneratedColumn<double> cuotaMensual = GeneratedColumn<double>(
+  late final GeneratedColumn<int> cuotaMensual = GeneratedColumn<int>(
     'cuota_mensual',
     aliasedName,
     true,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
   static const VerificationMeta _notasMeta = const VerificationMeta('notas');
@@ -334,7 +334,7 @@ class $DeudasTable extends Deudas with TableInfo<$DeudasTable, Deuda> {
         data['${effectivePrefix}acreedor_nombre'],
       )!,
       montoOriginal: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}monto_original'],
       )!,
       tasaInteres: attachedDatabase.typeMapping.read(
@@ -358,7 +358,7 @@ class $DeudasTable extends Deudas with TableInfo<$DeudasTable, Deuda> {
         data['${effectivePrefix}fecha_limite'],
       ),
       cuotaMensual: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}cuota_mensual'],
       ),
       notas: attachedDatabase.typeMapping.read(
@@ -393,13 +393,13 @@ class $DeudasTable extends Deudas with TableInfo<$DeudasTable, Deuda> {
 class Deuda extends DataClass implements Insertable<Deuda> {
   final int id;
   final String acreedorNombre;
-  final double montoOriginal;
+  final int montoOriginal;
   final double tasaInteres;
   final String tipoInteres;
   final String modalidadCalculo;
   final DateTime fechaPrestamo;
   final DateTime? fechaLimite;
-  final double? cuotaMensual;
+  final int? cuotaMensual;
   final String notas;
   final String estado;
   final DateTime? fechaPagoReal;
@@ -426,7 +426,7 @@ class Deuda extends DataClass implements Insertable<Deuda> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['acreedor_nombre'] = Variable<String>(acreedorNombre);
-    map['monto_original'] = Variable<double>(montoOriginal);
+    map['monto_original'] = Variable<int>(montoOriginal);
     map['tasa_interes'] = Variable<double>(tasaInteres);
     map['tipo_interes'] = Variable<String>(tipoInteres);
     map['modalidad_calculo'] = Variable<String>(modalidadCalculo);
@@ -435,7 +435,7 @@ class Deuda extends DataClass implements Insertable<Deuda> {
       map['fecha_limite'] = Variable<DateTime>(fechaLimite);
     }
     if (!nullToAbsent || cuotaMensual != null) {
-      map['cuota_mensual'] = Variable<double>(cuotaMensual);
+      map['cuota_mensual'] = Variable<int>(cuotaMensual);
     }
     map['notas'] = Variable<String>(notas);
     map['estado'] = Variable<String>(estado);
@@ -480,13 +480,13 @@ class Deuda extends DataClass implements Insertable<Deuda> {
     return Deuda(
       id: serializer.fromJson<int>(json['id']),
       acreedorNombre: serializer.fromJson<String>(json['acreedorNombre']),
-      montoOriginal: serializer.fromJson<double>(json['montoOriginal']),
+      montoOriginal: serializer.fromJson<int>(json['montoOriginal']),
       tasaInteres: serializer.fromJson<double>(json['tasaInteres']),
       tipoInteres: serializer.fromJson<String>(json['tipoInteres']),
       modalidadCalculo: serializer.fromJson<String>(json['modalidadCalculo']),
       fechaPrestamo: serializer.fromJson<DateTime>(json['fechaPrestamo']),
       fechaLimite: serializer.fromJson<DateTime?>(json['fechaLimite']),
-      cuotaMensual: serializer.fromJson<double?>(json['cuotaMensual']),
+      cuotaMensual: serializer.fromJson<int?>(json['cuotaMensual']),
       notas: serializer.fromJson<String>(json['notas']),
       estado: serializer.fromJson<String>(json['estado']),
       fechaPagoReal: serializer.fromJson<DateTime?>(json['fechaPagoReal']),
@@ -500,13 +500,13 @@ class Deuda extends DataClass implements Insertable<Deuda> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'acreedorNombre': serializer.toJson<String>(acreedorNombre),
-      'montoOriginal': serializer.toJson<double>(montoOriginal),
+      'montoOriginal': serializer.toJson<int>(montoOriginal),
       'tasaInteres': serializer.toJson<double>(tasaInteres),
       'tipoInteres': serializer.toJson<String>(tipoInteres),
       'modalidadCalculo': serializer.toJson<String>(modalidadCalculo),
       'fechaPrestamo': serializer.toJson<DateTime>(fechaPrestamo),
       'fechaLimite': serializer.toJson<DateTime?>(fechaLimite),
-      'cuotaMensual': serializer.toJson<double?>(cuotaMensual),
+      'cuotaMensual': serializer.toJson<int?>(cuotaMensual),
       'notas': serializer.toJson<String>(notas),
       'estado': serializer.toJson<String>(estado),
       'fechaPagoReal': serializer.toJson<DateTime?>(fechaPagoReal),
@@ -518,13 +518,13 @@ class Deuda extends DataClass implements Insertable<Deuda> {
   Deuda copyWith({
     int? id,
     String? acreedorNombre,
-    double? montoOriginal,
+    int? montoOriginal,
     double? tasaInteres,
     String? tipoInteres,
     String? modalidadCalculo,
     DateTime? fechaPrestamo,
     Value<DateTime?> fechaLimite = const Value.absent(),
-    Value<double?> cuotaMensual = const Value.absent(),
+    Value<int?> cuotaMensual = const Value.absent(),
     String? notas,
     String? estado,
     Value<DateTime?> fechaPagoReal = const Value.absent(),
@@ -648,13 +648,13 @@ class Deuda extends DataClass implements Insertable<Deuda> {
 class DeudasCompanion extends UpdateCompanion<Deuda> {
   final Value<int> id;
   final Value<String> acreedorNombre;
-  final Value<double> montoOriginal;
+  final Value<int> montoOriginal;
   final Value<double> tasaInteres;
   final Value<String> tipoInteres;
   final Value<String> modalidadCalculo;
   final Value<DateTime> fechaPrestamo;
   final Value<DateTime?> fechaLimite;
-  final Value<double?> cuotaMensual;
+  final Value<int?> cuotaMensual;
   final Value<String> notas;
   final Value<String> estado;
   final Value<DateTime?> fechaPagoReal;
@@ -679,7 +679,7 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
   DeudasCompanion.insert({
     this.id = const Value.absent(),
     required String acreedorNombre,
-    required double montoOriginal,
+    required int montoOriginal,
     this.tasaInteres = const Value.absent(),
     this.tipoInteres = const Value.absent(),
     this.modalidadCalculo = const Value.absent(),
@@ -697,13 +697,13 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
   static Insertable<Deuda> custom({
     Expression<int>? id,
     Expression<String>? acreedorNombre,
-    Expression<double>? montoOriginal,
+    Expression<int>? montoOriginal,
     Expression<double>? tasaInteres,
     Expression<String>? tipoInteres,
     Expression<String>? modalidadCalculo,
     Expression<DateTime>? fechaPrestamo,
     Expression<DateTime>? fechaLimite,
-    Expression<double>? cuotaMensual,
+    Expression<int>? cuotaMensual,
     Expression<String>? notas,
     Expression<String>? estado,
     Expression<DateTime>? fechaPagoReal,
@@ -731,13 +731,13 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
   DeudasCompanion copyWith({
     Value<int>? id,
     Value<String>? acreedorNombre,
-    Value<double>? montoOriginal,
+    Value<int>? montoOriginal,
     Value<double>? tasaInteres,
     Value<String>? tipoInteres,
     Value<String>? modalidadCalculo,
     Value<DateTime>? fechaPrestamo,
     Value<DateTime?>? fechaLimite,
-    Value<double?>? cuotaMensual,
+    Value<int?>? cuotaMensual,
     Value<String>? notas,
     Value<String>? estado,
     Value<DateTime?>? fechaPagoReal,
@@ -772,7 +772,7 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
       map['acreedor_nombre'] = Variable<String>(acreedorNombre.value);
     }
     if (montoOriginal.present) {
-      map['monto_original'] = Variable<double>(montoOriginal.value);
+      map['monto_original'] = Variable<int>(montoOriginal.value);
     }
     if (tasaInteres.present) {
       map['tasa_interes'] = Variable<double>(tasaInteres.value);
@@ -790,7 +790,7 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
       map['fecha_limite'] = Variable<DateTime>(fechaLimite.value);
     }
     if (cuotaMensual.present) {
-      map['cuota_mensual'] = Variable<double>(cuotaMensual.value);
+      map['cuota_mensual'] = Variable<int>(cuotaMensual.value);
     }
     if (notas.present) {
       map['notas'] = Variable<String>(notas.value);
@@ -869,11 +869,11 @@ class $PagosDeudaTable extends PagosDeuda
     'montoAbonado',
   );
   @override
-  late final GeneratedColumn<double> montoAbonado = GeneratedColumn<double>(
+  late final GeneratedColumn<int> montoAbonado = GeneratedColumn<int>(
     'monto_abonado',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _fechaPagoMeta = const VerificationMeta(
@@ -990,7 +990,7 @@ class $PagosDeudaTable extends PagosDeuda
         data['${effectivePrefix}deuda_id'],
       )!,
       montoAbonado: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}monto_abonado'],
       )!,
       fechaPago: attachedDatabase.typeMapping.read(
@@ -1017,7 +1017,7 @@ class $PagosDeudaTable extends PagosDeuda
 class PagosDeudaData extends DataClass implements Insertable<PagosDeudaData> {
   final int id;
   final int deudaId;
-  final double montoAbonado;
+  final int montoAbonado;
   final DateTime fechaPago;
   final String notas;
   final DateTime creadoEn;
@@ -1034,7 +1034,7 @@ class PagosDeudaData extends DataClass implements Insertable<PagosDeudaData> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['deuda_id'] = Variable<int>(deudaId);
-    map['monto_abonado'] = Variable<double>(montoAbonado);
+    map['monto_abonado'] = Variable<int>(montoAbonado);
     map['fecha_pago'] = Variable<DateTime>(fechaPago);
     map['notas'] = Variable<String>(notas);
     map['creado_en'] = Variable<DateTime>(creadoEn);
@@ -1060,7 +1060,7 @@ class PagosDeudaData extends DataClass implements Insertable<PagosDeudaData> {
     return PagosDeudaData(
       id: serializer.fromJson<int>(json['id']),
       deudaId: serializer.fromJson<int>(json['deudaId']),
-      montoAbonado: serializer.fromJson<double>(json['montoAbonado']),
+      montoAbonado: serializer.fromJson<int>(json['montoAbonado']),
       fechaPago: serializer.fromJson<DateTime>(json['fechaPago']),
       notas: serializer.fromJson<String>(json['notas']),
       creadoEn: serializer.fromJson<DateTime>(json['creadoEn']),
@@ -1072,7 +1072,7 @@ class PagosDeudaData extends DataClass implements Insertable<PagosDeudaData> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'deudaId': serializer.toJson<int>(deudaId),
-      'montoAbonado': serializer.toJson<double>(montoAbonado),
+      'montoAbonado': serializer.toJson<int>(montoAbonado),
       'fechaPago': serializer.toJson<DateTime>(fechaPago),
       'notas': serializer.toJson<String>(notas),
       'creadoEn': serializer.toJson<DateTime>(creadoEn),
@@ -1082,7 +1082,7 @@ class PagosDeudaData extends DataClass implements Insertable<PagosDeudaData> {
   PagosDeudaData copyWith({
     int? id,
     int? deudaId,
-    double? montoAbonado,
+    int? montoAbonado,
     DateTime? fechaPago,
     String? notas,
     DateTime? creadoEn,
@@ -1138,7 +1138,7 @@ class PagosDeudaData extends DataClass implements Insertable<PagosDeudaData> {
 class PagosDeudaCompanion extends UpdateCompanion<PagosDeudaData> {
   final Value<int> id;
   final Value<int> deudaId;
-  final Value<double> montoAbonado;
+  final Value<int> montoAbonado;
   final Value<DateTime> fechaPago;
   final Value<String> notas;
   final Value<DateTime> creadoEn;
@@ -1153,7 +1153,7 @@ class PagosDeudaCompanion extends UpdateCompanion<PagosDeudaData> {
   PagosDeudaCompanion.insert({
     this.id = const Value.absent(),
     required int deudaId,
-    required double montoAbonado,
+    required int montoAbonado,
     required DateTime fechaPago,
     this.notas = const Value.absent(),
     this.creadoEn = const Value.absent(),
@@ -1163,7 +1163,7 @@ class PagosDeudaCompanion extends UpdateCompanion<PagosDeudaData> {
   static Insertable<PagosDeudaData> custom({
     Expression<int>? id,
     Expression<int>? deudaId,
-    Expression<double>? montoAbonado,
+    Expression<int>? montoAbonado,
     Expression<DateTime>? fechaPago,
     Expression<String>? notas,
     Expression<DateTime>? creadoEn,
@@ -1181,7 +1181,7 @@ class PagosDeudaCompanion extends UpdateCompanion<PagosDeudaData> {
   PagosDeudaCompanion copyWith({
     Value<int>? id,
     Value<int>? deudaId,
-    Value<double>? montoAbonado,
+    Value<int>? montoAbonado,
     Value<DateTime>? fechaPago,
     Value<String>? notas,
     Value<DateTime>? creadoEn,
@@ -1206,7 +1206,7 @@ class PagosDeudaCompanion extends UpdateCompanion<PagosDeudaData> {
       map['deuda_id'] = Variable<int>(deudaId.value);
     }
     if (montoAbonado.present) {
-      map['monto_abonado'] = Variable<double>(montoAbonado.value);
+      map['monto_abonado'] = Variable<int>(montoAbonado.value);
     }
     if (fechaPago.present) {
       map['fecha_pago'] = Variable<DateTime>(fechaPago.value);
@@ -1280,11 +1280,11 @@ class $PrestamosTable extends Prestamos
     'montoPrestado',
   );
   @override
-  late final GeneratedColumn<double> montoPrestado = GeneratedColumn<double>(
+  late final GeneratedColumn<int> montoPrestado = GeneratedColumn<int>(
     'monto_prestado',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _tasaInteresMeta = const VerificationMeta(
@@ -1550,7 +1550,7 @@ class $PrestamosTable extends Prestamos
         data['${effectivePrefix}deudor_contacto'],
       )!,
       montoPrestado: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}monto_prestado'],
       )!,
       tasaInteres: attachedDatabase.typeMapping.read(
@@ -1602,7 +1602,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
   final int id;
   final String deudorNombre;
   final String deudorContacto;
-  final double montoPrestado;
+  final int montoPrestado;
   final double tasaInteres;
   final String tipoInteres;
   final String modalidadCalculo;
@@ -1633,7 +1633,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
     map['id'] = Variable<int>(id);
     map['deudor_nombre'] = Variable<String>(deudorNombre);
     map['deudor_contacto'] = Variable<String>(deudorContacto);
-    map['monto_prestado'] = Variable<double>(montoPrestado);
+    map['monto_prestado'] = Variable<int>(montoPrestado);
     map['tasa_interes'] = Variable<double>(tasaInteres);
     map['tipo_interes'] = Variable<String>(tipoInteres);
     map['modalidad_calculo'] = Variable<String>(modalidadCalculo);
@@ -1677,7 +1677,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
       id: serializer.fromJson<int>(json['id']),
       deudorNombre: serializer.fromJson<String>(json['deudorNombre']),
       deudorContacto: serializer.fromJson<String>(json['deudorContacto']),
-      montoPrestado: serializer.fromJson<double>(json['montoPrestado']),
+      montoPrestado: serializer.fromJson<int>(json['montoPrestado']),
       tasaInteres: serializer.fromJson<double>(json['tasaInteres']),
       tipoInteres: serializer.fromJson<String>(json['tipoInteres']),
       modalidadCalculo: serializer.fromJson<String>(json['modalidadCalculo']),
@@ -1698,7 +1698,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
       'id': serializer.toJson<int>(id),
       'deudorNombre': serializer.toJson<String>(deudorNombre),
       'deudorContacto': serializer.toJson<String>(deudorContacto),
-      'montoPrestado': serializer.toJson<double>(montoPrestado),
+      'montoPrestado': serializer.toJson<int>(montoPrestado),
       'tasaInteres': serializer.toJson<double>(tasaInteres),
       'tipoInteres': serializer.toJson<String>(tipoInteres),
       'modalidadCalculo': serializer.toJson<String>(modalidadCalculo),
@@ -1715,7 +1715,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
     int? id,
     String? deudorNombre,
     String? deudorContacto,
-    double? montoPrestado,
+    int? montoPrestado,
     double? tasaInteres,
     String? tipoInteres,
     String? modalidadCalculo,
@@ -1837,7 +1837,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
   final Value<int> id;
   final Value<String> deudorNombre;
   final Value<String> deudorContacto;
-  final Value<double> montoPrestado;
+  final Value<int> montoPrestado;
   final Value<double> tasaInteres;
   final Value<String> tipoInteres;
   final Value<String> modalidadCalculo;
@@ -1866,7 +1866,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     this.id = const Value.absent(),
     required String deudorNombre,
     this.deudorContacto = const Value.absent(),
-    required double montoPrestado,
+    required int montoPrestado,
     this.tasaInteres = const Value.absent(),
     this.tipoInteres = const Value.absent(),
     this.modalidadCalculo = const Value.absent(),
@@ -1883,7 +1883,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     Expression<int>? id,
     Expression<String>? deudorNombre,
     Expression<String>? deudorContacto,
-    Expression<double>? montoPrestado,
+    Expression<int>? montoPrestado,
     Expression<double>? tasaInteres,
     Expression<String>? tipoInteres,
     Expression<String>? modalidadCalculo,
@@ -1915,7 +1915,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     Value<int>? id,
     Value<String>? deudorNombre,
     Value<String>? deudorContacto,
-    Value<double>? montoPrestado,
+    Value<int>? montoPrestado,
     Value<double>? tasaInteres,
     Value<String>? tipoInteres,
     Value<String>? modalidadCalculo,
@@ -1956,7 +1956,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
       map['deudor_contacto'] = Variable<String>(deudorContacto.value);
     }
     if (montoPrestado.present) {
-      map['monto_prestado'] = Variable<double>(montoPrestado.value);
+      map['monto_prestado'] = Variable<int>(montoPrestado.value);
     }
     if (tasaInteres.present) {
       map['tasa_interes'] = Variable<double>(tasaInteres.value);
@@ -2046,11 +2046,11 @@ class $PagosRecibidosTable extends PagosRecibidos
     'montoAbonado',
   );
   @override
-  late final GeneratedColumn<double> montoAbonado = GeneratedColumn<double>(
+  late final GeneratedColumn<int> montoAbonado = GeneratedColumn<int>(
     'monto_abonado',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _fechaPagoMeta = const VerificationMeta(
@@ -2167,7 +2167,7 @@ class $PagosRecibidosTable extends PagosRecibidos
         data['${effectivePrefix}prestamo_id'],
       )!,
       montoAbonado: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}monto_abonado'],
       )!,
       fechaPago: attachedDatabase.typeMapping.read(
@@ -2194,7 +2194,7 @@ class $PagosRecibidosTable extends PagosRecibidos
 class PagosRecibido extends DataClass implements Insertable<PagosRecibido> {
   final int id;
   final int prestamoId;
-  final double montoAbonado;
+  final int montoAbonado;
   final DateTime fechaPago;
   final String notas;
   final DateTime creadoEn;
@@ -2211,7 +2211,7 @@ class PagosRecibido extends DataClass implements Insertable<PagosRecibido> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['prestamo_id'] = Variable<int>(prestamoId);
-    map['monto_abonado'] = Variable<double>(montoAbonado);
+    map['monto_abonado'] = Variable<int>(montoAbonado);
     map['fecha_pago'] = Variable<DateTime>(fechaPago);
     map['notas'] = Variable<String>(notas);
     map['creado_en'] = Variable<DateTime>(creadoEn);
@@ -2237,7 +2237,7 @@ class PagosRecibido extends DataClass implements Insertable<PagosRecibido> {
     return PagosRecibido(
       id: serializer.fromJson<int>(json['id']),
       prestamoId: serializer.fromJson<int>(json['prestamoId']),
-      montoAbonado: serializer.fromJson<double>(json['montoAbonado']),
+      montoAbonado: serializer.fromJson<int>(json['montoAbonado']),
       fechaPago: serializer.fromJson<DateTime>(json['fechaPago']),
       notas: serializer.fromJson<String>(json['notas']),
       creadoEn: serializer.fromJson<DateTime>(json['creadoEn']),
@@ -2249,7 +2249,7 @@ class PagosRecibido extends DataClass implements Insertable<PagosRecibido> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'prestamoId': serializer.toJson<int>(prestamoId),
-      'montoAbonado': serializer.toJson<double>(montoAbonado),
+      'montoAbonado': serializer.toJson<int>(montoAbonado),
       'fechaPago': serializer.toJson<DateTime>(fechaPago),
       'notas': serializer.toJson<String>(notas),
       'creadoEn': serializer.toJson<DateTime>(creadoEn),
@@ -2259,7 +2259,7 @@ class PagosRecibido extends DataClass implements Insertable<PagosRecibido> {
   PagosRecibido copyWith({
     int? id,
     int? prestamoId,
-    double? montoAbonado,
+    int? montoAbonado,
     DateTime? fechaPago,
     String? notas,
     DateTime? creadoEn,
@@ -2317,7 +2317,7 @@ class PagosRecibido extends DataClass implements Insertable<PagosRecibido> {
 class PagosRecibidosCompanion extends UpdateCompanion<PagosRecibido> {
   final Value<int> id;
   final Value<int> prestamoId;
-  final Value<double> montoAbonado;
+  final Value<int> montoAbonado;
   final Value<DateTime> fechaPago;
   final Value<String> notas;
   final Value<DateTime> creadoEn;
@@ -2332,7 +2332,7 @@ class PagosRecibidosCompanion extends UpdateCompanion<PagosRecibido> {
   PagosRecibidosCompanion.insert({
     this.id = const Value.absent(),
     required int prestamoId,
-    required double montoAbonado,
+    required int montoAbonado,
     required DateTime fechaPago,
     this.notas = const Value.absent(),
     this.creadoEn = const Value.absent(),
@@ -2342,7 +2342,7 @@ class PagosRecibidosCompanion extends UpdateCompanion<PagosRecibido> {
   static Insertable<PagosRecibido> custom({
     Expression<int>? id,
     Expression<int>? prestamoId,
-    Expression<double>? montoAbonado,
+    Expression<int>? montoAbonado,
     Expression<DateTime>? fechaPago,
     Expression<String>? notas,
     Expression<DateTime>? creadoEn,
@@ -2360,7 +2360,7 @@ class PagosRecibidosCompanion extends UpdateCompanion<PagosRecibido> {
   PagosRecibidosCompanion copyWith({
     Value<int>? id,
     Value<int>? prestamoId,
-    Value<double>? montoAbonado,
+    Value<int>? montoAbonado,
     Value<DateTime>? fechaPago,
     Value<String>? notas,
     Value<DateTime>? creadoEn,
@@ -2385,7 +2385,7 @@ class PagosRecibidosCompanion extends UpdateCompanion<PagosRecibido> {
       map['prestamo_id'] = Variable<int>(prestamoId.value);
     }
     if (montoAbonado.present) {
-      map['monto_abonado'] = Variable<double>(montoAbonado.value);
+      map['monto_abonado'] = Variable<int>(montoAbonado.value);
     }
     if (fechaPago.present) {
       map['fecha_pago'] = Variable<DateTime>(fechaPago.value);
@@ -2444,11 +2444,11 @@ class $IngresosTable extends Ingresos with TableInfo<$IngresosTable, Ingreso> {
   );
   static const VerificationMeta _montoMeta = const VerificationMeta('monto');
   @override
-  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+  late final GeneratedColumn<int> monto = GeneratedColumn<int>(
     'monto',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _frecuenciaMeta = const VerificationMeta(
@@ -2622,7 +2622,7 @@ class $IngresosTable extends Ingresos with TableInfo<$IngresosTable, Ingreso> {
         data['${effectivePrefix}concepto'],
       )!,
       monto: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}monto'],
       )!,
       frecuencia: attachedDatabase.typeMapping.read(
@@ -2661,7 +2661,7 @@ class $IngresosTable extends Ingresos with TableInfo<$IngresosTable, Ingreso> {
 class Ingreso extends DataClass implements Insertable<Ingreso> {
   final int id;
   final String concepto;
-  final double monto;
+  final int monto;
   final String frecuencia;
   final DateTime fecha;
   final String notas;
@@ -2684,7 +2684,7 @@ class Ingreso extends DataClass implements Insertable<Ingreso> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['concepto'] = Variable<String>(concepto);
-    map['monto'] = Variable<double>(monto);
+    map['monto'] = Variable<int>(monto);
     map['frecuencia'] = Variable<String>(frecuencia);
     map['fecha'] = Variable<DateTime>(fecha);
     map['notas'] = Variable<String>(notas);
@@ -2716,7 +2716,7 @@ class Ingreso extends DataClass implements Insertable<Ingreso> {
     return Ingreso(
       id: serializer.fromJson<int>(json['id']),
       concepto: serializer.fromJson<String>(json['concepto']),
-      monto: serializer.fromJson<double>(json['monto']),
+      monto: serializer.fromJson<int>(json['monto']),
       frecuencia: serializer.fromJson<String>(json['frecuencia']),
       fecha: serializer.fromJson<DateTime>(json['fecha']),
       notas: serializer.fromJson<String>(json['notas']),
@@ -2731,7 +2731,7 @@ class Ingreso extends DataClass implements Insertable<Ingreso> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'concepto': serializer.toJson<String>(concepto),
-      'monto': serializer.toJson<double>(monto),
+      'monto': serializer.toJson<int>(monto),
       'frecuencia': serializer.toJson<String>(frecuencia),
       'fecha': serializer.toJson<DateTime>(fecha),
       'notas': serializer.toJson<String>(notas),
@@ -2744,7 +2744,7 @@ class Ingreso extends DataClass implements Insertable<Ingreso> {
   Ingreso copyWith({
     int? id,
     String? concepto,
-    double? monto,
+    int? monto,
     String? frecuencia,
     DateTime? fecha,
     String? notas,
@@ -2826,7 +2826,7 @@ class Ingreso extends DataClass implements Insertable<Ingreso> {
 class IngresosCompanion extends UpdateCompanion<Ingreso> {
   final Value<int> id;
   final Value<String> concepto;
-  final Value<double> monto;
+  final Value<int> monto;
   final Value<String> frecuencia;
   final Value<DateTime> fecha;
   final Value<String> notas;
@@ -2847,7 +2847,7 @@ class IngresosCompanion extends UpdateCompanion<Ingreso> {
   IngresosCompanion.insert({
     this.id = const Value.absent(),
     required String concepto,
-    required double monto,
+    required int monto,
     this.frecuencia = const Value.absent(),
     required DateTime fecha,
     this.notas = const Value.absent(),
@@ -2860,7 +2860,7 @@ class IngresosCompanion extends UpdateCompanion<Ingreso> {
   static Insertable<Ingreso> custom({
     Expression<int>? id,
     Expression<String>? concepto,
-    Expression<double>? monto,
+    Expression<int>? monto,
     Expression<String>? frecuencia,
     Expression<DateTime>? fecha,
     Expression<String>? notas,
@@ -2884,7 +2884,7 @@ class IngresosCompanion extends UpdateCompanion<Ingreso> {
   IngresosCompanion copyWith({
     Value<int>? id,
     Value<String>? concepto,
-    Value<double>? monto,
+    Value<int>? monto,
     Value<String>? frecuencia,
     Value<DateTime>? fecha,
     Value<String>? notas,
@@ -2915,7 +2915,7 @@ class IngresosCompanion extends UpdateCompanion<Ingreso> {
       map['concepto'] = Variable<String>(concepto.value);
     }
     if (monto.present) {
-      map['monto'] = Variable<double>(monto.value);
+      map['monto'] = Variable<int>(monto.value);
     }
     if (frecuencia.present) {
       map['frecuencia'] = Variable<String>(frecuencia.value);
@@ -2987,11 +2987,11 @@ class $GastosFijosTable extends GastosFijos
   );
   static const VerificationMeta _montoMeta = const VerificationMeta('monto');
   @override
-  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+  late final GeneratedColumn<int> monto = GeneratedColumn<int>(
     'monto',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _frecuenciaMeta = const VerificationMeta(
@@ -3165,7 +3165,7 @@ class $GastosFijosTable extends GastosFijos
         data['${effectivePrefix}concepto'],
       )!,
       monto: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}monto'],
       )!,
       frecuencia: attachedDatabase.typeMapping.read(
@@ -3204,7 +3204,7 @@ class $GastosFijosTable extends GastosFijos
 class GastosFijo extends DataClass implements Insertable<GastosFijo> {
   final int id;
   final String concepto;
-  final double monto;
+  final int monto;
   final String frecuencia;
   final int? diaCobro;
   final String notas;
@@ -3227,7 +3227,7 @@ class GastosFijo extends DataClass implements Insertable<GastosFijo> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['concepto'] = Variable<String>(concepto);
-    map['monto'] = Variable<double>(monto);
+    map['monto'] = Variable<int>(monto);
     map['frecuencia'] = Variable<String>(frecuencia);
     if (!nullToAbsent || diaCobro != null) {
       map['dia_cobro'] = Variable<int>(diaCobro);
@@ -3263,7 +3263,7 @@ class GastosFijo extends DataClass implements Insertable<GastosFijo> {
     return GastosFijo(
       id: serializer.fromJson<int>(json['id']),
       concepto: serializer.fromJson<String>(json['concepto']),
-      monto: serializer.fromJson<double>(json['monto']),
+      monto: serializer.fromJson<int>(json['monto']),
       frecuencia: serializer.fromJson<String>(json['frecuencia']),
       diaCobro: serializer.fromJson<int?>(json['diaCobro']),
       notas: serializer.fromJson<String>(json['notas']),
@@ -3278,7 +3278,7 @@ class GastosFijo extends DataClass implements Insertable<GastosFijo> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'concepto': serializer.toJson<String>(concepto),
-      'monto': serializer.toJson<double>(monto),
+      'monto': serializer.toJson<int>(monto),
       'frecuencia': serializer.toJson<String>(frecuencia),
       'diaCobro': serializer.toJson<int?>(diaCobro),
       'notas': serializer.toJson<String>(notas),
@@ -3291,7 +3291,7 @@ class GastosFijo extends DataClass implements Insertable<GastosFijo> {
   GastosFijo copyWith({
     int? id,
     String? concepto,
-    double? monto,
+    int? monto,
     String? frecuencia,
     Value<int?> diaCobro = const Value.absent(),
     String? notas,
@@ -3373,7 +3373,7 @@ class GastosFijo extends DataClass implements Insertable<GastosFijo> {
 class GastosFijosCompanion extends UpdateCompanion<GastosFijo> {
   final Value<int> id;
   final Value<String> concepto;
-  final Value<double> monto;
+  final Value<int> monto;
   final Value<String> frecuencia;
   final Value<int?> diaCobro;
   final Value<String> notas;
@@ -3394,7 +3394,7 @@ class GastosFijosCompanion extends UpdateCompanion<GastosFijo> {
   GastosFijosCompanion.insert({
     this.id = const Value.absent(),
     required String concepto,
-    required double monto,
+    required int monto,
     this.frecuencia = const Value.absent(),
     this.diaCobro = const Value.absent(),
     this.notas = const Value.absent(),
@@ -3406,7 +3406,7 @@ class GastosFijosCompanion extends UpdateCompanion<GastosFijo> {
   static Insertable<GastosFijo> custom({
     Expression<int>? id,
     Expression<String>? concepto,
-    Expression<double>? monto,
+    Expression<int>? monto,
     Expression<String>? frecuencia,
     Expression<int>? diaCobro,
     Expression<String>? notas,
@@ -3430,7 +3430,7 @@ class GastosFijosCompanion extends UpdateCompanion<GastosFijo> {
   GastosFijosCompanion copyWith({
     Value<int>? id,
     Value<String>? concepto,
-    Value<double>? monto,
+    Value<int>? monto,
     Value<String>? frecuencia,
     Value<int?>? diaCobro,
     Value<String>? notas,
@@ -3461,7 +3461,7 @@ class GastosFijosCompanion extends UpdateCompanion<GastosFijo> {
       map['concepto'] = Variable<String>(concepto.value);
     }
     if (monto.present) {
-      map['monto'] = Variable<double>(monto.value);
+      map['monto'] = Variable<int>(monto.value);
     }
     if (frecuencia.present) {
       map['frecuencia'] = Variable<String>(frecuencia.value);
@@ -5084,11 +5084,11 @@ class $GastosVariablesTable extends GastosVariables
   );
   static const VerificationMeta _montoMeta = const VerificationMeta('monto');
   @override
-  late final GeneratedColumn<double> monto = GeneratedColumn<double>(
+  late final GeneratedColumn<int> monto = GeneratedColumn<int>(
     'monto',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _categoriaMeta = const VerificationMeta(
@@ -5222,7 +5222,7 @@ class $GastosVariablesTable extends GastosVariables
         data['${effectivePrefix}descripcion'],
       )!,
       monto: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}monto'],
       )!,
       categoria: attachedDatabase.typeMapping.read(
@@ -5253,7 +5253,7 @@ class $GastosVariablesTable extends GastosVariables
 class GastosVariable extends DataClass implements Insertable<GastosVariable> {
   final int id;
   final String descripcion;
-  final double monto;
+  final int monto;
   final String categoria;
   final DateTime fecha;
   final String? notas;
@@ -5272,7 +5272,7 @@ class GastosVariable extends DataClass implements Insertable<GastosVariable> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['descripcion'] = Variable<String>(descripcion);
-    map['monto'] = Variable<double>(monto);
+    map['monto'] = Variable<int>(monto);
     map['categoria'] = Variable<String>(categoria);
     map['fecha'] = Variable<DateTime>(fecha);
     if (!nullToAbsent || notas != null) {
@@ -5304,7 +5304,7 @@ class GastosVariable extends DataClass implements Insertable<GastosVariable> {
     return GastosVariable(
       id: serializer.fromJson<int>(json['id']),
       descripcion: serializer.fromJson<String>(json['descripcion']),
-      monto: serializer.fromJson<double>(json['monto']),
+      monto: serializer.fromJson<int>(json['monto']),
       categoria: serializer.fromJson<String>(json['categoria']),
       fecha: serializer.fromJson<DateTime>(json['fecha']),
       notas: serializer.fromJson<String?>(json['notas']),
@@ -5317,7 +5317,7 @@ class GastosVariable extends DataClass implements Insertable<GastosVariable> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'descripcion': serializer.toJson<String>(descripcion),
-      'monto': serializer.toJson<double>(monto),
+      'monto': serializer.toJson<int>(monto),
       'categoria': serializer.toJson<String>(categoria),
       'fecha': serializer.toJson<DateTime>(fecha),
       'notas': serializer.toJson<String?>(notas),
@@ -5328,7 +5328,7 @@ class GastosVariable extends DataClass implements Insertable<GastosVariable> {
   GastosVariable copyWith({
     int? id,
     String? descripcion,
-    double? monto,
+    int? monto,
     String? categoria,
     DateTime? fecha,
     Value<String?> notas = const Value.absent(),
@@ -5389,7 +5389,7 @@ class GastosVariable extends DataClass implements Insertable<GastosVariable> {
 class GastosVariablesCompanion extends UpdateCompanion<GastosVariable> {
   final Value<int> id;
   final Value<String> descripcion;
-  final Value<double> monto;
+  final Value<int> monto;
   final Value<String> categoria;
   final Value<DateTime> fecha;
   final Value<String?> notas;
@@ -5406,7 +5406,7 @@ class GastosVariablesCompanion extends UpdateCompanion<GastosVariable> {
   GastosVariablesCompanion.insert({
     this.id = const Value.absent(),
     required String descripcion,
-    required double monto,
+    required int monto,
     required String categoria,
     required DateTime fecha,
     this.notas = const Value.absent(),
@@ -5418,7 +5418,7 @@ class GastosVariablesCompanion extends UpdateCompanion<GastosVariable> {
   static Insertable<GastosVariable> custom({
     Expression<int>? id,
     Expression<String>? descripcion,
-    Expression<double>? monto,
+    Expression<int>? monto,
     Expression<String>? categoria,
     Expression<DateTime>? fecha,
     Expression<String>? notas,
@@ -5438,7 +5438,7 @@ class GastosVariablesCompanion extends UpdateCompanion<GastosVariable> {
   GastosVariablesCompanion copyWith({
     Value<int>? id,
     Value<String>? descripcion,
-    Value<double>? monto,
+    Value<int>? monto,
     Value<String>? categoria,
     Value<DateTime>? fecha,
     Value<String?>? notas,
@@ -5465,7 +5465,7 @@ class GastosVariablesCompanion extends UpdateCompanion<GastosVariable> {
       map['descripcion'] = Variable<String>(descripcion.value);
     }
     if (monto.present) {
-      map['monto'] = Variable<double>(monto.value);
+      map['monto'] = Variable<int>(monto.value);
     }
     if (categoria.present) {
       map['categoria'] = Variable<String>(categoria.value);
@@ -5531,11 +5531,11 @@ class $PresupuestosCategoriasTable extends PresupuestosCategorias
     'limiteMensual',
   );
   @override
-  late final GeneratedColumn<double> limiteMensual = GeneratedColumn<double>(
+  late final GeneratedColumn<int> limiteMensual = GeneratedColumn<int>(
     'limite_mensual',
     aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _creadoEnMeta = const VerificationMeta(
@@ -5642,7 +5642,7 @@ class $PresupuestosCategoriasTable extends PresupuestosCategorias
         data['${effectivePrefix}categoria'],
       )!,
       limiteMensual: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
+        DriftSqlType.int,
         data['${effectivePrefix}limite_mensual'],
       )!,
       creadoEn: attachedDatabase.typeMapping.read(
@@ -5666,7 +5666,7 @@ class PresupuestosCategoria extends DataClass
     implements Insertable<PresupuestosCategoria> {
   final int id;
   final String categoria;
-  final double limiteMensual;
+  final int limiteMensual;
   final DateTime creadoEn;
   final DateTime actualizadoEn;
   const PresupuestosCategoria({
@@ -5681,7 +5681,7 @@ class PresupuestosCategoria extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['categoria'] = Variable<String>(categoria);
-    map['limite_mensual'] = Variable<double>(limiteMensual);
+    map['limite_mensual'] = Variable<int>(limiteMensual);
     map['creado_en'] = Variable<DateTime>(creadoEn);
     map['actualizado_en'] = Variable<DateTime>(actualizadoEn);
     return map;
@@ -5705,7 +5705,7 @@ class PresupuestosCategoria extends DataClass
     return PresupuestosCategoria(
       id: serializer.fromJson<int>(json['id']),
       categoria: serializer.fromJson<String>(json['categoria']),
-      limiteMensual: serializer.fromJson<double>(json['limiteMensual']),
+      limiteMensual: serializer.fromJson<int>(json['limiteMensual']),
       creadoEn: serializer.fromJson<DateTime>(json['creadoEn']),
       actualizadoEn: serializer.fromJson<DateTime>(json['actualizadoEn']),
     );
@@ -5716,7 +5716,7 @@ class PresupuestosCategoria extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'categoria': serializer.toJson<String>(categoria),
-      'limiteMensual': serializer.toJson<double>(limiteMensual),
+      'limiteMensual': serializer.toJson<int>(limiteMensual),
       'creadoEn': serializer.toJson<DateTime>(creadoEn),
       'actualizadoEn': serializer.toJson<DateTime>(actualizadoEn),
     };
@@ -5725,7 +5725,7 @@ class PresupuestosCategoria extends DataClass
   PresupuestosCategoria copyWith({
     int? id,
     String? categoria,
-    double? limiteMensual,
+    int? limiteMensual,
     DateTime? creadoEn,
     DateTime? actualizadoEn,
   }) => PresupuestosCategoria(
@@ -5781,7 +5781,7 @@ class PresupuestosCategoriasCompanion
     extends UpdateCompanion<PresupuestosCategoria> {
   final Value<int> id;
   final Value<String> categoria;
-  final Value<double> limiteMensual;
+  final Value<int> limiteMensual;
   final Value<DateTime> creadoEn;
   final Value<DateTime> actualizadoEn;
   const PresupuestosCategoriasCompanion({
@@ -5794,7 +5794,7 @@ class PresupuestosCategoriasCompanion
   PresupuestosCategoriasCompanion.insert({
     this.id = const Value.absent(),
     required String categoria,
-    required double limiteMensual,
+    required int limiteMensual,
     this.creadoEn = const Value.absent(),
     this.actualizadoEn = const Value.absent(),
   }) : categoria = Value(categoria),
@@ -5802,7 +5802,7 @@ class PresupuestosCategoriasCompanion
   static Insertable<PresupuestosCategoria> custom({
     Expression<int>? id,
     Expression<String>? categoria,
-    Expression<double>? limiteMensual,
+    Expression<int>? limiteMensual,
     Expression<DateTime>? creadoEn,
     Expression<DateTime>? actualizadoEn,
   }) {
@@ -5818,7 +5818,7 @@ class PresupuestosCategoriasCompanion
   PresupuestosCategoriasCompanion copyWith({
     Value<int>? id,
     Value<String>? categoria,
-    Value<double>? limiteMensual,
+    Value<int>? limiteMensual,
     Value<DateTime>? creadoEn,
     Value<DateTime>? actualizadoEn,
   }) {
@@ -5841,7 +5841,7 @@ class PresupuestosCategoriasCompanion
       map['categoria'] = Variable<String>(categoria.value);
     }
     if (limiteMensual.present) {
-      map['limite_mensual'] = Variable<double>(limiteMensual.value);
+      map['limite_mensual'] = Variable<int>(limiteMensual.value);
     }
     if (creadoEn.present) {
       map['creado_en'] = Variable<DateTime>(creadoEn.value);
@@ -5929,13 +5929,13 @@ typedef $$DeudasTableCreateCompanionBuilder =
     DeudasCompanion Function({
       Value<int> id,
       required String acreedorNombre,
-      required double montoOriginal,
+      required int montoOriginal,
       Value<double> tasaInteres,
       Value<String> tipoInteres,
       Value<String> modalidadCalculo,
       required DateTime fechaPrestamo,
       Value<DateTime?> fechaLimite,
-      Value<double?> cuotaMensual,
+      Value<int?> cuotaMensual,
       Value<String> notas,
       Value<String> estado,
       Value<DateTime?> fechaPagoReal,
@@ -5946,13 +5946,13 @@ typedef $$DeudasTableUpdateCompanionBuilder =
     DeudasCompanion Function({
       Value<int> id,
       Value<String> acreedorNombre,
-      Value<double> montoOriginal,
+      Value<int> montoOriginal,
       Value<double> tasaInteres,
       Value<String> tipoInteres,
       Value<String> modalidadCalculo,
       Value<DateTime> fechaPrestamo,
       Value<DateTime?> fechaLimite,
-      Value<double?> cuotaMensual,
+      Value<int?> cuotaMensual,
       Value<String> notas,
       Value<String> estado,
       Value<DateTime?> fechaPagoReal,
@@ -6002,7 +6002,7 @@ class $$DeudasTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get montoOriginal => $composableBuilder(
+  ColumnFilters<int> get montoOriginal => $composableBuilder(
     column: $table.montoOriginal,
     builder: (column) => ColumnFilters(column),
   );
@@ -6032,7 +6032,7 @@ class $$DeudasTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get cuotaMensual => $composableBuilder(
+  ColumnFilters<int> get cuotaMensual => $composableBuilder(
     column: $table.cuotaMensual,
     builder: (column) => ColumnFilters(column),
   );
@@ -6107,7 +6107,7 @@ class $$DeudasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get montoOriginal => $composableBuilder(
+  ColumnOrderings<int> get montoOriginal => $composableBuilder(
     column: $table.montoOriginal,
     builder: (column) => ColumnOrderings(column),
   );
@@ -6137,7 +6137,7 @@ class $$DeudasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get cuotaMensual => $composableBuilder(
+  ColumnOrderings<int> get cuotaMensual => $composableBuilder(
     column: $table.cuotaMensual,
     builder: (column) => ColumnOrderings(column),
   );
@@ -6185,7 +6185,7 @@ class $$DeudasTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<double> get montoOriginal => $composableBuilder(
+  GeneratedColumn<int> get montoOriginal => $composableBuilder(
     column: $table.montoOriginal,
     builder: (column) => column,
   );
@@ -6215,7 +6215,7 @@ class $$DeudasTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<double> get cuotaMensual => $composableBuilder(
+  GeneratedColumn<int> get cuotaMensual => $composableBuilder(
     column: $table.cuotaMensual,
     builder: (column) => column,
   );
@@ -6295,13 +6295,13 @@ class $$DeudasTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> acreedorNombre = const Value.absent(),
-                Value<double> montoOriginal = const Value.absent(),
+                Value<int> montoOriginal = const Value.absent(),
                 Value<double> tasaInteres = const Value.absent(),
                 Value<String> tipoInteres = const Value.absent(),
                 Value<String> modalidadCalculo = const Value.absent(),
                 Value<DateTime> fechaPrestamo = const Value.absent(),
                 Value<DateTime?> fechaLimite = const Value.absent(),
-                Value<double?> cuotaMensual = const Value.absent(),
+                Value<int?> cuotaMensual = const Value.absent(),
                 Value<String> notas = const Value.absent(),
                 Value<String> estado = const Value.absent(),
                 Value<DateTime?> fechaPagoReal = const Value.absent(),
@@ -6327,13 +6327,13 @@ class $$DeudasTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String acreedorNombre,
-                required double montoOriginal,
+                required int montoOriginal,
                 Value<double> tasaInteres = const Value.absent(),
                 Value<String> tipoInteres = const Value.absent(),
                 Value<String> modalidadCalculo = const Value.absent(),
                 required DateTime fechaPrestamo,
                 Value<DateTime?> fechaLimite = const Value.absent(),
-                Value<double?> cuotaMensual = const Value.absent(),
+                Value<int?> cuotaMensual = const Value.absent(),
                 Value<String> notas = const Value.absent(),
                 Value<String> estado = const Value.absent(),
                 Value<DateTime?> fechaPagoReal = const Value.absent(),
@@ -6409,7 +6409,7 @@ typedef $$PagosDeudaTableCreateCompanionBuilder =
     PagosDeudaCompanion Function({
       Value<int> id,
       required int deudaId,
-      required double montoAbonado,
+      required int montoAbonado,
       required DateTime fechaPago,
       Value<String> notas,
       Value<DateTime> creadoEn,
@@ -6418,7 +6418,7 @@ typedef $$PagosDeudaTableUpdateCompanionBuilder =
     PagosDeudaCompanion Function({
       Value<int> id,
       Value<int> deudaId,
-      Value<double> montoAbonado,
+      Value<int> montoAbonado,
       Value<DateTime> fechaPago,
       Value<String> notas,
       Value<DateTime> creadoEn,
@@ -6461,7 +6461,7 @@ class $$PagosDeudaTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get montoAbonado => $composableBuilder(
+  ColumnFilters<int> get montoAbonado => $composableBuilder(
     column: $table.montoAbonado,
     builder: (column) => ColumnFilters(column),
   );
@@ -6519,7 +6519,7 @@ class $$PagosDeudaTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get montoAbonado => $composableBuilder(
+  ColumnOrderings<int> get montoAbonado => $composableBuilder(
     column: $table.montoAbonado,
     builder: (column) => ColumnOrderings(column),
   );
@@ -6575,7 +6575,7 @@ class $$PagosDeudaTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<double> get montoAbonado => $composableBuilder(
+  GeneratedColumn<int> get montoAbonado => $composableBuilder(
     column: $table.montoAbonado,
     builder: (column) => column,
   );
@@ -6643,7 +6643,7 @@ class $$PagosDeudaTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> deudaId = const Value.absent(),
-                Value<double> montoAbonado = const Value.absent(),
+                Value<int> montoAbonado = const Value.absent(),
                 Value<DateTime> fechaPago = const Value.absent(),
                 Value<String> notas = const Value.absent(),
                 Value<DateTime> creadoEn = const Value.absent(),
@@ -6659,7 +6659,7 @@ class $$PagosDeudaTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required int deudaId,
-                required double montoAbonado,
+                required int montoAbonado,
                 required DateTime fechaPago,
                 Value<String> notas = const Value.absent(),
                 Value<DateTime> creadoEn = const Value.absent(),
@@ -6743,7 +6743,7 @@ typedef $$PrestamosTableCreateCompanionBuilder =
       Value<int> id,
       required String deudorNombre,
       Value<String> deudorContacto,
-      required double montoPrestado,
+      required int montoPrestado,
       Value<double> tasaInteres,
       Value<String> tipoInteres,
       Value<String> modalidadCalculo,
@@ -6759,7 +6759,7 @@ typedef $$PrestamosTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> deudorNombre,
       Value<String> deudorContacto,
-      Value<double> montoPrestado,
+      Value<int> montoPrestado,
       Value<double> tasaInteres,
       Value<String> tipoInteres,
       Value<String> modalidadCalculo,
@@ -6821,7 +6821,7 @@ class $$PrestamosTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get montoPrestado => $composableBuilder(
+  ColumnFilters<int> get montoPrestado => $composableBuilder(
     column: $table.montoPrestado,
     builder: (column) => ColumnFilters(column),
   );
@@ -6921,7 +6921,7 @@ class $$PrestamosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get montoPrestado => $composableBuilder(
+  ColumnOrderings<int> get montoPrestado => $composableBuilder(
     column: $table.montoPrestado,
     builder: (column) => ColumnOrderings(column),
   );
@@ -6994,7 +6994,7 @@ class $$PrestamosTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<double> get montoPrestado => $composableBuilder(
+  GeneratedColumn<int> get montoPrestado => $composableBuilder(
     column: $table.montoPrestado,
     builder: (column) => column,
   );
@@ -7095,7 +7095,7 @@ class $$PrestamosTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> deudorNombre = const Value.absent(),
                 Value<String> deudorContacto = const Value.absent(),
-                Value<double> montoPrestado = const Value.absent(),
+                Value<int> montoPrestado = const Value.absent(),
                 Value<double> tasaInteres = const Value.absent(),
                 Value<String> tipoInteres = const Value.absent(),
                 Value<String> modalidadCalculo = const Value.absent(),
@@ -7125,7 +7125,7 @@ class $$PrestamosTableTableManager
                 Value<int> id = const Value.absent(),
                 required String deudorNombre,
                 Value<String> deudorContacto = const Value.absent(),
-                required double montoPrestado,
+                required int montoPrestado,
                 Value<double> tasaInteres = const Value.absent(),
                 Value<String> tipoInteres = const Value.absent(),
                 Value<String> modalidadCalculo = const Value.absent(),
@@ -7212,7 +7212,7 @@ typedef $$PagosRecibidosTableCreateCompanionBuilder =
     PagosRecibidosCompanion Function({
       Value<int> id,
       required int prestamoId,
-      required double montoAbonado,
+      required int montoAbonado,
       required DateTime fechaPago,
       Value<String> notas,
       Value<DateTime> creadoEn,
@@ -7221,7 +7221,7 @@ typedef $$PagosRecibidosTableUpdateCompanionBuilder =
     PagosRecibidosCompanion Function({
       Value<int> id,
       Value<int> prestamoId,
-      Value<double> montoAbonado,
+      Value<int> montoAbonado,
       Value<DateTime> fechaPago,
       Value<String> notas,
       Value<DateTime> creadoEn,
@@ -7269,7 +7269,7 @@ class $$PagosRecibidosTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get montoAbonado => $composableBuilder(
+  ColumnFilters<int> get montoAbonado => $composableBuilder(
     column: $table.montoAbonado,
     builder: (column) => ColumnFilters(column),
   );
@@ -7327,7 +7327,7 @@ class $$PagosRecibidosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get montoAbonado => $composableBuilder(
+  ColumnOrderings<int> get montoAbonado => $composableBuilder(
     column: $table.montoAbonado,
     builder: (column) => ColumnOrderings(column),
   );
@@ -7383,7 +7383,7 @@ class $$PagosRecibidosTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<double> get montoAbonado => $composableBuilder(
+  GeneratedColumn<int> get montoAbonado => $composableBuilder(
     column: $table.montoAbonado,
     builder: (column) => column,
   );
@@ -7453,7 +7453,7 @@ class $$PagosRecibidosTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> prestamoId = const Value.absent(),
-                Value<double> montoAbonado = const Value.absent(),
+                Value<int> montoAbonado = const Value.absent(),
                 Value<DateTime> fechaPago = const Value.absent(),
                 Value<String> notas = const Value.absent(),
                 Value<DateTime> creadoEn = const Value.absent(),
@@ -7469,7 +7469,7 @@ class $$PagosRecibidosTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required int prestamoId,
-                required double montoAbonado,
+                required int montoAbonado,
                 required DateTime fechaPago,
                 Value<String> notas = const Value.absent(),
                 Value<DateTime> creadoEn = const Value.absent(),
@@ -7553,7 +7553,7 @@ typedef $$IngresosTableCreateCompanionBuilder =
     IngresosCompanion Function({
       Value<int> id,
       required String concepto,
-      required double monto,
+      required int monto,
       Value<String> frecuencia,
       required DateTime fecha,
       Value<String> notas,
@@ -7565,7 +7565,7 @@ typedef $$IngresosTableUpdateCompanionBuilder =
     IngresosCompanion Function({
       Value<int> id,
       Value<String> concepto,
-      Value<double> monto,
+      Value<int> monto,
       Value<String> frecuencia,
       Value<DateTime> fecha,
       Value<String> notas,
@@ -7593,7 +7593,7 @@ class $$IngresosTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get monto => $composableBuilder(
+  ColumnFilters<int> get monto => $composableBuilder(
     column: $table.monto,
     builder: (column) => ColumnFilters(column),
   );
@@ -7648,7 +7648,7 @@ class $$IngresosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get monto => $composableBuilder(
+  ColumnOrderings<int> get monto => $composableBuilder(
     column: $table.monto,
     builder: (column) => ColumnOrderings(column),
   );
@@ -7699,7 +7699,7 @@ class $$IngresosTableAnnotationComposer
   GeneratedColumn<String> get concepto =>
       $composableBuilder(column: $table.concepto, builder: (column) => column);
 
-  GeneratedColumn<double> get monto =>
+  GeneratedColumn<int> get monto =>
       $composableBuilder(column: $table.monto, builder: (column) => column);
 
   GeneratedColumn<String> get frecuencia => $composableBuilder(
@@ -7755,7 +7755,7 @@ class $$IngresosTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> concepto = const Value.absent(),
-                Value<double> monto = const Value.absent(),
+                Value<int> monto = const Value.absent(),
                 Value<String> frecuencia = const Value.absent(),
                 Value<DateTime> fecha = const Value.absent(),
                 Value<String> notas = const Value.absent(),
@@ -7777,7 +7777,7 @@ class $$IngresosTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String concepto,
-                required double monto,
+                required int monto,
                 Value<String> frecuencia = const Value.absent(),
                 required DateTime fecha,
                 Value<String> notas = const Value.absent(),
@@ -7821,7 +7821,7 @@ typedef $$GastosFijosTableCreateCompanionBuilder =
     GastosFijosCompanion Function({
       Value<int> id,
       required String concepto,
-      required double monto,
+      required int monto,
       Value<String> frecuencia,
       Value<int?> diaCobro,
       Value<String> notas,
@@ -7833,7 +7833,7 @@ typedef $$GastosFijosTableUpdateCompanionBuilder =
     GastosFijosCompanion Function({
       Value<int> id,
       Value<String> concepto,
-      Value<double> monto,
+      Value<int> monto,
       Value<String> frecuencia,
       Value<int?> diaCobro,
       Value<String> notas,
@@ -7861,7 +7861,7 @@ class $$GastosFijosTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get monto => $composableBuilder(
+  ColumnFilters<int> get monto => $composableBuilder(
     column: $table.monto,
     builder: (column) => ColumnFilters(column),
   );
@@ -7916,7 +7916,7 @@ class $$GastosFijosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get monto => $composableBuilder(
+  ColumnOrderings<int> get monto => $composableBuilder(
     column: $table.monto,
     builder: (column) => ColumnOrderings(column),
   );
@@ -7967,7 +7967,7 @@ class $$GastosFijosTableAnnotationComposer
   GeneratedColumn<String> get concepto =>
       $composableBuilder(column: $table.concepto, builder: (column) => column);
 
-  GeneratedColumn<double> get monto =>
+  GeneratedColumn<int> get monto =>
       $composableBuilder(column: $table.monto, builder: (column) => column);
 
   GeneratedColumn<String> get frecuencia => $composableBuilder(
@@ -8026,7 +8026,7 @@ class $$GastosFijosTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> concepto = const Value.absent(),
-                Value<double> monto = const Value.absent(),
+                Value<int> monto = const Value.absent(),
                 Value<String> frecuencia = const Value.absent(),
                 Value<int?> diaCobro = const Value.absent(),
                 Value<String> notas = const Value.absent(),
@@ -8048,7 +8048,7 @@ class $$GastosFijosTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String concepto,
-                required double monto,
+                required int monto,
                 Value<String> frecuencia = const Value.absent(),
                 Value<int?> diaCobro = const Value.absent(),
                 Value<String> notas = const Value.absent(),
@@ -8817,7 +8817,7 @@ typedef $$GastosVariablesTableCreateCompanionBuilder =
     GastosVariablesCompanion Function({
       Value<int> id,
       required String descripcion,
-      required double monto,
+      required int monto,
       required String categoria,
       required DateTime fecha,
       Value<String?> notas,
@@ -8827,7 +8827,7 @@ typedef $$GastosVariablesTableUpdateCompanionBuilder =
     GastosVariablesCompanion Function({
       Value<int> id,
       Value<String> descripcion,
-      Value<double> monto,
+      Value<int> monto,
       Value<String> categoria,
       Value<DateTime> fecha,
       Value<String?> notas,
@@ -8853,7 +8853,7 @@ class $$GastosVariablesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get monto => $composableBuilder(
+  ColumnFilters<int> get monto => $composableBuilder(
     column: $table.monto,
     builder: (column) => ColumnFilters(column),
   );
@@ -8898,7 +8898,7 @@ class $$GastosVariablesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get monto => $composableBuilder(
+  ColumnOrderings<int> get monto => $composableBuilder(
     column: $table.monto,
     builder: (column) => ColumnOrderings(column),
   );
@@ -8941,7 +8941,7 @@ class $$GastosVariablesTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<double> get monto =>
+  GeneratedColumn<int> get monto =>
       $composableBuilder(column: $table.monto, builder: (column) => column);
 
   GeneratedColumn<String> get categoria =>
@@ -8996,7 +8996,7 @@ class $$GastosVariablesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> descripcion = const Value.absent(),
-                Value<double> monto = const Value.absent(),
+                Value<int> monto = const Value.absent(),
                 Value<String> categoria = const Value.absent(),
                 Value<DateTime> fecha = const Value.absent(),
                 Value<String?> notas = const Value.absent(),
@@ -9014,7 +9014,7 @@ class $$GastosVariablesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String descripcion,
-                required double monto,
+                required int monto,
                 required String categoria,
                 required DateTime fecha,
                 Value<String?> notas = const Value.absent(),
@@ -9057,7 +9057,7 @@ typedef $$PresupuestosCategoriasTableCreateCompanionBuilder =
     PresupuestosCategoriasCompanion Function({
       Value<int> id,
       required String categoria,
-      required double limiteMensual,
+      required int limiteMensual,
       Value<DateTime> creadoEn,
       Value<DateTime> actualizadoEn,
     });
@@ -9065,7 +9065,7 @@ typedef $$PresupuestosCategoriasTableUpdateCompanionBuilder =
     PresupuestosCategoriasCompanion Function({
       Value<int> id,
       Value<String> categoria,
-      Value<double> limiteMensual,
+      Value<int> limiteMensual,
       Value<DateTime> creadoEn,
       Value<DateTime> actualizadoEn,
     });
@@ -9089,7 +9089,7 @@ class $$PresupuestosCategoriasTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get limiteMensual => $composableBuilder(
+  ColumnFilters<int> get limiteMensual => $composableBuilder(
     column: $table.limiteMensual,
     builder: (column) => ColumnFilters(column),
   );
@@ -9124,7 +9124,7 @@ class $$PresupuestosCategoriasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get limiteMensual => $composableBuilder(
+  ColumnOrderings<int> get limiteMensual => $composableBuilder(
     column: $table.limiteMensual,
     builder: (column) => ColumnOrderings(column),
   );
@@ -9155,7 +9155,7 @@ class $$PresupuestosCategoriasTableAnnotationComposer
   GeneratedColumn<String> get categoria =>
       $composableBuilder(column: $table.categoria, builder: (column) => column);
 
-  GeneratedColumn<double> get limiteMensual => $composableBuilder(
+  GeneratedColumn<int> get limiteMensual => $composableBuilder(
     column: $table.limiteMensual,
     builder: (column) => column,
   );
@@ -9217,7 +9217,7 @@ class $$PresupuestosCategoriasTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> categoria = const Value.absent(),
-                Value<double> limiteMensual = const Value.absent(),
+                Value<int> limiteMensual = const Value.absent(),
                 Value<DateTime> creadoEn = const Value.absent(),
                 Value<DateTime> actualizadoEn = const Value.absent(),
               }) => PresupuestosCategoriasCompanion(
@@ -9231,7 +9231,7 @@ class $$PresupuestosCategoriasTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String categoria,
-                required double limiteMensual,
+                required int limiteMensual,
                 Value<DateTime> creadoEn = const Value.absent(),
                 Value<DateTime> actualizadoEn = const Value.absent(),
               }) => PresupuestosCategoriasCompanion.insert(

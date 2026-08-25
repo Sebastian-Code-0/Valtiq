@@ -1,5 +1,57 @@
 # Changelog
 
+## Montos enteros, fix de backups viejos y corrección de docs de notificaciones (2026-08-24)
+
+schemaVersion **9 → 10**: todas las columnas de dinero pasan de REAL
+(`double`) a INTEGER (`int`, peso colombiano entero sin centavos).
+
+### Montos de dinero: double → int
+- `lib/db/tables.dart`: `Deudas.montoOriginal`/`cuotaMensual`,
+  `Prestamos.montoPrestado`, `PagosRecibidos`/`PagosDeuda.montoAbonado`,
+  `Ingresos.monto`, `GastosFijos.monto`, `GastosVariables.monto`,
+  `PresupuestosCategorias.limiteMensual` pasan de `RealColumn` a
+  `IntColumn`. `tasaInteres` (porcentaje, no dinero) no se toca.
+- Motivo: la app ya mostraba y capturaba los montos como enteros
+  (`formatCOP`/`CopInputFormatter` nunca permitían decimales); usar
+  `double` para el almacenamiento y el cálculo de interés compuesto
+  permitía deriva de precisión de punto flotante acumulable entre
+  abonos sucesivos — el "parche" ya existente de tolerancia de $1 en
+  la validación de saldo pendiente era, en parte, un síntoma de esto.
+- Migración v9→v10 (`lib/db/database.dart`): 8 `TableMigration` con
+  `CAST(ROUND(columna) AS INTEGER)` para redondear (no truncar) los
+  valores existentes al peso más cercano.
+- `lib/services/interes_calculator.dart`: entradas/salidas de dinero
+  en `int`; el cálculo intermedio sigue en `double` (fórmula continua)
+  y se redondea una sola vez al final antes de devolver el resultado.
+- `lib/utils/format.dart`/`currency_input.dart`: `formatCOP`/
+  `formatCOPInput` amplían su firma a `num` (compatibles con `int` y
+  `double`, sin cambio visual); `parseCOP` devuelve `int?` en vez de
+  `double?`.
+- Nuevo test `test/db/migration_v10_test.dart`: reconstruye el schema
+  v9 completo sobre SQLite en memoria y verifica el redondeo correcto
+  de la migración.
+
+### Fix: restaurar un backup viejo ya no falla
+- `lib/services/backup_service.dart`: un backup exportado antes de
+  esta migración serializa el dinero como `double` (ej. `500000.0`);
+  al restaurarlo, el `fromJson` generado por drift para una columna
+  `int` rechazaba ese tipo (`TypeError`). `importarDatos()` ahora pasa
+  cada fila por `_enteroEnClaves()`, que redondea las claves
+  monetarias conocidas antes de deserializar.
+- Nuevo test `test/services/backup_service_test.dart`: cubre el
+  round-trip normal y la restauración de un backup con montos
+  fraccionarios simulando el formato viejo.
+
+### Corrección de documentación: notificaciones
+- `docs/ARCHITECTURE.md`, `docs/decisions/003-android-inexact-notifications.md`
+  y `docs/background-notifications-android.md` describían
+  `AndroidScheduleMode.inexact` como mecanismo activo de scheduling en
+  Android. El código real (`lib/services/notification_service.dart`)
+  nunca lo implementó: solo revisa y dispara recordatorios de forma
+  inmediata al abrir/reanudar la app, sin ningún scheduling futuro.
+  Los 3 documentos se corrigieron para describir el comportamiento
+  real.
+
 ## Rebrand visual, dashboard rediseñado y auto-pago (2026-08-18 a 2026-08-19) — v1.4.0+5
 
 schemaVersion **sin cambios** este ciclo (sigue en 9) — no hay tablas,
