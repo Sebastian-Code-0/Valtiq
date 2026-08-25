@@ -6,6 +6,7 @@ import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
 
@@ -76,6 +77,7 @@ class _IngresoFormState extends State<IngresoForm>
     final notas = _notasCtrl.text.trim();
 
     final dao = widget.db.ingresosDao;
+    final fecha = normalizarFechaCivil(_fecha);
     await ejecutarGuardado(() async {
       if (widget.ingreso == null) {
         await dao.insertIngreso(
@@ -83,7 +85,7 @@ class _IngresoFormState extends State<IngresoForm>
             concepto: concepto,
             monto: monto,
             frecuencia: Value(_frecuencia),
-            fecha: _fecha,
+            fecha: fecha,
             notas: Value(notas),
           ),
         );
@@ -93,7 +95,7 @@ class _IngresoFormState extends State<IngresoForm>
             concepto: concepto,
             monto: monto,
             frecuencia: _frecuencia,
-            fecha: _fecha,
+            fecha: fecha,
             notas: notas,
             actualizadoEn: DateTime.now(),
           ),

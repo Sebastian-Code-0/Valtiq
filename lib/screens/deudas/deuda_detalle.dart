@@ -7,6 +7,7 @@ import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/date_format.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/formulario_guardado_mixin.dart';
@@ -66,7 +67,10 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
       ),
     );
     if (ok != true) return;
-    await widget.db.deudasDao.marcarComoPagada(widget.deudaId, DateTime.now());
+    await widget.db.deudasDao.marcarComoPagada(
+      widget.deudaId,
+      normalizarFechaCivil(DateTime.now()),
+    );
     if (mounted) Navigator.pop(context);
   }
 
@@ -410,14 +414,14 @@ class _InfoCard extends StatelessWidget {
             ),
             InfoRow(
               label: 'Fecha préstamo:',
-              valor: formatFecha(deuda.fechaPrestamo),
+              valor: formatFecha(fechaCivilGuardada(deuda.fechaPrestamo)),
               colorSec: colorSec,
               theme: theme,
             ),
             InfoRow(
               label: 'Fecha límite:',
               valor: deuda.fechaLimite != null
-                  ? formatFecha(deuda.fechaLimite!)
+                  ? formatFecha(fechaCivilGuardada(deuda.fechaLimite!))
                   : 'Sin fecha',
               colorSec: colorSec,
               theme: theme,
@@ -522,7 +526,7 @@ class _AbonosSection extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  formatFecha(p.fechaPago),
+                                  formatFecha(fechaCivilGuardada(p.fechaPago)),
                                   style: theme.textTheme.bodyMedium,
                                 ),
                                 if (p.notas.isNotEmpty)
@@ -615,7 +619,7 @@ class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog>
         PagosDeudaCompanion.insert(
           deudaId: widget.deudaId,
           montoAbonado: monto,
-          fechaPago: _fecha,
+          fechaPago: normalizarFechaCivil(_fecha),
           notas: Value(_notasCtrl.text.trim()),
         ),
       );

@@ -9,8 +9,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 2, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 2, 1),
         );
         expect(interes, closeTo(20000.0, 0.01));
       });
@@ -20,8 +20,8 @@ void main() {
           monto: 500000,
           tasaInteres: 0,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 6, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 6, 1),
         );
         expect(interes, 0.0);
       });
@@ -31,14 +31,14 @@ void main() {
           monto: 500000,
           tasaInteres: 5,
           tipoInteres: 'ninguno',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 6, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 6, 1),
         );
         expect(interes, 0.0);
       });
 
       test('fecha fin igual a fecha inicio → 0 días, sin interés', () {
-        final fecha = DateTime(2026, 3, 15);
+        final fecha = DateTime.utc(2026, 3, 15);
         final interes = InteresCalculator.calcularInteresSimple(
           monto: 1000000,
           tasaInteres: 2,
@@ -54,8 +54,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 3, 1),
-          fechaFin: DateTime(2026, 1, 1),
+          fechaInicio: DateTime.utc(2026, 3, 1),
+          fechaFin: DateTime.utc(2026, 1, 1),
         );
         expect(interes, 0.0);
       });
@@ -66,8 +66,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2025, 11, 1),
-          fechaFin: DateTime(2026, 2, 1),
+          fechaInicio: DateTime.utc(2025, 11, 1),
+          fechaFin: DateTime.utc(2026, 2, 1),
         );
         expect(interes, closeTo(60000.0, 0.01));
       });
@@ -77,15 +77,15 @@ void main() {
           monto: 1000000,
           tasaInteres: 24,
           tipoInteres: 'anual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 2, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 2, 1),
         );
         final interesMensual = InteresCalculator.calcularInteresSimple(
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 2, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 2, 1),
         );
         expect(interesAnual, closeTo(interesMensual, 0.01));
       });
@@ -95,8 +95,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 3, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 3, 1),
         );
         expect(interes, closeTo(40000.0, 0.01));
       });
@@ -110,8 +110,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 2, 16),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 2, 16),
         );
         expect(interes, closeTo(30000.0, 0.01));
       });
@@ -124,8 +124,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 3, 30),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 3, 30),
         );
         // 2 + 29/30 meses × 2% × 1M = (2.9667) × 20000 = 59.333
         expect(interes, closeTo(59333.33, 1.0));
@@ -139,15 +139,15 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 2, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 2, 1),
         );
         final compuesto = InteresCalculator.calcularInteresCompuesto(
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 2, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 2, 1),
         );
         expect(compuesto, closeTo(simple, 0.01));
       });
@@ -157,15 +157,15 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 3, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 3, 1),
         );
         final compuesto = InteresCalculator.calcularInteresCompuesto(
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 3, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 3, 1),
         );
         // simple: 1M * 0.02 * 2 = 40.000
         // compuesto: 1M * (1.02^2 - 1) = 1M * 0.0404 = 40.400
@@ -179,8 +179,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 0,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 3, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 3, 1),
         );
         expect(interes, 0.0);
       });
@@ -190,8 +190,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 10,
           tipoInteres: 'ninguno',
-          fechaInicio: DateTime(2026, 1, 1),
-          fechaFin: DateTime(2026, 3, 1),
+          fechaInicio: DateTime.utc(2026, 1, 1),
+          fechaFin: DateTime.utc(2026, 3, 1),
         );
         expect(interes, 0.0);
       });
@@ -204,7 +204,7 @@ void main() {
           tasaInteres: 0,
           tipoInteres: 'ninguno',
           modalidadCalculo: 'simple',
-          fechaPrestamo: DateTime(2026, 1, 1),
+          fechaPrestamo: DateTime.utc(2026, 1, 1),
           totalAbonado: 0,
         );
         expect(total, 1000000.0);
@@ -216,7 +216,7 @@ void main() {
           tasaInteres: 0,
           tipoInteres: 'ninguno',
           modalidadCalculo: 'simple',
-          fechaPrestamo: DateTime(2026, 1, 1),
+          fechaPrestamo: DateTime.utc(2026, 1, 1),
           totalAbonado: 9999999,
         );
         expect(total, 0.0);
@@ -230,7 +230,7 @@ void main() {
           tasaInteres: 0,
           tipoInteres: 'ninguno',
           modalidadCalculo: 'simple',
-          fechaPrestamo: DateTime(2026, 1, 1),
+          fechaPrestamo: DateTime.utc(2026, 1, 1),
           totalAbonado: 200000,
         );
         expect(r['montoPrestado'], 1000000.0);
@@ -247,7 +247,7 @@ void main() {
           tasaInteres: 0,
           tipoInteres: 'ninguno',
           modalidadCalculo: 'simple',
-          fechaPrestamo: DateTime(2026, 1, 1),
+          fechaPrestamo: DateTime.utc(2026, 1, 1),
           totalAbonado: 9999999,
         );
         expect(r['saldoPendiente'], 0.0);
@@ -260,8 +260,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 31),
-          fechaFin: DateTime(2026, 2, 28),
+          fechaInicio: DateTime.utc(2026, 1, 31),
+          fechaFin: DateTime.utc(2026, 2, 28),
         );
         // _aniversario(2026, 2, 31) → Feb 28 (ultimoDia=28).
         // Feb 28 isAfter(Feb 28)? No → mesesCompletos=1.
@@ -274,8 +274,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 31),
-          fechaFin: DateTime(2026, 3, 3),
+          fechaInicio: DateTime.utc(2026, 1, 31),
+          fechaFin: DateTime.utc(2026, 3, 3),
         );
         // Aniversario feb = Feb 28. ultimoCumplimiento = Feb 28.
         // diasDif = Mar 3 − Feb 28 = 3 días → 1 + 3/30 = 1.1 meses.
@@ -288,8 +288,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 31),
-          fechaFin: DateTime(2026, 4, 30),
+          fechaInicio: DateTime.utc(2026, 1, 31),
+          fechaFin: DateTime.utc(2026, 4, 30),
         );
         // Aniversarios: feb→28feb, mar→31mar, _aniversario(2026,4,31)→Apr 30
         // (ultimoDia de abril=30). Apr 30 isAfter(Apr 30)? No → mesesCompletos=3.
@@ -302,8 +302,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 29),
-          fechaFin: DateTime(2026, 2, 28),
+          fechaInicio: DateTime.utc(2026, 1, 29),
+          fechaFin: DateTime.utc(2026, 2, 28),
         );
         // _aniversario(2026, 2, 29): ultimoDia=28 → Feb 28.
         // Feb 28 isAfter(Feb 28)? No → mesesCompletos=1. diasDif=0.
@@ -315,8 +315,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2026, 1, 30),
-          fechaFin: DateTime(2026, 2, 28),
+          fechaInicio: DateTime.utc(2026, 1, 30),
+          fechaFin: DateTime.utc(2026, 2, 28),
         );
         // _aniversario(2026, 2, 30): ultimoDia=28 → Feb 28. diasDif=0.
         expect(interes, closeTo(20000.0, 0.01));
@@ -327,8 +327,8 @@ void main() {
           monto: 1000000,
           tasaInteres: 2,
           tipoInteres: 'mensual',
-          fechaInicio: DateTime(2025, 10, 31),
-          fechaFin: DateTime(2026, 2, 28),
+          fechaInicio: DateTime.utc(2025, 10, 31),
+          fechaFin: DateTime.utc(2026, 2, 28),
         );
         // Aniversarios: nov→30nov, dic→31dic, ene→31ene, _aniversario(2025,14,31)
         // = feb2026 con ultimoDia=28 → Feb 28. Feb 28 isAfter(Feb 28)? No → m=4.

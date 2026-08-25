@@ -18,8 +18,8 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
   )..orderBy([(g) => OrderingTerm.desc(g.fecha)])).watch();
 
   Stream<List<GastosVariable>> watchGastosPorMes(int anio, int mes) {
-    final inicio = DateTime(anio, mes, 1);
-    final fin = DateTime(anio, mes + 1, 1);
+    final inicio = DateTime.utc(anio, mes, 1);
+    final fin = DateTime.utc(anio, mes + 1, 1);
     return (select(gastosVariables)
           ..where(
             (g) =>
@@ -31,8 +31,8 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
   }
 
   Stream<Map<String, int>> watchTotalPorCategoria(int anio, int mes) {
-    final inicio = DateTime(anio, mes, 1);
-    final fin = DateTime(anio, mes + 1, 1);
+    final inicio = DateTime.utc(anio, mes, 1);
+    final fin = DateTime.utc(anio, mes + 1, 1);
     final sumMonto = gastosVariables.monto.sum();
     return (selectOnly(gastosVariables)
           ..addColumns([gastosVariables.categoria, sumMonto])
@@ -54,8 +54,8 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
   }
 
   Stream<int> watchTotalMes(int anio, int mes) {
-    final inicio = DateTime(anio, mes, 1);
-    final fin = DateTime(anio, mes + 1, 1);
+    final inicio = DateTime.utc(anio, mes, 1);
+    final fin = DateTime.utc(anio, mes + 1, 1);
     final sumMonto = gastosVariables.monto.sum();
     return (selectOnly(gastosVariables)
           ..addColumns([sumMonto])

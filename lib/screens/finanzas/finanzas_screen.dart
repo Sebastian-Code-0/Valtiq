@@ -5,6 +5,7 @@ import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/categoria_gasto.dart';
 import '../../utils/date_format.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/notificaciones.dart';
@@ -649,7 +650,7 @@ class _GastoVariableCard extends StatelessWidget {
                   Icon(Icons.calendar_today, size: 14, color: colorSec),
                   const SizedBox(width: 4),
                   Text(
-                    formatFecha(gasto.fecha),
+                    formatFecha(fechaCivilGuardada(gasto.fecha)),
                     style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
                   ),
                 ],
@@ -797,7 +798,7 @@ class _IngresoCard extends StatelessWidget {
                   Icon(Icons.calendar_today, size: 14, color: colorSec),
                   const SizedBox(width: 4),
                   Text(
-                    formatFecha(ingreso.fecha),
+                    formatFecha(fechaCivilGuardada(ingreso.fecha)),
                     style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
                   ),
                 ],

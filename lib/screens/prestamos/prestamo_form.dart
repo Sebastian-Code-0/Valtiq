@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
 
@@ -106,6 +107,10 @@ class _PrestamoFormState extends State<PrestamoForm>
     final modalidad = tasa > 0 ? _modalidadCalculo : 'simple';
 
     final dao = widget.db.prestamosDao;
+    final fechaPrestamo = normalizarFechaCivil(_fechaPrestamo);
+    final fechaPactada = _fechaPactada == null
+        ? null
+        : normalizarFechaCivil(_fechaPactada!);
     await ejecutarGuardado(() async {
       if (widget.prestamo == null) {
         await dao.insertPrestamo(
@@ -116,8 +121,8 @@ class _PrestamoFormState extends State<PrestamoForm>
             tasaInteres: Value(tasa),
             tipoInteres: Value(tipo),
             modalidadCalculo: Value(modalidad),
-            fechaPrestamo: _fechaPrestamo,
-            fechaPactadaPago: Value(_fechaPactada),
+            fechaPrestamo: fechaPrestamo,
+            fechaPactadaPago: Value(fechaPactada),
             notas: Value(_notasCtrl.text.trim()),
           ),
         );
@@ -130,8 +135,8 @@ class _PrestamoFormState extends State<PrestamoForm>
             tasaInteres: tasa,
             tipoInteres: tipo,
             modalidadCalculo: modalidad,
-            fechaPrestamo: _fechaPrestamo,
-            fechaPactadaPago: Value(_fechaPactada),
+            fechaPrestamo: fechaPrestamo,
+            fechaPactadaPago: Value(fechaPactada),
             notas: _notasCtrl.text.trim(),
             actualizadoEn: DateTime.now(),
           ),

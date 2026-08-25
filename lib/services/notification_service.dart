@@ -6,6 +6,7 @@ import 'package:mailer/mailer.dart';
 
 import '../db/database.dart';
 import '../utils/date_format.dart';
+import '../utils/fecha_civil.dart';
 import '../utils/format.dart';
 import 'smtp_service.dart';
 
@@ -110,7 +111,15 @@ class NotificationService {
     await init();
     final lista = await db.recordatoriosDao.getRecordatoriosActivos();
     final ahora = DateTime.now();
+    // "hoy" (local) se usa para deduplicar contra ultimaNotificacion/
+    // ultimoEnvioCorreo, que son instantes reales — se quedan en su
+    // convención local, sin tocar.
     final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    // "hoyCivil" (UTC-medianoche) se usa para comparar contra fechaAlerta,
+    // que se guarda como medianoche UTC (ver lib/utils/fecha_civil.dart) —
+    // para que la resta de días dé múltiplos exactos de 24h, ambos lados
+    // deben estar en la misma convención.
+    final hoyCivil = normalizarFechaCivil(ahora);
     int notificados = 0;
 
     // Carga en lote las referencias (deuda/préstamo/gasto) en vez de una
@@ -147,29 +156,20 @@ class NotificationService {
     // notificar hoy.
     final accionables = <(Recordatorio, int)>[];
     for (final r in lista) {
-      final diaAlerta = DateTime(
-        r.fechaAlerta.year,
-        r.fechaAlerta.month,
-        r.fechaAlerta.day,
-      );
-      final diasFaltantes = diaAlerta.difference(hoy).inDays;
+      final diaAlerta = fechaCivilGuardada(r.fechaAlerta);
+      final diasFaltantes = diaAlerta.difference(hoyCivil).inDays;
 
       // Si pasó la ventana de gracia y tiene repetir, reprogramar al mes siguiente.
       if (diasFaltantes < -7 && r.repetir) {
         // Avanza mes a mes hasta que la fecha quede en ventana o futuro.
-        DateTime nuevaFecha = r.fechaAlerta;
+        DateTime nuevaFecha = diaAlerta;
         while (true) {
-          nuevaFecha = DateTime(
+          nuevaFecha = DateTime.utc(
             nuevaFecha.year,
             nuevaFecha.month + 1,
             nuevaFecha.day,
           );
-          final diaNuevo = DateTime(
-            nuevaFecha.year,
-            nuevaFecha.month,
-            nuevaFecha.day,
-          );
-          final diff = diaNuevo.difference(hoy).inDays;
+          final diff = nuevaFecha.difference(hoyCivil).inDays;
           if (diff >= -7) break;
         }
         await db.recordatoriosDao.reprogramarMensual(r.id, nuevaFecha);
@@ -361,7 +361,8 @@ class NotificationService {
           ..writeln('💰 Monto original: $monto');
         if (deuda.fechaLimite != null) {
           buf.writeln(
-            '📅 Fecha límite: ${formatFechaLegible(deuda.fechaLimite!)}',
+            '📅 Fecha límite: '
+            '${formatFechaLegible(fechaCivilGuardada(deuda.fechaLimite!))}',
           );
         }
         buf.writeln('⏰ Estado: $estado');
@@ -386,7 +387,8 @@ class NotificationService {
           ..writeln('💰 Monto prestado: $monto');
         if (prestamo.fechaPactadaPago != null) {
           buf.writeln(
-            '📅 Fecha pactada: ${formatFechaLegible(prestamo.fechaPactadaPago!)}',
+            '📅 Fecha pactada: '
+            '${formatFechaLegible(fechaCivilGuardada(prestamo.fechaPactadaPago!))}',
           );
         }
         buf.writeln('⏰ Estado: $estado');

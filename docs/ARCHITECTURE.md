@@ -1,6 +1,6 @@
 # Arquitectura de Valtiq
 
-## Base de datos (SQLite vía drift, schemaVersion 10)
+## Base de datos (SQLite vía drift, schemaVersion 11)
 
 ### Tablas
 
@@ -168,6 +168,48 @@
             de punto flotante en interés compuesto y sumas de abonos
             — la app ya mostraba y capturaba los montos como enteros,
             así que el tipo de almacenamiento ahora coincide con eso.
+- v10 → v11: las fechas de NEGOCIO (no timestamps de auditoría) se
+            normalizan a medianoche UTC de su fecha civil:
+            Deudas.fechaPrestamo/fechaLimite/fechaPagoReal,
+            Prestamos.fechaPrestamo/fechaPactadaPago,
+            PagosDeuda/PagosRecibidos.fechaPago, Ingresos.fecha,
+            GastosVariables.fecha, Recordatorios.fechaAlerta. El valor
+            existente se interpreta en el huso horario ACTUAL del
+            dispositivo (`'localtime'` de SQLite) y se reconvierte a
+            medianoche UTC de esa misma fecha civil
+            (`strftime('%s', date(col, 'unixepoch', 'localtime'))`).
+            `creadoEn`/`actualizadoEn` (todas las tablas) y
+            `Recordatorios.ultimaNotificacion`/`ultimoEnvioCorreo` NO
+            se tocan — son instantes de auditoría reales, no fechas
+            civiles. Motivo: sin esto, si el usuario viaja y cambia la
+            zona horaria del dispositivo, una transacción guardada
+            cerca de medianoche puede "saltar" de día al mostrarse, y
+            el badge "Vencido" puede voltearse sin que el usuario haya
+            hecho nada. Ver `lib/utils/fecha_civil.dart`.
+
+### Fechas de negocio vs. timestamps de auditoría
+
+Desde schemaVersion 11, los campos de fecha se dividen en dos
+categorías con tratamiento distinto:
+
+- **Fechas de negocio** (fecha de una transacción — `fechaPrestamo`,
+  `fechaLimite`, `fechaPagoReal`, `fechaPactadaPago`, `fechaPago`,
+  `fecha` de ingresos/gastos, `fechaAlerta`): se guardan siempre como
+  medianoche UTC de su fecha civil (`normalizarFechaCivil()` en
+  `lib/utils/fecha_civil.dart`), y se leen siempre con
+  `fechaCivilGuardada()` (o `.toUtc()`) antes de extraer
+  año/mes/día — nunca con los getters locales directos, porque drift
+  reconstruye estas fechas como `DateTime` local (`isUtc == false`)
+  aunque representen exactamente medianoche UTC, y leer `.year`/
+  `.month`/`.day` sin pasar por `.toUtc()` puede dar el día
+  equivocado según el huso horario actual del dispositivo. Comparar
+  estos valores con `==`/`!=` es además engañoso incluso después de
+  `.toUtc()`, porque `DateTime.==` en Dart también compara el flag
+  `isUtc` (no solo el instante) — hay que usar `isAtSameMomentAs()`.
+- **Timestamps de auditoría** (`creadoEn`, `actualizadoEn`,
+  `Recordatorios.ultimaNotificacion`/`ultimoEnvioCorreo`): siguen
+  siendo instantes reales en hora local, sin normalizar — se leen y
+  comparan como siempre (getters locales directos).
 
 ### Ubicación de archivos
 
@@ -302,8 +344,10 @@ caminos de entrada: el botón manual "Marcar como pagada/o" (menú de la
 pantalla de detalle) y, desde este ciclo, automático — `_registrarAbono`
 (`deuda_detalle.dart`) / `_registrarPago` (`prestamo_detalle.dart`)
 recalculan el saldo pendiente tras guardar un abono/pago y llaman al
-mismo método del DAO si el saldo queda en ≤ 1 (tolerancia de redondeo),
-siempre por `id`, nunca por nombre. Ambos caminos terminan en el mismo
+mismo método del DAO si el saldo queda en ≤ 0 (aritmética entera
+exacta desde la migración a montos enteros, ver schemaVersion 10 —
+ya no hace falta margen de redondeo), siempre por `id`, nunca por
+nombre. Ambos caminos terminan en el mismo
 método del DAO, así que la sincronización del recordatorio vinculado
 descrita arriba aplica igual sin importar cuál disparó el cambio.
 
@@ -316,6 +360,11 @@ transaccional y respeta integridad referencial (FK enforcement).
 
 ## Utilidades compartidas
 
+- `utils/fecha_civil.dart` — `normalizarFechaCivil(DateTime)`: envuelve
+  año/mes/día en `DateTime.utc(...)` antes de guardar una fecha de
+  negocio. `fechaCivilGuardada(DateTime)`: hace `.toUtc()` antes de
+  extraer año/mes/día al leer una ya guardada. Ver "Fechas de negocio
+  vs. timestamps de auditoría" arriba para el porqué.
 - `utils/format.dart` — `formatCOP(num)`: formatea un monto en pesos
   colombianos (`$1.234.567`) vía conversión basada en `String`
   (`toStringAsFixed(0)` + agrupación de miles). Acepta `num` (no solo

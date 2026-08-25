@@ -45,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor openConnection() => conn.openValtiqConnection();
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -197,6 +197,115 @@ class AppDatabase extends _$AppDatabase {
             columnTransformer: {
               presupuestosCategorias.limiteMensual: const CustomExpression(
                 'CAST(ROUND(limite_mensual) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+      }
+      if (from < 11) {
+        // Las fechas de NEGOCIO (fecha de una transacción, no un timestamp
+        // de auditoría) pasan de instante crudo a fecha civil normalizada:
+        // medianoche UTC del día que representan. Sin esto, si el usuario
+        // viaja y cambia la zona horaria del dispositivo, una transacción
+        // guardada cerca de medianoche puede "saltar" de día al mostrarse.
+        //
+        // El valor existente se interpreta en el huso horario ACTUAL del
+        // dispositivo que corre la migración (no hay forma de saber en qué
+        // huso se creó cada dato viejo, así que se usa el de ahora mismo,
+        // igual que lo vería el usuario si abriera la app en este momento):
+        // 'localtime' convierte el epoch guardado a la fecha civil local,
+        // y strftime('%s', <fecha>) la reconvierte a epoch asumiendo UTC
+        // (comportamiento por defecto de SQLite con strings de fecha sin
+        // zona), dando la medianoche UTC de esa misma fecha civil.
+        //
+        // creadoEn/actualizadoEn (y Recordatorios.ultimaNotificacion/
+        // ultimoEnvioCorreo) NO se tocan: son instantes de auditoría reales,
+        // no fechas civiles — ver lib/utils/fecha_civil.dart.
+        await m.alterTable(
+          TableMigration(
+            deudas,
+            columnTransformer: {
+              deudas.fechaPrestamo: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_prestamo, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+              deudas.fechaLimite: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_limite, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+              deudas.fechaPagoReal: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_pago_real, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            prestamos,
+            columnTransformer: {
+              prestamos.fechaPrestamo: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_prestamo, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+              prestamos.fechaPactadaPago: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_pactada_pago, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            pagosDeuda,
+            columnTransformer: {
+              pagosDeuda.fechaPago: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_pago, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            pagosRecibidos,
+            columnTransformer: {
+              pagosRecibidos.fechaPago: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_pago, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            ingresos,
+            columnTransformer: {
+              ingresos.fecha: const CustomExpression(
+                "CAST(strftime('%s', date(fecha, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            gastosVariables,
+            columnTransformer: {
+              gastosVariables.fecha: const CustomExpression(
+                "CAST(strftime('%s', date(fecha, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            recordatorios,
+            columnTransformer: {
+              recordatorios.fechaAlerta: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_alerta, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
               ),
             },
           ),

@@ -5,6 +5,7 @@ import '../../db/database.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/notificaciones.dart';
@@ -119,7 +120,10 @@ class _DeudasScreenState extends State<DeudasScreen> {
       ),
     );
     if (ok == true) {
-      await widget.db.deudasDao.marcarComoPagada(deuda.id, DateTime.now());
+      await widget.db.deudasDao.marcarComoPagada(
+        deuda.id,
+        normalizarFechaCivil(DateTime.now()),
+      );
     }
   }
 
@@ -316,7 +320,9 @@ class _DeudaCard extends StatelessWidget {
         : 0.0;
     final vencida =
         deuda.fechaLimite != null &&
-        deuda.fechaLimite!.isBefore(DateTime.now());
+        fechaCivilGuardada(
+          deuda.fechaLimite!,
+        ).isBefore(normalizarFechaCivil(DateTime.now()));
 
     final card = Card(
       child: InkWell(
@@ -434,7 +440,7 @@ class _DeudaCard extends StatelessWidget {
                     Icon(Icons.calendar_today, size: 14, color: colorSec),
                     const SizedBox(width: 4),
                     Text(
-                      formatFecha(deuda.fechaPrestamo),
+                      formatFecha(fechaCivilGuardada(deuda.fechaPrestamo)),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorSec,
                       ),
@@ -471,7 +477,7 @@ class _DeudaCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: AppSpacing.sm),
                   child: Text(
-                    'Vence: ${formatFecha(deuda.fechaLimite!)}',
+                    'Vence: ${formatFecha(fechaCivilGuardada(deuda.fechaLimite!))}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: vencida ? AppColors.alerta : colorSec,
                       fontWeight: vencida ? FontWeight.bold : null,

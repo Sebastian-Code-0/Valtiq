@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/formulario_guardado_mixin.dart';
@@ -120,12 +121,13 @@ class _RecordatorioFormState extends State<RecordatorioForm>
     final refId = _tipoReferencia == 'ninguna' ? null : _referenciaId;
 
     final dao = widget.db.recordatoriosDao;
+    final fechaAlerta = normalizarFechaCivil(_fechaAlerta);
     await ejecutarGuardado(() async {
       if (widget.recordatorio == null) {
         await dao.insertRecordatorio(
           RecordatoriosCompanion.insert(
             titulo: titulo,
-            fechaAlerta: _fechaAlerta,
+            fechaAlerta: fechaAlerta,
             diasAnticipacion: Value(dias),
             tipoNotificacion: Value(_tipoNotificacion),
             repetir: Value(_repetir),
@@ -140,7 +142,7 @@ class _RecordatorioFormState extends State<RecordatorioForm>
         await dao.updateRecordatorio(
           widget.recordatorio!.copyWith(
             titulo: titulo,
-            fechaAlerta: _fechaAlerta,
+            fechaAlerta: fechaAlerta,
             diasAnticipacion: dias,
             tipoNotificacion: _tipoNotificacion,
             repetir: _repetir,
@@ -151,7 +153,12 @@ class _RecordatorioFormState extends State<RecordatorioForm>
             frecuenciaAviso: _frecuenciaAviso,
           ),
         );
-        if (widget.recordatorio!.fechaAlerta != _fechaAlerta) {
+        // DateTime.== también compara el flag isUtc (no solo el instante):
+        // fechaAlerta guardado viene de drift como local pero representa
+        // medianoche UTC, y el `fechaAlerta` recién normalizado aquí es
+        // UTC-flagged — hay que comparar el instante con
+        // isAtSameMomentAs, no con !=, o esto dispararía siempre.
+        if (!widget.recordatorio!.fechaAlerta.isAtSameMomentAs(fechaAlerta)) {
           await dao.resetearDeduplicacion(widget.recordatorio!.id);
         }
       }

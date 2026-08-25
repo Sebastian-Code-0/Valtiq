@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../utils/categoria_gasto.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
 
@@ -92,6 +93,7 @@ class _GastoVariableFormState extends State<GastoVariableForm>
     }
 
     final dao = widget.db.gastosVariablesDao;
+    final fecha = normalizarFechaCivil(_fecha);
     await ejecutarGuardado(() async {
       if (widget.gasto == null) {
         await dao.insertGastoVariable(
@@ -99,7 +101,7 @@ class _GastoVariableFormState extends State<GastoVariableForm>
             descripcion: descripcion,
             monto: monto,
             categoria: _categoria!,
-            fecha: _fecha,
+            fecha: fecha,
             notas: Value(notas.isEmpty ? null : notas),
           ),
         );
@@ -109,7 +111,7 @@ class _GastoVariableFormState extends State<GastoVariableForm>
             descripcion: descripcion,
             monto: monto,
             categoria: _categoria!,
-            fecha: _fecha,
+            fecha: fecha,
             notas: Value(notas.isEmpty ? null : notas),
           ),
         );

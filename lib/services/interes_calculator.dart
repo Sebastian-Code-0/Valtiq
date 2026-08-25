@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import '../utils/fecha_civil.dart';
+
 abstract class InteresCalculator {
   static const double _diasPorMes = 30;
 
@@ -13,9 +15,20 @@ abstract class InteresCalculator {
     return DateTime(anio, mes, diaReal);
   }
 
+  // fechaPrestamo/fechaLimite/etc. son fechas de negocio guardadas como
+  // medianoche UTC (ver lib/utils/fecha_civil.dart); drift las reconstruye
+  // con isUtc == false aunque representen ese instante UTC, así que leer
+  // .year/.month/.day directo puede dar el día equivocado según el huso del
+  // dispositivo. .toUtc() antes de extraer los componentes es lo que
+  // garantiza el día civil correcto sin importar el huso horario actual.
+  static DateTime _diaCivil(DateTime d) {
+    final u = d.toUtc();
+    return DateTime(u.year, u.month, u.day);
+  }
+
   static double _mesesTranscurridos(DateTime inicio, DateTime fin) {
-    final inicioNorm = DateTime(inicio.year, inicio.month, inicio.day);
-    final finNorm = DateTime(fin.year, fin.month, fin.day);
+    final inicioNorm = _diaCivil(inicio);
+    final finNorm = _diaCivil(fin);
     if (!finNorm.isAfter(inicioNorm)) return 0;
 
     int mesesCompletos = 0;
@@ -58,7 +71,7 @@ abstract class InteresCalculator {
     DateTime? fechaFin,
   }) {
     if (tipoInteres == 'ninguno' || tasaInteres == 0) return 0;
-    final fin = fechaFin ?? DateTime.now();
+    final fin = fechaFin ?? normalizarFechaCivil(DateTime.now());
     final meses = _mesesTranscurridos(fechaInicio, fin);
     if (meses <= 0) return 0;
     final tasaMensual = tipoInteres == 'anual' ? tasaInteres / 12 : tasaInteres;
@@ -73,7 +86,7 @@ abstract class InteresCalculator {
     DateTime? fechaFin,
   }) {
     if (tipoInteres == 'ninguno' || tasaInteres == 0) return 0;
-    final fin = fechaFin ?? DateTime.now();
+    final fin = fechaFin ?? normalizarFechaCivil(DateTime.now());
     final meses = _mesesTranscurridos(fechaInicio, fin);
     if (meses <= 0) return 0;
     final tasaMensual = tipoInteres == 'anual'

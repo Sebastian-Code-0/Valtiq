@@ -1,5 +1,58 @@
 # Changelog
 
+## Fechas de negocio normalizadas a medianoche UTC (huso horario) (2026-08-24)
+
+schemaVersion **10 → 11**: las fechas de transacción (no los
+timestamps de auditoría) pasan de instante local crudo a fecha civil
+normalizada, eliminando el riesgo de que un viaje o cambio de zona
+horaria del dispositivo corra una transacción a otro día o voltee un
+badge "Vencido".
+
+### Fix hacia adelante: fechas de negocio como valor civil, no instante
+- Nuevo `lib/utils/fecha_civil.dart`: `normalizarFechaCivil(DateTime)`
+  (envuelve año/mes/día en `DateTime.utc(...)` antes de guardar) y
+  `fechaCivilGuardada(DateTime)` (`.toUtc()` antes de extraer
+  año/mes/día al leer). Aplicado en los 5 formularios y los 2 diálogos
+  de abono/pago que capturan una fecha de negocio.
+- Comparaciones "vencido" (`deudas_screen.dart`, `prestamos_screen.dart`)
+  y la ventana de recordatorios en
+  `notification_service.dart::revisarRecordatorios()` ahora extraen el
+  día civil con `.toUtc()` antes de comparar, en vez de usar
+  `DateTime.now()` local crudo contra el valor guardado.
+- `lib/services/interes_calculator.dart`: `fechaInicio`/`fechaFin` se
+  extraen ahora vía `.toUtc()` (`_diaCivil()`); el default de
+  `fechaFin` pasa de `DateTime.now()` a `normalizarFechaCivil(DateTime.now())`.
+  Sin este ajuste, leer `.year`/`.month`/`.day` directo de una fecha ya
+  normalizada corría el riesgo de dar el día equivocado según el huso
+  del dispositivo — se verificó corriendo el test suite completo con
+  `TZ=America/Bogota` (UTC-5) y `TZ=Asia/Tokyo` (UTC+9) para confirmar
+  que el resultado no depende de la zona horaria de quien lo ejecuta.
+- `lib/db/daos/gastos_variables_dao.dart`: los 3 métodos que filtran
+  por mes construían el rango con `DateTime(anio, mes, 1)` (local);
+  como la columna `fecha` ahora es UTC-medianoche, el rango pasa a
+  `DateTime.utc(anio, mes, 1)` para no dejar fuera transacciones de
+  inicio de mes.
+- Corregido de paso: `recordatorio_form.dart` comparaba la fecha
+  guardada contra la nueva con `!=` para decidir si resetear la
+  deduplicación — `DateTime.==` en Dart también compara el flag
+  `isUtc` (no solo el instante), así que esa comparación habría
+  disparado siempre. Se cambió a `isAtSameMomentAs()`.
+
+### Migración v10 → v11
+- `lib/db/database.dart`: 7 `TableMigration` (Deudas, Prestamos,
+  PagosDeuda, PagosRecibidos, Ingresos, GastosVariables, Recordatorios)
+  con `CAST(strftime('%s', date(col, 'unixepoch', 'localtime')) AS
+  INTEGER)` — interpreta el epoch guardado en el huso ACTUAL del
+  dispositivo (no se puede saber en qué huso se creó cada dato viejo)
+  y lo reconvierte a medianoche UTC de esa misma fecha civil.
+  `creadoEn`/`actualizadoEn`/`ultimaNotificacion`/`ultimoEnvioCorreo`
+  no se tocan.
+- Nuevo test `test/db/migration_v11_test.dart`: reconstruye el schema
+  v10 completo con fechas de hora arbitraria (23:47, etc.) y verifica
+  que cada una migra al día civil correcto — usando
+  `isAtSameMomentAs()`, no `==`, por el mismo motivo de arriba.
+  Verificado también con `TZ=Asia/Tokyo`.
+
 ## Montos enteros, fix de backups viejos y corrección de docs de notificaciones (2026-08-24) — v1.5.0+6
 
 schemaVersion **9 → 10**: todas las columnas de dinero pasan de REAL

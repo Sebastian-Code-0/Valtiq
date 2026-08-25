@@ -5,6 +5,7 @@ import '../../db/database.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/notificaciones.dart';
@@ -312,7 +313,9 @@ class _PrestamoCard extends StatelessWidget {
         : 0.0;
     final vencido =
         prestamo.fechaPactadaPago != null &&
-        prestamo.fechaPactadaPago!.isBefore(DateTime.now()) &&
+        fechaCivilGuardada(
+          prestamo.fechaPactadaPago!,
+        ).isBefore(normalizarFechaCivil(DateTime.now())) &&
         prestamo.estado == 'activo';
 
     final card = Card(
@@ -430,7 +433,7 @@ class _PrestamoCard extends StatelessWidget {
                       Icon(Icons.calendar_today, size: 14, color: colorSec),
                       const SizedBox(width: 4),
                       Text(
-                        formatFecha(prestamo.fechaPrestamo),
+                        formatFecha(fechaCivilGuardada(prestamo.fechaPrestamo)),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorSec,
                         ),

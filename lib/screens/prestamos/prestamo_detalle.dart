@@ -7,6 +7,7 @@ import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/date_format.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/formulario_guardado_mixin.dart';
@@ -443,14 +444,14 @@ class _InfoCard extends StatelessWidget {
             ),
             InfoRow(
               label: 'Fecha préstamo:',
-              valor: formatFecha(prestamo.fechaPrestamo),
+              valor: formatFecha(fechaCivilGuardada(prestamo.fechaPrestamo)),
               colorSec: colorSec,
               theme: theme,
             ),
             InfoRow(
               label: 'Fecha pactada:',
               valor: prestamo.fechaPactadaPago != null
-                  ? formatFecha(prestamo.fechaPactadaPago!)
+                  ? formatFecha(fechaCivilGuardada(prestamo.fechaPactadaPago!))
                   : 'Sin fecha',
               colorSec: colorSec,
               theme: theme,
@@ -555,7 +556,7 @@ class _PagosSection extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  formatFecha(p.fechaPago),
+                                  formatFecha(fechaCivilGuardada(p.fechaPago)),
                                   style: theme.textTheme.bodyMedium,
                                 ),
                                 if (p.notas.isNotEmpty)
@@ -648,7 +649,7 @@ class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog>
         PagosRecibidosCompanion.insert(
           prestamoId: widget.prestamoId,
           montoAbonado: monto,
-          fechaPago: _fecha,
+          fechaPago: normalizarFechaCivil(_fecha),
           notas: Value(_notasCtrl.text.trim()),
         ),
       );

@@ -5,6 +5,7 @@ import '../../db/database.dart';
 import '../../services/notification_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/notificaciones.dart';
 import 'recordatorio_form.dart';
 
@@ -121,7 +122,7 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
     await NotificationService.showNotification(
       id: r.id,
       title: r.titulo,
-      body: '🔔 Prueba — ${fechaRelativa(r.fechaAlerta)}',
+      body: '🔔 Prueba — ${fechaRelativa(fechaCivilGuardada(r.fechaAlerta))}',
     );
     if (mounted) {
       mostrarInfo(context, 'Notificación enviada');
@@ -287,10 +288,14 @@ class _RecordatorioCard extends StatelessWidget {
     final theme = Theme.of(context);
     final ahora = DateTime.now();
     final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    // fechaAlerta se guarda como medianoche UTC (fecha civil); se extrae con
+    // .toUtc() y se reconstruye en convención local para comparar contra
+    // "hoy" (también local) con diferencias exactas de 24h.
+    final diaAlertaUtc = fechaCivilGuardada(recordatorio.fechaAlerta);
     final diaAlerta = DateTime(
-      recordatorio.fechaAlerta.year,
-      recordatorio.fechaAlerta.month,
-      recordatorio.fechaAlerta.day,
+      diaAlertaUtc.year,
+      diaAlertaUtc.month,
+      diaAlertaUtc.day,
     );
     final diasFaltantes = diaAlerta.difference(hoy).inDays;
     final vencido = diasFaltantes < 0;
@@ -418,7 +423,7 @@ class _RecordatorioCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      '${formatFecha(recordatorio.fechaAlerta)} — ${fechaRelativa(recordatorio.fechaAlerta)}',
+                      '${formatFecha(diaAlertaUtc)} — ${fechaRelativa(diaAlertaUtc)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: vencido ? AppColors.alerta : colorSec,
                         fontWeight: vencido ? FontWeight.bold : null,

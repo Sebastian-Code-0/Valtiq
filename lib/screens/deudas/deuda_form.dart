@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../../utils/fecha_civil.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
 
@@ -112,6 +113,10 @@ class _DeudaFormState extends State<DeudaForm>
     final acreedor = _acreedorCtrl.text.trim();
 
     final dao = widget.db.deudasDao;
+    final fechaPrestamo = normalizarFechaCivil(_fechaPrestamo);
+    final fechaLimite = _fechaLimite == null
+        ? null
+        : normalizarFechaCivil(_fechaLimite!);
     await ejecutarGuardado(() async {
       if (widget.deuda == null) {
         await dao.insertDeuda(
@@ -121,8 +126,8 @@ class _DeudaFormState extends State<DeudaForm>
             tasaInteres: Value(tasa),
             tipoInteres: Value(tipo),
             modalidadCalculo: Value(modalidad),
-            fechaPrestamo: _fechaPrestamo,
-            fechaLimite: Value(_fechaLimite),
+            fechaPrestamo: fechaPrestamo,
+            fechaLimite: Value(fechaLimite),
             cuotaMensual: Value(cuota),
             notas: Value(notas),
           ),
@@ -135,8 +140,8 @@ class _DeudaFormState extends State<DeudaForm>
             tasaInteres: tasa,
             tipoInteres: tipo,
             modalidadCalculo: modalidad,
-            fechaPrestamo: _fechaPrestamo,
-            fechaLimite: Value(_fechaLimite),
+            fechaPrestamo: fechaPrestamo,
+            fechaLimite: Value(fechaLimite),
             cuotaMensual: Value(cuota),
             notas: notas,
             actualizadoEn: DateTime.now(),
