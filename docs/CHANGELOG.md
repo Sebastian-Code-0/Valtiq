@@ -1,12 +1,13 @@
 # Changelog
 
-## Fechas de negocio normalizadas a medianoche UTC (huso horario) (2026-08-24)
+## Fechas de negocio normalizadas a medianoche UTC (huso horario) (2026-08-24) — v1.6.0+7
 
 schemaVersion **10 → 11**: las fechas de transacción (no los
 timestamps de auditoría) pasan de instante local crudo a fecha civil
 normalizada, eliminando el riesgo de que un viaje o cambio de zona
 horaria del dispositivo corra una transacción a otro día o voltee un
-badge "Vencido".
+badge "Vencido". Bump de versión (1.5.0+6 → 1.6.0+7) por el mismo
+motivo que el ciclo anterior: incluye un cambio de schema real.
 
 ### Fix hacia adelante: fechas de negocio como valor civil, no instante
 - Nuevo `lib/utils/fecha_civil.dart`: `normalizarFechaCivil(DateTime)`
