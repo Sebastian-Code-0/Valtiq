@@ -283,7 +283,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         final gastos = snapshot.data!;
-        final total = gastos.fold<double>(0, (s, g) => s + g.monto);
+        final total = gastos.fold<int>(0, (s, g) => s + g.monto);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -389,7 +389,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
 
   Widget _totalRow({
     required ThemeData theme,
-    required double total,
+    required num total,
     required Color color,
   }) {
     return Row(
@@ -434,7 +434,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         final ingresos = snapshot.data!;
         final total = ingresos
             .where((i) => i.activo)
-            .fold<double>(0, (sum, i) => sum + i.monto);
+            .fold<int>(0, (sum, i) => sum + i.monto);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -494,7 +494,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         final gastos = snapshot.data!;
         final total = gastos
             .where((g) => g.activo)
-            .fold<double>(0, (sum, g) => sum + g.monto);
+            .fold<int>(0, (sum, g) => sum + g.monto);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -115,7 +115,7 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
       );
       final saldoPendienteActual =
           resumenActual['totalConInteres']! - resumenActual['totalAbonado']!;
-      if (saldoPendienteActual <= 1) {
+      if (saldoPendienteActual <= 0) {
         await widget.db.prestamosDao.marcarComoPagado(widget.prestamoId);
         if (mounted) {
           mostrarExito(

@@ -1,9 +1,11 @@
 # Changelog
 
-## Montos enteros, fix de backups viejos y corrección de docs de notificaciones (2026-08-24)
+## Montos enteros, fix de backups viejos y corrección de docs de notificaciones (2026-08-24) — v1.5.0+6
 
 schemaVersion **9 → 10**: todas las columnas de dinero pasan de REAL
-(`double`) a INTEGER (`int`, peso colombiano entero sin centavos).
+(`double`) a INTEGER (`int`, peso colombiano entero sin centavos). Bump
+de versión (1.4.0+5 → 1.5.0+6) porque este ciclo incluye un cambio de
+schema real (no solo docs/fixes de UI como el ciclo anterior).
 
 ### Montos de dinero: double → int
 - `lib/db/tables.dart`: `Deudas.montoOriginal`/`cuotaMensual`,
@@ -51,6 +53,25 @@ schemaVersion **9 → 10**: todas las columnas de dinero pasan de REAL
   inmediata al abrir/reanudar la app, sin ningún scheduling futuro.
   Los 3 documentos se corrigieron para describir el comportamiento
   real.
+
+### Limpieza post-migración: consistencia y tolerancias que ya sobraban
+- `lib/screens/finanzas/finanzas_screen.dart`: los 3 totales (gastos
+  variables, ingresos, gastos fijos) usaban `fold<double>` sobre listas
+  donde `.monto` ya es `int` — funcionaba por promoción automática de
+  Dart, pero quedaba inconsistente con el resto del proyecto. Ahora
+  `fold<int>`; `_totalRow` amplía su parámetro a `num` (mismo patrón de
+  `format.dart`).
+- `lib/screens/deudas/deuda_detalle.dart` y
+  `lib/screens/prestamos/prestamo_detalle.dart`: la condición
+  `saldoPendienteActual <= 1` (detecta el pago del 100% para
+  auto-marcar como pagada) pasa a `<= 0` — el margen de 1 peso existía
+  para absorber deriva de punto flotante, que ya no es posible con
+  aritmética entera exacta. La tolerancia de $1 en la *validación* del
+  monto máximo del abono (regla de negocio distinta, no relacionada con
+  precisión) no se tocó.
+- Nuevo test `test/screens/deuda_detalle_flow_test.dart`: cubre el
+  flujo real de registrar un abono exacto (marca pagada en 0) y uno
+  $1 por debajo (no la marca).
 
 ## Rebrand visual, dashboard rediseñado y auto-pago (2026-08-18 a 2026-08-19) — v1.4.0+5
 

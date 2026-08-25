@@ -107,7 +107,7 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
       );
       final saldoPendienteActual =
           resumenActual['totalConInteres']! - resumenActual['totalAbonado']!;
-      if (saldoPendienteActual <= 1) {
+      if (saldoPendienteActual <= 0) {
         await widget.db.deudasDao.marcarComoPagada(
           widget.deudaId,
           DateTime.now(),
