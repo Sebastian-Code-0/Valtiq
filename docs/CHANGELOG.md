@@ -1,5 +1,46 @@
 # Changelog
 
+## Clave de cifrado SMTP en Keystore/Keychain en Android/iOS (2026-08-27) — v1.6.0+7
+
+Sin cambio de schema, sin bump de versión. La clave AES de
+`CryptoService` dejaba de estar realmente protegida en el escenario
+que importa: alguien con acceso al almacenamiento completo de la app
+(dispositivo rooteado, backup vía ADB, malware) obtenía la base
+cifrada y el archivo de la clave (`valtiq_key.bin`) uno junto al
+otro. En Android/iOS ahora la clave se guarda en Android
+Keystore/iOS Keychain vía `flutter_secure_storage`, respaldada por
+hardware (TEE/StrongBox en Android, Secure Enclave en iOS) en vez de
+un archivo plano. Linux/Windows mantienen el archivo como fallback:
+ninguno de los dos tiene un keystore de escritorio confiable (el
+crash `KeyringLocked` de `flutter_secure_storage` en Linux ya había
+descartado antes ese camino ahí).
+
+- `lib/services/crypto_service.dart`: `init()` ramifica por
+  plataforma. Android/iOS leen/escriben la clave (base64) en
+  `flutter_secure_storage`; Linux/Windows siguen con
+  `valtiq_key.bin` en `getApplicationSupportDirectory()`.
+- Migración automática y silenciosa para instalaciones Android
+  existentes: si no hay clave en el almacén seguro, se busca
+  `valtiq_key.bin` en `getApplicationDocumentsDirectory()` (donde
+  vivía antes de este cambio), se copia al almacén seguro y se borra
+  el archivo. Si no se encuentra o falla la lectura, se genera una
+  clave nueva como antes (con la misma pérdida de datos cifrados
+  previos que ya manejaba el caso de clave corrupta).
+- iOS no tenía instalaciones previas (el proyecto no había agregado
+  la plataforma iOS todavía), así que ahí no aplica migración: la
+  clave se genera directo en Keychain la primera vez.
+- `android/app/build.gradle.kts`: `minSdk` sube a 23 y `compileSdk` a
+  36 (antes 21 y el default de Flutter) — requeridos por
+  `flutter_secure_storage`, que respalda la clave en Keystore vía
+  EncryptedSharedPreferences/Tink.
+- `test/services/crypto_service_test.dart` no cambió: corre en el
+  host de desarrollo (no Android/iOS), así que sigue ejercitando la
+  rama de archivo plano sin tocar `flutter_secure_storage` — ese
+  plugin no es mockeable en `flutter test` sin un dispositivo/
+  emulador real, así que la rama de almacén seguro se verifica
+  manualmente en un dispositivo Android antes de dar esto por
+  cerrado.
+
 ## Fechas de negocio normalizadas a medianoche UTC (huso horario) (2026-08-24) — v1.6.0+7
 
 schemaVersion **10 → 11**: las fechas de transacción (no los

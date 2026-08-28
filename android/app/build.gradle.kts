@@ -15,7 +15,9 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.valtiq.valtiq"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_secure_storage compila contra SDK 36; se fija explícito
+    // porque el default de Flutter (flutter.compileSdkVersion) va por detrás.
+    compileSdk = maxOf(flutter.compileSdkVersion, 36)
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -30,7 +32,8 @@ android {
 
     defaultConfig {
         applicationId = "com.valtiq.valtiq"
-        minSdk = flutter.minSdkVersion
+        // flutter_secure_storage (Keystore-backed) requiere minSdk 23+.
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

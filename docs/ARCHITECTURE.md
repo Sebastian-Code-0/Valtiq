@@ -213,15 +213,23 @@ categorías con tratamiento distinto:
 
 ### Ubicación de archivos
 
-`valtiq.db` y `valtiq_key.bin` se guardan fuera del árbol de código.
-En Android usan `getApplicationDocumentsDirectory()` (directorio
-privado de la app, ya usado por instalaciones existentes). En
-Linux/Windows usan `getApplicationSupportDirectory()`: la carpeta de
-Documentos del usuario no es apropiada para archivos internos de la
-app. En Android, `allowBackup="false"` en AndroidManifest.xml impide
-que Auto Backup/`adb backup` extraiga `valtiq.db` y `valtiq_key.bin`
-juntos (lo que permitiría desencriptar la contraseña SMTP fuera del
-dispositivo).
+`valtiq.db` se guarda fuera del árbol de código: en Android usa
+`getApplicationDocumentsDirectory()` (directorio privado de la app,
+ya usado por instalaciones existentes); en Linux/Windows usa
+`getApplicationSupportDirectory()`, porque la carpeta de Documentos
+del usuario no es apropiada para archivos internos de la app.
+
+La clave de cifrado ya no sigue la misma regla que la DB. En
+Android/iOS se guarda en Android Keystore/iOS Keychain vía
+`flutter_secure_storage` (respaldada por hardware — TEE/StrongBox en
+Android, Secure Enclave en iOS), no en un archivo. En Linux/Windows,
+sin keystore de escritorio confiable, sigue en `valtiq_key.bin` junto
+a la base de datos (`getApplicationSupportDirectory()`). Instalaciones
+Android previas a este cambio migran automáticamente: `CryptoService`
+detecta el `valtiq_key.bin` antiguo, lo mueve al almacén seguro y
+borra el archivo. En Android, `allowBackup="false"` en
+AndroidManifest.xml impide además que Auto Backup/`adb backup`
+extraiga `valtiq.db` fuera del dispositivo.
 
 ## Pantallas
 
@@ -280,9 +288,9 @@ recordatorio.
 Encripta y desencripta la contraseña SMTP con AES-GCM autenticado
 (reemplaza el AES-256-CBC original). Si el desencriptado falla por
 clave o formato antiguo, se autoregenera la clave y se loguea el
-fallo en vez de crashear. La clave se genera al primer uso y se
-persiste en valtiq_key.bin junto a la base de datos (ver
-"Ubicación de archivos" arriba).
+fallo en vez de crashear. La clave se genera al primer uso; dónde se
+persiste depende de la plataforma (Keystore/Keychain en Android/iOS,
+archivo en Linux/Windows — ver "Ubicación de archivos" arriba).
 
 **BackupService** (`services/backup_service.dart`)
 Exporta e importa todos los datos del usuario como un único archivo

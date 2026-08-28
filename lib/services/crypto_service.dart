@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -15,33 +16,93 @@ abstract class CryptoService {
   /// es legible).
   static bool claveFueRegenerada = false;
 
-  static Future<void> init() async {
-    final dir = Platform.isAndroid
-        ? await getApplicationDocumentsDirectory()
-        : await getApplicationSupportDirectory();
-    final keyFile = File(p.join(dir.path, 'valtiq_key.bin'));
+  static const _secureStorageKeyName = 'valtiq_aes_key';
+  static const _secureStorage = FlutterSecureStorage();
 
-    Uint8List keyBytes;
-    if (await keyFile.exists()) {
-      keyBytes = await keyFile.readAsBytes();
-      if (keyBytes.length != 32) {
-        debugPrint(
-          'CryptoService.init: clave corrupta detectada (tamaño inválido), '
-          'se generó una nueva. Los datos cifrados con la clave anterior ya '
-          'no serán legibles.',
-        );
-        claveFueRegenerada = true;
-        keyBytes = _generateKey();
-        await keyFile.writeAsBytes(keyBytes, flush: true);
-      }
-    } else {
-      keyBytes = _generateKey();
-      await keyFile.writeAsBytes(keyBytes, flush: true);
-    }
+  /// Android/iOS respaldan la clave en Keystore/Keychain (con soporte
+  /// hardware). En Linux/Windows no hay keystore de escritorio confiable
+  /// (el backend de keyring puede no estar desbloqueado o instalado), así
+  /// que ahí se mantiene el archivo plano junto a la DB como fallback.
+  static bool get _usaAlmacenSeguro => Platform.isAndroid || Platform.isIOS;
+
+  static Future<void> init() async {
+    final keyBytes = _usaAlmacenSeguro
+        ? await _initAlmacenSeguro()
+        : await _initArchivo();
 
     _encrypter = enc.Encrypter(
       enc.AES(enc.Key(keyBytes), mode: enc.AESMode.gcm),
     );
+  }
+
+  static Future<Uint8List> _initArchivo() async {
+    final dir = await getApplicationSupportDirectory();
+    final keyFile = File(p.join(dir.path, 'valtiq_key.bin'));
+
+    if (await keyFile.exists()) {
+      final keyBytes = await keyFile.readAsBytes();
+      if (keyBytes.length == 32) return keyBytes;
+      debugPrint(
+        'CryptoService.init: clave corrupta detectada (tamaño inválido), '
+        'se generó una nueva. Los datos cifrados con la clave anterior ya '
+        'no serán legibles.',
+      );
+      claveFueRegenerada = true;
+    }
+    final nuevaClave = _generateKey();
+    await keyFile.writeAsBytes(nuevaClave, flush: true);
+    return nuevaClave;
+  }
+
+  static Future<Uint8List> _initAlmacenSeguro() async {
+    final existente = await _secureStorage.read(key: _secureStorageKeyName);
+    if (existente != null) {
+      final keyBytes = base64.decode(existente);
+      if (keyBytes.length == 32) return keyBytes;
+      debugPrint(
+        'CryptoService.init: clave corrupta detectada en almacén seguro '
+        '(tamaño inválido), se generó una nueva. Los datos cifrados con la '
+        'clave anterior ya no serán legibles.',
+      );
+      claveFueRegenerada = true;
+    } else {
+      // Instalación previa a este cambio: la clave puede seguir en el
+      // archivo plano que se usaba antes de adoptar Keystore/Keychain.
+      final migrada = await _migrarClaveDesdeArchivo();
+      if (migrada != null) {
+        await _secureStorage.write(
+          key: _secureStorageKeyName,
+          value: base64.encode(migrada),
+        );
+        return migrada;
+      }
+    }
+    final nuevaClave = _generateKey();
+    await _secureStorage.write(
+      key: _secureStorageKeyName,
+      value: base64.encode(nuevaClave),
+    );
+    return nuevaClave;
+  }
+
+  /// Lee la clave del esquema de archivo plano usado antes de este cambio
+  /// (solo aplicable a Android, la única plataforma móvil que ya existía) y
+  /// borra el archivo una vez migrada. Nunca lanza: cualquier fallo aquí
+  /// simplemente resulta en generar una clave nueva.
+  static Future<Uint8List?> _migrarClaveDesdeArchivo() async {
+    try {
+      final dir = Platform.isAndroid
+          ? await getApplicationDocumentsDirectory()
+          : await getApplicationSupportDirectory();
+      final keyFile = File(p.join(dir.path, 'valtiq_key.bin'));
+      if (!await keyFile.exists()) return null;
+      final keyBytes = await keyFile.readAsBytes();
+      if (keyBytes.length != 32) return null;
+      await keyFile.delete();
+      return keyBytes;
+    } catch (_) {
+      return null;
+    }
   }
 
   static Uint8List _generateKey() {
