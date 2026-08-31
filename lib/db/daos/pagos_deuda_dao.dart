@@ -23,6 +23,13 @@ class PagosDeudaDao extends DatabaseAccessor<AppDatabase>
         .watch();
   }
 
+  Future<List<PagosDeudaData>> getPagosDeDeuda(int deudaId) {
+    return (select(pagosDeuda)
+          ..where((t) => t.deudaId.equals(deudaId))
+          ..orderBy([(t) => OrderingTerm.desc(t.fechaPago)]))
+        .get();
+  }
+
   Future<int> insertPago(PagosDeudaCompanion pago) {
     return into(pagosDeuda).insert(pago);
   }

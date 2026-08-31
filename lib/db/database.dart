@@ -45,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor openConnection() => conn.openValtiqConnection();
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -310,6 +310,27 @@ class AppDatabase extends _$AppDatabase {
             },
           ),
         );
+      }
+      if (from < 12) {
+        // Nueva modalidad de amortización explícita ('saldo_original' vs
+        // 'saldo_insoluto', ver tables.dart e interes_calculator.dart).
+        // Deudas/préstamos existentes quedan en 'saldo_original' (el default
+        // de la columna), que es exactamente el comportamiento que ya tenían
+        // antes de que existiera esta opción — no cambia ningún cálculo para
+        // datos ya creados.
+        //
+        // OJO: `TableMigration` (usado arriba en `from < 10` y `from < 11`
+        // para deudas/prestamos) siempre reconstruye la tabla con el schema
+        // ACTUAL de tables.dart — es decir, cualquier upgrade que pase por
+        // esos bloques ya recibe `tipoAmortizacion` gratis (con su default)
+        // en el rebuild. Agregar la columna otra vez aquí para esos casos
+        // rompería con "duplicate column name". El `addColumn` explícito
+        // solo hace falta cuando NINGÚN rebuild anterior tocó la tabla en
+        // este mismo upgrade, es decir cuando `from` ya era >= 11.
+        if (from >= 11) {
+          await m.addColumn(deudas, deudas.tipoAmortizacion);
+          await m.addColumn(prestamos, prestamos.tipoAmortizacion);
+        }
       }
     },
     beforeOpen: (details) async {

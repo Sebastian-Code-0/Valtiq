@@ -82,10 +82,14 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         builder: (_) => GastoVariableForm(db: widget.db, gasto: gasto),
       ),
     );
-    if (resultado is String && mounted) {
+    if (resultado is ({String categoria, DateTime mes}) && mounted) {
+      final ahora = DateTime.now();
+      final esMesActual =
+          resultado.mes.year == ahora.year && resultado.mes.month == ahora.month;
+      final cuando = esMesActual ? 'este mes' : 'en ${formatMesAnio(resultado.mes)}';
       mostrarAlerta(
         context,
-        'Superaste tu presupuesto de $resultado este mes.',
+        'Superaste tu presupuesto de ${resultado.categoria} $cuando.',
       );
     }
   }

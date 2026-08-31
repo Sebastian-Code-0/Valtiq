@@ -78,19 +78,30 @@ class _GastoVariableFormState extends State<GastoVariableForm>
     final notas = _notasCtrl.text.trim();
 
     String? categoriaExcedida;
-    if (widget.gasto == null) {
-      final presupuesto = await widget.db.presupuestosCategoriasDao
-          .getPresupuestoPorCategoria(_categoria!);
-      if (presupuesto != null) {
-        final totales = await widget.db.gastosVariablesDao
-            .watchTotalPorCategoria(_fecha.year, _fecha.month)
-            .first;
-        final proyectado = (totales[_categoria!] ?? 0.0) + monto;
-        if (proyectado > presupuesto.limiteMensual) {
-          categoriaExcedida = _categoria;
-        }
+    final presupuesto = await widget.db.presupuestosCategoriasDao
+        .getPresupuestoPorCategoria(_categoria!);
+    if (presupuesto != null) {
+      final totales = await widget.db.gastosVariablesDao
+          .watchTotalPorCategoria(_fecha.year, _fecha.month)
+          .first;
+      var totalCategoria = totales[_categoria!] ?? 0.0;
+      // Al editar un gasto que ya cae en el mismo mes/categoría que el valor
+      // nuevo, `totales` ya incluye su monto VIEJO — hay que restarlo antes
+      // de sumar el nuevo, o se contaría dos veces (mismo patrón que la
+      // validación de saldo pendiente en abonos: ver memoria del proyecto).
+      final original = widget.gasto;
+      if (original != null &&
+          original.categoria == _categoria &&
+          original.fecha.year == _fecha.year &&
+          original.fecha.month == _fecha.month) {
+        totalCategoria -= original.monto;
+      }
+      final proyectado = totalCategoria + monto;
+      if (proyectado > presupuesto.limiteMensual) {
+        categoriaExcedida = _categoria;
       }
     }
+    final mesExcedido = _fecha;
 
     final dao = widget.db.gastosVariablesDao;
     final fecha = normalizarFechaCivil(_fecha);
@@ -116,7 +127,9 @@ class _GastoVariableFormState extends State<GastoVariableForm>
           ),
         );
       }
-    }, resultadoExtra: () => categoriaExcedida);
+    }, resultadoExtra: () => categoriaExcedida == null
+        ? null
+        : (categoria: categoriaExcedida, mes: mesExcedido));
   }
 
   @override

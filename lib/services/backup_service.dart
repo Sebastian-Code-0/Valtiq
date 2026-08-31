@@ -75,6 +75,22 @@ class BackupService {
     return copia;
   }
 
+  // Backups creados antes de que existiera una columna (ej. modalidadCalculo
+  // desde schemaVersion 8, tipoAmortizacion desde schemaVersion 12) no traen
+  // esa clave en el JSON. El fromJson generado por drift para una columna no
+  // nullable hace un cast directo y lanza TypeError con un valor null en vez
+  // de aplicar el default de la columna — se completa a mano antes.
+  Map<String, dynamic> _conDefaults(
+    Map<String, dynamic> row,
+    Map<String, dynamic> defaults,
+  ) {
+    final copia = Map<String, dynamic>.from(row);
+    for (final entry in defaults.entries) {
+      if (copia[entry.key] == null) copia[entry.key] = entry.value;
+    }
+    return copia;
+  }
+
   Future<void> importarDatos(Map<String, dynamic> json) async {
     // Validación mínima antes de tocar nada:
     if (json['datos'] is! Map) {
@@ -85,6 +101,12 @@ class BackupService {
     final datos = Map<String, dynamic>.from(json['datos'] as Map);
 
     final deudas = _lista(datos, 'deudas')
+        .map(
+          (r) => _conDefaults(r, const {
+            'modalidadCalculo': 'simple',
+            'tipoAmortizacion': 'saldo_original',
+          }),
+        )
         .map((r) => _enteroEnClaves(r, const ['montoOriginal', 'cuotaMensual']))
         .map(Deuda.fromJson)
         .toList();
@@ -93,6 +115,12 @@ class BackupService {
         .map(PagosDeudaData.fromJson)
         .toList();
     final prestamos = _lista(datos, 'prestamos')
+        .map(
+          (r) => _conDefaults(r, const {
+            'modalidadCalculo': 'simple',
+            'tipoAmortizacion': 'saldo_original',
+          }),
+        )
         .map((r) => _enteroEnClaves(r, const ['montoPrestado']))
         .map(Prestamo.fromJson)
         .toList();

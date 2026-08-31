@@ -41,56 +41,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     final db = widget.db;
 
+    // Join sin agregar (en vez de groupBy + sum): el modo de amortización
+    // 'saldo_insoluto' necesita la fecha de cada abono, no solo la suma —
+    // ver InteresCalculator._resumenSaldoInsoluto. Se agrupa en Dart.
     final d = db.deudas;
     final pd = db.pagosDeuda;
-    final sumPagosDeuda = pd.montoAbonado.sum();
-    final queryDeudas =
-        db.select(d).join([leftOuterJoin(pd, pd.deudaId.equalsExp(d.id))])
-          ..where(d.estado.equals('activa'))
-          ..groupBy([d.id])
-          ..addColumns([sumPagosDeuda]);
+    final queryDeudas = db.select(d).join([
+      leftOuterJoin(pd, pd.deudaId.equalsExp(d.id)),
+    ])..where(d.estado.equals('activa'));
 
     _streamDeudas = queryDeudas.watch().map((rows) {
-      double total = 0;
+      final deudas = <int, Deuda>{};
+      final abonosPorDeuda = <int, List<AbonoInteres>>{};
       for (final row in rows) {
         final deuda = row.readTable(d);
-        final abonado = row.read(sumPagosDeuda) ?? 0;
-        final saldo = InteresCalculator.calcularDeudaTotal(
+        deudas[deuda.id] = deuda;
+        final pago = row.readTableOrNull(pd);
+        if (pago != null) {
+          (abonosPorDeuda[deuda.id] ??= []).add(
+            AbonoInteres(fecha: pago.fechaPago, monto: pago.montoAbonado),
+          );
+        }
+      }
+      double total = 0;
+      for (final deuda in deudas.values) {
+        final abonos = abonosPorDeuda[deuda.id] ?? const [];
+        total += InteresCalculator.calcularDeudaTotal(
           montoPrestado: deuda.montoOriginal,
           tasaInteres: deuda.tasaInteres,
           tipoInteres: deuda.tipoInteres,
           modalidadCalculo: deuda.modalidadCalculo,
           fechaPrestamo: deuda.fechaPrestamo,
-          totalAbonado: abonado,
+          totalAbonado: abonos.fold<int>(0, (s, a) => s + a.monto),
+          tipoAmortizacion: deuda.tipoAmortizacion,
+          abonos: abonos,
         );
-        total += saldo;
       }
       return total;
     });
 
     final p = db.prestamos;
     final pr = db.pagosRecibidos;
-    final sumAbonosPrestamos = pr.montoAbonado.sum();
-    final queryPrestamos =
-        db.select(p).join([leftOuterJoin(pr, pr.prestamoId.equalsExp(p.id))])
-          ..where(p.estado.equals('activo'))
-          ..groupBy([p.id])
-          ..addColumns([sumAbonosPrestamos]);
+    final queryPrestamos = db.select(p).join([
+      leftOuterJoin(pr, pr.prestamoId.equalsExp(p.id)),
+    ])..where(p.estado.equals('activo'));
 
     _streamPrestamos = queryPrestamos.watch().map((rows) {
-      double total = 0;
+      final prestamos = <int, Prestamo>{};
+      final abonosPorPrestamo = <int, List<AbonoInteres>>{};
       for (final row in rows) {
         final prestamo = row.readTable(p);
-        final abonado = row.read(sumAbonosPrestamos) ?? 0;
-        final saldo = InteresCalculator.calcularDeudaTotal(
+        prestamos[prestamo.id] = prestamo;
+        final pago = row.readTableOrNull(pr);
+        if (pago != null) {
+          (abonosPorPrestamo[prestamo.id] ??= []).add(
+            AbonoInteres(fecha: pago.fechaPago, monto: pago.montoAbonado),
+          );
+        }
+      }
+      double total = 0;
+      for (final prestamo in prestamos.values) {
+        final abonos = abonosPorPrestamo[prestamo.id] ?? const [];
+        total += InteresCalculator.calcularDeudaTotal(
           montoPrestado: prestamo.montoPrestado,
           tasaInteres: prestamo.tasaInteres,
           tipoInteres: prestamo.tipoInteres,
           modalidadCalculo: prestamo.modalidadCalculo,
           fechaPrestamo: prestamo.fechaPrestamo,
-          totalAbonado: abonado,
+          totalAbonado: abonos.fold<int>(0, (s, a) => s + a.monto),
+          tipoAmortizacion: prestamo.tipoAmortizacion,
+          abonos: abonos,
         );
-        total += saldo;
       }
       return total;
     });

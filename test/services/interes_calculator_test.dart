@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valtiq/services/interes_calculator.dart';
 
@@ -334,6 +336,270 @@ void main() {
         // = feb2026 con ultimoDia=28 → Feb 28. Feb 28 isAfter(Feb 28)? No → m=4.
         // ultimoCumplimiento=Feb 28, diasDif=0 → 4.0 meses.
         expect(interes, closeTo(80000.0, 0.01));
+      });
+    });
+
+    group('saldo_insoluto (amortización bancaria real)', () {
+      test(
+        'sin abonos → da exactamente lo mismo que saldo_original (mismo '
+        'monto, misma fecha, mismo período)',
+        () {
+          final base = InteresCalculator.resumenPrestamo(
+            montoPrestado: 1000000,
+            tasaInteres: 2,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'simple',
+            fechaPrestamo: DateTime.utc(2026, 1, 1),
+            totalAbonado: 0,
+            fechaFin: DateTime.utc(2026, 7, 1),
+          );
+          final insoluto = InteresCalculator.resumenPrestamo(
+            montoPrestado: 1000000,
+            tasaInteres: 2,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'simple',
+            fechaPrestamo: DateTime.utc(2026, 1, 1),
+            totalAbonado: 0,
+            tipoAmortizacion: 'saldo_insoluto',
+            fechaFin: DateTime.utc(2026, 7, 1),
+          );
+          expect(insoluto, base);
+        },
+      );
+
+      test(
+        '1M al 2% mensual, abono de 500.000 a los 2 meses exactos: el '
+        'interés de los meses 3-4 se calcula sobre el saldo YA reducido '
+        '(540.000), no sobre el millón original',
+        () {
+          final r = InteresCalculator.resumenPrestamo(
+            montoPrestado: 1000000,
+            tasaInteres: 2,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'simple',
+            fechaPrestamo: DateTime.utc(2026, 1, 1),
+            totalAbonado: 500000,
+            tipoAmortizacion: 'saldo_insoluto',
+            abonos: [
+              AbonoInteres(fecha: DateTime.utc(2026, 3, 1), monto: 500000),
+            ],
+            fechaFin: DateTime.utc(2026, 5, 1),
+          );
+          // Meses 1-2: interés = 1.000.000 × 2% × 2 = 40.000. El abono de
+          // 500.000 cubre esos 40.000 de interés y el resto (460.000) baja
+          // el capital: 1.000.000 − 460.000 = 540.000.
+          // Meses 3-4: interés = 540.000 × 2% × 2 = 21.600.
+          expect(r['interesAcumulado'], 61600);
+          expect(r['saldoPendiente'], 561600); // 540.000 + 21.600
+          expect(r['totalConInteres'], 1061600);
+          expect(r['totalAbonado'], 500000);
+        },
+      );
+
+      test(
+        'el mismo escenario en saldo_original da MÁS interés (sigue '
+        'cobrando sobre el millón completo) — confirma que saldo_insoluto '
+        'es siempre <= saldo_original con abonos de por medio',
+        () {
+          final original = InteresCalculator.resumenPrestamo(
+            montoPrestado: 1000000,
+            tasaInteres: 2,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'simple',
+            fechaPrestamo: DateTime.utc(2026, 1, 1),
+            totalAbonado: 500000,
+            fechaFin: DateTime.utc(2026, 5, 1),
+          );
+          final insoluto = InteresCalculator.resumenPrestamo(
+            montoPrestado: 1000000,
+            tasaInteres: 2,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'simple',
+            fechaPrestamo: DateTime.utc(2026, 1, 1),
+            totalAbonado: 500000,
+            tipoAmortizacion: 'saldo_insoluto',
+            abonos: [
+              AbonoInteres(fecha: DateTime.utc(2026, 3, 1), monto: 500000),
+            ],
+            fechaFin: DateTime.utc(2026, 5, 1),
+          );
+          expect(original['saldoPendiente'], 580000);
+          expect(insoluto['saldoPendiente'], 561600);
+          expect(
+            insoluto['saldoPendiente']!,
+            lessThan(original['saldoPendiente']!),
+          );
+        },
+      );
+
+      test('un abono que cubre todo el capital sin interés → saldo 0 exacto', () {
+        final r = InteresCalculator.resumenPrestamo(
+          montoPrestado: 1000000,
+          tasaInteres: 0,
+          tipoInteres: 'ninguno',
+          modalidadCalculo: 'simple',
+          fechaPrestamo: DateTime.utc(2026, 1, 1),
+          totalAbonado: 1000000,
+          tipoAmortizacion: 'saldo_insoluto',
+          abonos: [AbonoInteres(fecha: DateTime.utc(2026, 2, 1), monto: 1000000)],
+          fechaFin: DateTime.utc(2026, 3, 1),
+        );
+        expect(r['saldoPendiente'], 0);
+        expect(r['interesAcumulado'], 0);
+      });
+
+      test(
+        'dos abonos parciales con interés compuesto: cada abono reduce el '
+        'capital ANTES del siguiente período de interés',
+        () {
+          final r = InteresCalculator.resumenPrestamo(
+            montoPrestado: 5000000,
+            tasaInteres: 3,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'compuesto',
+            fechaPrestamo: DateTime.utc(2026, 1, 1),
+            totalAbonado: 0,
+            tipoAmortizacion: 'saldo_insoluto',
+            abonos: [
+              AbonoInteres(fecha: DateTime.utc(2026, 2, 1), monto: 1000000),
+              AbonoInteres(fecha: DateTime.utc(2026, 3, 1), monto: 1000000),
+            ],
+            fechaFin: DateTime.utc(2026, 4, 1),
+          );
+          // mes1: interés=5.000.000×3%=150.000; abono 1.000.000 cubre el
+          //   interés y baja capital en 850.000 → saldo 4.150.000.
+          // mes2: interés=4.150.000×3%=124.500; abono 1.000.000 cubre el
+          //   interés y baja capital en 875.500 → saldo 3.274.500.
+          // mes3: interés=3.274.500×3%=98.235.
+          expect(r['interesAcumulado'], 372735); // 150000+124500+98235
+          expect(r['saldoPendiente'], 3372735); // 3.274.500+98.235
+        },
+      );
+
+      test(
+        'abonos fuera de orden cronológico en la lista de entrada se '
+        'procesan igual (se reordenan internamente)',
+        () {
+          final enOrden = InteresCalculator.resumenPrestamo(
+            montoPrestado: 5000000,
+            tasaInteres: 3,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'compuesto',
+            fechaPrestamo: DateTime.utc(2026, 1, 1),
+            totalAbonado: 0,
+            tipoAmortizacion: 'saldo_insoluto',
+            abonos: [
+              AbonoInteres(fecha: DateTime.utc(2026, 2, 1), monto: 1000000),
+              AbonoInteres(fecha: DateTime.utc(2026, 3, 1), monto: 1000000),
+            ],
+            fechaFin: DateTime.utc(2026, 4, 1),
+          );
+          final desordenado = InteresCalculator.resumenPrestamo(
+            montoPrestado: 5000000,
+            tasaInteres: 3,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'compuesto',
+            fechaPrestamo: DateTime.utc(2026, 1, 1),
+            totalAbonado: 0,
+            tipoAmortizacion: 'saldo_insoluto',
+            abonos: [
+              AbonoInteres(fecha: DateTime.utc(2026, 3, 1), monto: 1000000),
+              AbonoInteres(fecha: DateTime.utc(2026, 2, 1), monto: 1000000),
+            ],
+            fechaFin: DateTime.utc(2026, 4, 1),
+          );
+          expect(desordenado, enOrden);
+        },
+      );
+
+      test('calcularDeudaTotal en saldo_insoluto delega a resumenPrestamo', () {
+        final total = InteresCalculator.calcularDeudaTotal(
+          montoPrestado: 1000000,
+          tasaInteres: 2,
+          tipoInteres: 'mensual',
+          modalidadCalculo: 'simple',
+          fechaPrestamo: DateTime.utc(2026, 1, 1),
+          totalAbonado: 500000,
+          tipoAmortizacion: 'saldo_insoluto',
+          abonos: [
+            AbonoInteres(fecha: DateTime.utc(2026, 3, 1), monto: 500000),
+          ],
+          fechaFin: DateTime.utc(2026, 5, 1),
+        );
+        expect(total, 561600);
+      });
+    });
+
+    group('calcularCuotaFija / calcularCuotaFijaDesdeTasa (sistema francés)', () {
+      test('tasa 0 → cuotas iguales de capital/n exacto', () {
+        final cuota = InteresCalculator.calcularCuotaFija(
+          capital: 1000000,
+          tasaPeriodica: 0,
+          numeroCuotas: 10,
+        );
+        expect(cuota, 100000);
+      });
+
+      test('numeroCuotas <= 0 → 0 sin lanzar', () {
+        expect(
+          InteresCalculator.calcularCuotaFija(
+            capital: 1000000,
+            tasaPeriodica: 0.02,
+            numeroCuotas: 0,
+          ),
+          0,
+        );
+      });
+
+      test(
+        '10.000.000 al 1.5% mensual a 12 meses → cuota fija verificable '
+        'contra la fórmula de amortización francesa estándar',
+        () {
+          final cuota = InteresCalculator.calcularCuotaFija(
+            capital: 10000000,
+            tasaPeriodica: 0.015,
+            numeroCuotas: 12,
+          );
+          // Cuota = 10.000.000 × [0.015×(1.015)^12] / [(1.015)^12 − 1]
+          final factor = math.pow(1.015, 12);
+          final esperada =
+              (10000000 * (0.015 * factor) / (factor - 1)).round();
+          expect(cuota, esperada);
+        },
+      );
+
+      test(
+        'a mayor tasa, mayor cuota fija para el mismo capital y plazo',
+        () {
+          final cuotaBaja = InteresCalculator.calcularCuotaFija(
+            capital: 1000000,
+            tasaPeriodica: 0.01,
+            numeroCuotas: 12,
+          );
+          final cuotaAlta = InteresCalculator.calcularCuotaFija(
+            capital: 1000000,
+            tasaPeriodica: 0.03,
+            numeroCuotas: 12,
+          );
+          expect(cuotaAlta, greaterThan(cuotaBaja));
+        },
+      );
+
+      test('calcularCuotaFijaDesdeTasa con tasa anual equivale a la mensual '
+          'correspondiente', () {
+        final desdeAnual = InteresCalculator.calcularCuotaFijaDesdeTasa(
+          capital: 1000000,
+          tasaInteres: 24,
+          tipoInteres: 'anual',
+          numeroCuotas: 12,
+        );
+        final desdeMensual = InteresCalculator.calcularCuotaFijaDesdeTasa(
+          capital: 1000000,
+          tasaInteres: 2,
+          tipoInteres: 'mensual',
+          numeroCuotas: 12,
+        );
+        expect(desdeAnual, desdeMensual);
       });
     });
   });

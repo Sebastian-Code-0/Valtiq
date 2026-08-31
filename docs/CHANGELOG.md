@@ -1,5 +1,74 @@
 # Changelog
 
+## Amortización bancaria real, fixes de presupuestos y cifrado SMTP (2026-08-30) — v1.7.0+8
+
+schemaVersion **11 → 12**: nueva columna `tipoAmortizacion` en `Deudas` y
+`Prestamos` (`'saldo_original'` por default, `'saldo_insoluto'` nuevo).
+
+**Nuevo modo de amortización `saldo_insoluto` (interés bancario real):**
+hasta ahora el interés siempre se calculaba sobre el monto original
+completo desde la fecha del préstamo, sin importar los abonos — los
+abonos solo se restaban al final ("saldo_original", ahora explícito y
+sigue siendo el default). Se agregó `saldo_insoluto`: cada abono se
+aplica primero al interés causado desde el corte anterior y el resto a
+capital, y el interés siguiente se calcula sobre el capital YA
+reducido — así es como amortiza un crédito bancario real. Se puede
+elegir por deuda/préstamo (dropdown "Interés sobre" en los formularios,
+mismo patrón que "Modalidad de cálculo"). También se agregó
+`InteresCalculator.calcularCuotaFija`/`calcularCuotaFijaDesdeTasa`
+(sistema de amortización francés de cuota fija, el mismo que usan los
+bancos colombianos para créditos de libre inversión/vehículo/
+hipotecario), con un botón "Calcular cuota sugerida" en los
+formularios de deuda y préstamo.
+
+- `lib/services/interes_calculator.dart`: nueva clase `AbonoInteres`
+  (fecha + monto), `_resumenSaldoInsoluto()`, `calcularCuotaFija()`,
+  `calcularCuotaFijaDesdeTasa()`. `resumenPrestamo`/`calcularDeudaTotal`
+  ahora aceptan `tipoAmortizacion`/`abonos`/`fechaFin` opcionales,
+  retrocompatibles con todos los call sites existentes.
+- `deuda_detalle.dart`/`prestamo_detalle.dart`,
+  `deudas_screen.dart`/`prestamos_screen.dart`, `dashboard_screen.dart`:
+  las consultas que antes sumaban abonos con `groupBy + sum` en SQL
+  pasan a un join sin agregar (agrupación en Dart), porque
+  `saldo_insoluto` necesita la fecha de cada abono, no solo la suma.
+- Gotcha real de migración: `TableMigration` (usado en los pasos v10 y
+  v11 para `deudas`/`prestamos`) reconstruye la tabla con el schema
+  ACTUAL de `tables.dart` en tiempo de compilación, así que cualquier
+  upgrade que pase por esos bloques ya recibía `tipoAmortizacion`
+  gratis — un `addColumn` incondicional en el bloque v12 producía
+  `duplicate column name` para upgrades desde v9/v10. El `addColumn`
+  ahora solo corre si `from >= 11`.
+- `backup_service.dart`: se descubrió (y corrigió) que restaurar un
+  backup exportado antes de esta columna —o antes de `modalidadCalculo`,
+  el mismo hueco existía desde schemaVersion 8 sin haberse disparado
+  nunca— crasheaba (`type 'Null' is not a subtype of type 'String'`).
+  Nuevo helper `_conDefaults()` completa esas columnas con su default
+  antes de deserializar.
+
+**Mensaje de presupuestos excedidos corregido:** el aviso decía
+"Superaste tu presupuesto de X **este mes**" sin importar el mes real
+del gasto — el cálculo (comparado contra el mes de la fecha elegida)
+siempre fue correcto, el mensaje no. Ahora dice el mes correcto
+("en marzo de 2026") cuando no es el mes actual. También se extendió
+el chequeo a la edición de un gasto existente (antes solo corría al
+crear uno nuevo), restando el monto viejo del total antes de sumar el
+nuevo si ambos caen en el mismo mes/categoría.
+
+**Cifrado SMTP — 3 huecos corregidos:**
+- `CryptoService.claveFueRegenerada` no se activaba si la migración
+  desde `valtiq_key.bin` fallaba por una excepción (solo si la clave
+  YA estaba en el almacén seguro y era corrupta) — ahora se activa en
+  ambos casos.
+- Esa bandera nunca se leía en ningún lado de la app. `ShellScreen`
+  ahora muestra un aviso al usuario si la clave se regeneró en este
+  arranque, con acceso directo a reconfigurar el SMTP.
+- Se agregó `CryptoService.usaAlmacenSeguroOverride`
+  (`@visibleForTesting`) para poder mockear la rama de Keystore/
+  Keychain en `flutter test` sin depender de un dispositivo real
+  (`Platform.isAndroid` refleja el host real, nunca Android en CI) —
+  `crypto_service_test.dart` ahora cubre esa rama completa, incluida
+  la migración y sus dos modos de fallo.
+
 ## Clave de cifrado SMTP en Keystore/Keychain en Android/iOS (2026-08-27) — v1.6.0+7
 
 Sin cambio de schema, sin bump de versión. La clave AES de

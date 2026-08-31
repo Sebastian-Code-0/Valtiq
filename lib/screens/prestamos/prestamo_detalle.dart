@@ -79,7 +79,11 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
     if (mounted) Navigator.pop(context);
   }
 
-  Future<void> _registrarPago(Prestamo prestamo, int totalAbonado) async {
+  Future<void> _registrarPago(
+    Prestamo prestamo,
+    int totalAbonado,
+    List<AbonoInteres> abonos,
+  ) async {
     final resumen = InteresCalculator.resumenPrestamo(
       montoPrestado: prestamo.montoPrestado,
       tasaInteres: prestamo.tasaInteres,
@@ -87,6 +91,8 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
       modalidadCalculo: prestamo.modalidadCalculo,
       fechaPrestamo: prestamo.fechaPrestamo,
       totalAbonado: totalAbonado,
+      tipoAmortizacion: prestamo.tipoAmortizacion,
+      abonos: abonos,
     );
     // Sin recortar a 0: resumen['saldoPendiente'] sí lo recorta (para no
     // mostrar saldo negativo en la UI), pero eso permitiría abonar de a $1
@@ -103,8 +109,12 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
       ),
     );
     if (guardado == true && mounted) {
-      final totalAbonadoActual = await widget.db.prestamosDao.getTotalAbonado(
+      final pagosActuales = await widget.db.prestamosDao.getPagosDelPrestamo(
         widget.prestamoId,
+      );
+      final totalAbonadoActual = pagosActuales.fold<int>(
+        0,
+        (sum, p) => sum + p.montoAbonado,
       );
       final resumenActual = InteresCalculator.resumenPrestamo(
         montoPrestado: prestamo.montoPrestado,
@@ -113,6 +123,10 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
         modalidadCalculo: prestamo.modalidadCalculo,
         fechaPrestamo: prestamo.fechaPrestamo,
         totalAbonado: totalAbonadoActual,
+        tipoAmortizacion: prestamo.tipoAmortizacion,
+        abonos: pagosActuales
+            .map((p) => AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado))
+            .toList(),
       );
       final saldoPendienteActual =
           resumenActual['totalConInteres']! - resumenActual['totalAbonado']!;
@@ -224,6 +238,11 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
                 0,
                 (sum, p) => sum + p.montoAbonado,
               );
+              final abonosInteres = pagos
+                  .map(
+                    (p) => AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
+                  )
+                  .toList();
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
@@ -232,13 +251,15 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
                     _ResumenCard(
                       prestamo: prestamo,
                       totalAbonado: totalAbonado,
+                      abonos: abonosInteres,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     _InfoCard(prestamo: prestamo),
                     const SizedBox(height: AppSpacing.md),
                     _PagosSection(
                       pagos: pagos,
-                      onRegistrar: () => _registrarPago(prestamo, totalAbonado),
+                      onRegistrar: () =>
+                          _registrarPago(prestamo, totalAbonado, abonosInteres),
                       onEliminar: _confirmarEliminarPago,
                     ),
                   ],
@@ -253,10 +274,15 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
 }
 
 class _ResumenCard extends StatelessWidget {
-  const _ResumenCard({required this.prestamo, required this.totalAbonado});
+  const _ResumenCard({
+    required this.prestamo,
+    required this.totalAbonado,
+    required this.abonos,
+  });
 
   final Prestamo prestamo;
   final int totalAbonado;
+  final List<AbonoInteres> abonos;
 
   @override
   Widget build(BuildContext context) {
@@ -270,6 +296,8 @@ class _ResumenCard extends StatelessWidget {
       modalidadCalculo: prestamo.modalidadCalculo,
       fechaPrestamo: prestamo.fechaPrestamo,
       totalAbonado: totalAbonado,
+      tipoAmortizacion: prestamo.tipoAmortizacion,
+      abonos: abonos,
     );
 
     final saldo = resumen['saldoPendiente']!;
@@ -442,6 +470,15 @@ class _InfoCard extends StatelessWidget {
               colorSec: colorSec,
               theme: theme,
             ),
+            if (tieneInteres)
+              InfoRow(
+                label: 'Interés sobre:',
+                valor: prestamo.tipoAmortizacion == 'saldo_insoluto'
+                    ? 'Saldo insoluto'
+                    : 'Saldo original',
+                colorSec: colorSec,
+                theme: theme,
+              ),
             InfoRow(
               label: 'Fecha préstamo:',
               valor: formatFecha(fechaCivilGuardada(prestamo.fechaPrestamo)),

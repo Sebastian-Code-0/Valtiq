@@ -8,6 +8,14 @@ class Deudas extends Table {
   TextColumn get tipoInteres => text().withDefault(const Constant('ninguno'))();
   TextColumn get modalidadCalculo =>
       text().withDefault(const Constant('simple'))();
+  // 'saldo_original': el interés se acumula siempre sobre montoOriginal
+  // completo (comportamiento histórico, pensado para deuda informal donde no
+  // se sabe si habrá abonos periódicos). 'saldo_insoluto': cada abono se
+  // aplica primero al interés causado y luego a capital, y el interés
+  // siguiente se calcula sobre el capital restante — igual que un crédito
+  // bancario real. Ver lib/services/interes_calculator.dart.
+  TextColumn get tipoAmortizacion =>
+      text().withDefault(const Constant('saldo_original'))();
   DateTimeColumn get fechaPrestamo => dateTime()();
   DateTimeColumn get fechaLimite => dateTime().nullable()();
   IntColumn get cuotaMensual => integer().nullable()();
@@ -28,6 +36,8 @@ class Prestamos extends Table {
   TextColumn get tipoInteres => text().withDefault(const Constant('ninguno'))();
   TextColumn get modalidadCalculo =>
       text().withDefault(const Constant('simple'))();
+  TextColumn get tipoAmortizacion =>
+      text().withDefault(const Constant('saldo_original'))();
   DateTimeColumn get fechaPrestamo => dateTime()();
   DateTimeColumn get fechaPactadaPago => dateTime().nullable()();
   TextColumn get estado => text().withDefault(const Constant('activo'))();

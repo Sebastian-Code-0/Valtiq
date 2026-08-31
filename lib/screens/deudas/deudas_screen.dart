@@ -13,9 +13,11 @@ import 'deuda_detalle.dart';
 import 'deuda_form.dart';
 
 class _DeudaConAbonos {
-  _DeudaConAbonos(this.deuda, this.abonado);
+  _DeudaConAbonos(this.deuda, this.abonos);
   final Deuda deuda;
-  final int abonado;
+  final List<AbonoInteres> abonos;
+
+  int get abonado => abonos.fold<int>(0, (sum, a) => sum + a.monto);
 }
 
 class DeudasScreen extends StatefulWidget {
@@ -30,29 +32,38 @@ class DeudasScreen extends StatefulWidget {
 class _DeudasScreenState extends State<DeudasScreen> {
   bool _mostrarPagadas = false;
 
+  // Se usa un join sin agregar (en vez de groupBy + sum) porque el modo de
+  // amortización 'saldo_insoluto' necesita la fecha de cada abono, no solo
+  // la suma — ver InteresCalculator._resumenSaldoInsoluto. La agrupación por
+  // deuda se hace en Dart a partir de las filas planas del join.
   Stream<List<_DeudaConAbonos>> _stream() {
     final estado = _mostrarPagadas ? 'pagada' : 'activa';
     final d = widget.db.deudas;
     final pd = widget.db.pagosDeuda;
-    final sumExpr = pd.montoAbonado.sum();
 
-    final query =
-        widget.db.select(d).join([
-            leftOuterJoin(pd, pd.deudaId.equalsExp(d.id)),
-          ])
-          ..where(d.estado.equals(estado))
-          ..groupBy([d.id])
-          ..orderBy([OrderingTerm.desc(d.fechaPrestamo)])
-          ..addColumns([sumExpr]);
+    final query = widget.db.select(d).join([
+      leftOuterJoin(pd, pd.deudaId.equalsExp(d.id)),
+    ])..where(d.estado.equals(estado));
 
-    return query.watch().map(
-      (rows) => rows
-          .map(
-            (row) =>
-                _DeudaConAbonos(row.readTable(d), row.read(sumExpr) ?? 0),
-          )
-          .toList(),
-    );
+    return query.watch().map((rows) {
+      final deudas = <int, Deuda>{};
+      final abonosPorDeuda = <int, List<AbonoInteres>>{};
+      for (final row in rows) {
+        final deuda = row.readTable(d);
+        deudas[deuda.id] = deuda;
+        final pago = row.readTableOrNull(pd);
+        if (pago != null) {
+          (abonosPorDeuda[deuda.id] ??= []).add(
+            AbonoInteres(fecha: pago.fechaPago, monto: pago.montoAbonado),
+          );
+        }
+      }
+      final items = deudas.values
+          .map((deuda) => _DeudaConAbonos(deuda, abonosPorDeuda[deuda.id] ?? const []))
+          .toList()
+        ..sort((a, b) => b.deuda.fechaPrestamo.compareTo(a.deuda.fechaPrestamo));
+      return items;
+    });
   }
 
   Future<void> _abrirForm({Deuda? deuda}) async {
@@ -240,6 +251,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                         key: ValueKey(item.deuda.id),
                         deuda: item.deuda,
                         abonado: item.abonado,
+                        abonos: item.abonos,
                         atenuada: _mostrarPagadas,
                         colorSec: colorSec,
                         onTap: _mostrarPagadas
@@ -279,6 +291,7 @@ class _DeudaCard extends StatelessWidget {
     super.key,
     required this.deuda,
     required this.abonado,
+    required this.abonos,
     required this.atenuada,
     required this.colorSec,
     required this.onTap,
@@ -290,6 +303,7 @@ class _DeudaCard extends StatelessWidget {
 
   final Deuda deuda;
   final int abonado;
+  final List<AbonoInteres> abonos;
   final bool atenuada;
   final Color colorSec;
   final VoidCallback onTap;
@@ -313,6 +327,8 @@ class _DeudaCard extends StatelessWidget {
       modalidadCalculo: deuda.modalidadCalculo,
       fechaPrestamo: deuda.fechaPrestamo,
       totalAbonado: abonado,
+      tipoAmortizacion: deuda.tipoAmortizacion,
+      abonos: abonos,
     );
     final totalConInteres = abonado + saldo;
     final fraccionPagada = totalConInteres > 0

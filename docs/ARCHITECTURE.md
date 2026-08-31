@@ -1,6 +1,6 @@
 # Arquitectura de Valtiq
 
-## Base de datos (SQLite vía drift, schemaVersion 11)
+## Base de datos (SQLite vía drift, schemaVersion 12)
 
 ### Tablas
 
@@ -13,6 +13,7 @@
 | tasaInteres    | REAL     | default 0 — porcentaje, no dinero |
 | tipoInteres      | TEXT     | 'ninguno' / 'mensual' / 'anual'          |
 | modalidadCalculo | TEXT     | 'simple' / 'compuesto', default 'simple' |
+| tipoAmortizacion | TEXT     | 'saldo_original' / 'saldo_insoluto', default 'saldo_original' |
 | fechaPrestamo  | DATETIME |                                 |
 | fechaLimite    | DATETIME | nullable                        |
 | cuotaMensual   | INTEGER  | nullable, pesos enteros          |
@@ -42,6 +43,7 @@
 | tasaInteres      | REAL     | default 0 — porcentaje, no dinero |
 | tipoInteres      | TEXT     | 'ninguno' / 'mensual' / 'anual' |
 | modalidadCalculo | TEXT     | 'simple' / 'compuesto'          |
+| tipoAmortizacion | TEXT     | 'saldo_original' / 'saldo_insoluto', default 'saldo_original' |
 | fechaPrestamo    | DATETIME |                                 |
 | fechaPactadaPago | DATETIME | nullable                        |
 | estado           | TEXT     | 'activo' / 'pagado'             |
@@ -186,6 +188,12 @@
             cerca de medianoche puede "saltar" de día al mostrarse, y
             el badge "Vencido" puede voltearse sin que el usuario haya
             hecho nada. Ver `lib/utils/fecha_civil.dart`.
+- v11 → v12: agregar Deudas.tipoAmortizacion y
+            Prestamos.tipoAmortizacion ('saldo_original' /
+            'saldo_insoluto', default 'saldo_original' — el default
+            preserva exactamente el comportamiento que ya tenían todas
+            las deudas/préstamos existentes). Ver `InteresCalculator`
+            más abajo para el significado de cada modo.
 
 ### Fechas de negocio vs. timestamps de auditoría
 
@@ -265,6 +273,26 @@ de devolverse — nunca se acumulan `double` sin redondear entre
 llamadas sucesivas. La tasa de interés (`tasaInteres`) sigue siendo
 `double` — es un porcentaje, no dinero.
 
+`tipoAmortizacion` controla sobre qué base se calcula el interés:
+`'saldo_original'` (default) lo acumula siempre sobre el monto
+original completo desde `fechaPrestamo`, sin importar los abonos —
+estos solo se restan al final; pensado para deuda informal sin
+abonos periódicos garantizados. `'saldo_insoluto'` (real bancario)
+recorre los abonos en orden cronológico y aplica cada uno primero al
+interés causado desde el corte anterior y el resto a capital, así
+que el interés siguiente se calcula sobre el capital YA reducido —
+es la lógica de amortización de un crédito real, e implica que
+`resumenPrestamo`/`calcularDeudaTotal` necesitan la lista de abonos
+con fecha (`AbonoInteres`), no solo su suma.
+
+`calcularCuotaFija`/`calcularCuotaFijaDesdeTasa` implementan el
+sistema de amortización francés (cuota fija e igual en todo el
+plazo): `Cuota = Capital × [i×(1+i)^n] / [(1+i)^n − 1]` — el mismo
+que usan los bancos colombianos para créditos de libre inversión,
+vehículo e hipotecario. Es un cálculo independiente (no cambia cómo
+se acumula el interés de una deuda ya creada); sirve para sugerir una
+cuota mensual fija dado un capital, tasa y número de cuotas.
+
 **NotificationService** (`services/notification_service.dart`)
 Inicializa flutter_local_notifications en Linux, Android y Windows.
 Ejecuta revisarRecordatorios() al arrancar o reanudar la app: evalúa
@@ -291,6 +319,13 @@ clave o formato antiguo, se autoregenera la clave y se loguea el
 fallo en vez de crashear. La clave se genera al primer uso; dónde se
 persiste depende de la plataforma (Keystore/Keychain en Android/iOS,
 archivo en Linux/Windows — ver "Ubicación de archivos" arriba).
+`claveFueRegenerada` queda en `true` para el resto de la sesión si la
+clave se regeneró por cualquier motivo (corrupta, o migración fallida
+desde el archivo viejo) — `ShellScreen` lo revisa al arrancar y avisa
+al usuario con un diálogo si es necesario reconfigurar el SMTP.
+`usaAlmacenSeguroOverride` (`@visibleForTesting`) permite forzar la
+rama de Keystore/Keychain en tests, ya que `Platform.isAndroid`
+refleja el host real que corre `flutter test`.
 
 **BackupService** (`services/backup_service.dart`)
 Exporta e importa todos los datos del usuario como un único archivo
@@ -306,6 +341,10 @@ reinserta en batch (padres antes que hijas), preservando los ids
 originales del archivo para que las referencias entre tablas sigan
 siendo válidas. Usado por `RespaldoScreen` (Ajustes → "Copia de
 seguridad"), que delega la elección de archivo a `file_selector`.
+`_conDefaults()` completa columnas agregadas después de que el
+backup fue creado (`modalidadCalculo`, `tipoAmortizacion`) con su
+valor default antes de deserializar — sin esto, restaurar un backup
+viejo lanza un TypeError en vez de fallar con un mensaje claro.
 
 Compatibilidad con backups viejos (pre-schemaVersion 10): un backup
 exportado antes de la migración de montos a entero serializa el

@@ -22,37 +22,54 @@ class PrestamosScreen extends StatefulWidget {
 }
 
 class _PrestamoConAbonos {
-  _PrestamoConAbonos(this.prestamo, this.abonado);
+  _PrestamoConAbonos(this.prestamo, this.abonos);
   final Prestamo prestamo;
-  final int abonado;
+  final List<AbonoInteres> abonos;
+
+  int get abonado => abonos.fold<int>(0, (sum, a) => sum + a.monto);
 }
 
 class _PrestamosScreenState extends State<PrestamosScreen> {
   bool _mostrarPagados = false;
 
+  // Join sin agregar (en vez de groupBy + sum): el modo de amortización
+  // 'saldo_insoluto' necesita la fecha de cada abono, no solo la suma — ver
+  // InteresCalculator._resumenSaldoInsoluto. Se agrupa en Dart.
   Stream<List<_PrestamoConAbonos>> _stream() {
     final estado = _mostrarPagados ? 'pagado' : 'activo';
     final p = widget.db.prestamos;
     final pr = widget.db.pagosRecibidos;
-    final sumExpr = pr.montoAbonado.sum();
 
-    final query =
-        widget.db.select(p).join([
-            leftOuterJoin(pr, pr.prestamoId.equalsExp(p.id)),
-          ])
-          ..where(p.estado.equals(estado))
-          ..groupBy([p.id])
-          ..orderBy([OrderingTerm.desc(p.fechaPrestamo)])
-          ..addColumns([sumExpr]);
+    final query = widget.db.select(p).join([
+      leftOuterJoin(pr, pr.prestamoId.equalsExp(p.id)),
+    ])..where(p.estado.equals(estado));
 
-    return query.watch().map(
-      (rows) => rows
+    return query.watch().map((rows) {
+      final prestamos = <int, Prestamo>{};
+      final abonosPorPrestamo = <int, List<AbonoInteres>>{};
+      for (final row in rows) {
+        final prestamo = row.readTable(p);
+        prestamos[prestamo.id] = prestamo;
+        final pago = row.readTableOrNull(pr);
+        if (pago != null) {
+          (abonosPorPrestamo[prestamo.id] ??= []).add(
+            AbonoInteres(fecha: pago.fechaPago, monto: pago.montoAbonado),
+          );
+        }
+      }
+      final items = prestamos.values
           .map(
-            (row) =>
-                _PrestamoConAbonos(row.readTable(p), row.read(sumExpr) ?? 0),
+            (prestamo) => _PrestamoConAbonos(
+              prestamo,
+              abonosPorPrestamo[prestamo.id] ?? const [],
+            ),
           )
-          .toList(),
-    );
+          .toList()
+        ..sort(
+          (a, b) => b.prestamo.fechaPrestamo.compareTo(a.prestamo.fechaPrestamo),
+        );
+      return items;
+    });
   }
 
   Future<void> _abrirForm({Prestamo? prestamo}) async {
@@ -246,6 +263,7 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
                         key: ValueKey(item.prestamo.id),
                         prestamo: item.prestamo,
                         abonado: item.abonado,
+                        abonos: item.abonos,
                         atenuada: _mostrarPagados,
                         colorSec: colorSec,
                         onTap: () => _abrirDetalle(item.prestamo.id),
@@ -274,6 +292,7 @@ class _PrestamoCard extends StatelessWidget {
     super.key,
     required this.prestamo,
     required this.abonado,
+    required this.abonos,
     required this.atenuada,
     required this.colorSec,
     required this.onTap,
@@ -284,6 +303,7 @@ class _PrestamoCard extends StatelessWidget {
 
   final Prestamo prestamo;
   final int abonado;
+  final List<AbonoInteres> abonos;
   final bool atenuada;
   final Color colorSec;
   final VoidCallback onTap;
@@ -306,6 +326,8 @@ class _PrestamoCard extends StatelessWidget {
       modalidadCalculo: prestamo.modalidadCalculo,
       fechaPrestamo: prestamo.fechaPrestamo,
       totalAbonado: abonado,
+      tipoAmortizacion: prestamo.tipoAmortizacion,
+      abonos: abonos,
     );
     final totalConInteres = abonado + saldo;
     final fraccionCobrada = totalConInteres > 0

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../db/database.dart';
+import '../services/crypto_service.dart';
+import 'config/config_smtp_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'deudas/deudas_screen.dart';
 import 'finanzas/finanzas_screen.dart';
@@ -19,6 +21,55 @@ class ShellScreen extends StatefulWidget {
 class _ShellScreenState extends State<ShellScreen> {
   int _index = 0;
   final List<bool> _visitada = [true, false, false, false, false];
+
+  @override
+  void initState() {
+    super.initState();
+    // CryptoService.claveFueRegenerada queda fijo desde CryptoService.init()
+    // en main(), antes de runApp() — es seguro leerlo una sola vez aquí. Si
+    // la clave se regeneró (corrupta o migración fallida desde el archivo
+    // viejo), cualquier config SMTP cifrada con la clave anterior quedó
+    // ilegible: ConfigSmtpDao.getPassword() ya la limpia sola al detectarlo,
+    // pero eso solo pasa cuando se intenta usar — sin este aviso, el usuario
+    // no se entera hasta que un correo falla en silencio.
+    if (CryptoService.claveFueRegenerada) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _avisarClavePerdida());
+    }
+  }
+
+  Future<void> _avisarClavePerdida() async {
+    if (!mounted) return;
+    final abrirConfig = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Configuración de correo perdida'),
+        content: const Text(
+          'No se pudo recuperar la clave de cifrado guardada, así que la '
+          'contraseña de tu configuración de correo (SMTP) ya no es '
+          'legible y tendrás que ingresarla de nuevo. El resto de tus '
+          'datos no se vio afectado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Más tarde'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ir a Configuración'),
+          ),
+        ],
+      ),
+    );
+    if (abrirConfig == true && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ConfigSmtpScreen(db: widget.db),
+        ),
+      );
+    }
+  }
 
   void _cambiarIndice(int i) {
     setState(() {

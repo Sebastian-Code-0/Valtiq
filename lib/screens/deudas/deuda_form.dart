@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
+import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
@@ -31,6 +32,7 @@ class _DeudaFormState extends State<DeudaForm>
 
   late String _tipoInteres;
   late String _modalidadCalculo;
+  late String _tipoAmortizacion;
   late DateTime _fechaPrestamo;
   DateTime? _fechaLimite;
 
@@ -51,6 +53,7 @@ class _DeudaFormState extends State<DeudaForm>
     _notasCtrl = TextEditingController(text: d?.notas ?? '');
     _tipoInteres = d?.tipoInteres ?? 'ninguno';
     _modalidadCalculo = d?.modalidadCalculo ?? 'simple';
+    _tipoAmortizacion = d?.tipoAmortizacion ?? 'saldo_original';
     _fechaPrestamo = d?.fechaPrestamo ?? DateTime.now();
     _fechaLimite = d?.fechaLimite;
   }
@@ -92,6 +95,56 @@ class _DeudaFormState extends State<DeudaForm>
     if (f != null) setState(() => _fechaLimite = f);
   }
 
+  Future<void> _calcularCuotaSugerida() async {
+    final monto = parseCOP(_montoCtrl.text);
+    if (monto == null || monto <= 0) {
+      mostrarAlerta(context, 'Ingresa primero el monto original.');
+      return;
+    }
+    if (!_tieneInteres) {
+      mostrarAlerta(context, 'Ingresa primero una tasa de interés mayor a 0.');
+      return;
+    }
+    final cuotasCtrl = TextEditingController();
+    final numeroCuotas = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Calcular cuota sugerida'),
+        content: TextField(
+          controller: cuotasCtrl,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(labelText: '¿En cuántos meses?'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, int.tryParse(cuotasCtrl.text)),
+            child: const Text('Calcular'),
+          ),
+        ],
+      ),
+    );
+    if (numeroCuotas == null || numeroCuotas <= 0) return;
+    final tasa = double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
+    final cuota = InteresCalculator.calcularCuotaFijaDesdeTasa(
+      capital: monto,
+      tasaInteres: tasa,
+      tipoInteres: _tipoInteres == 'anual' ? 'anual' : 'mensual',
+      numeroCuotas: numeroCuotas,
+    );
+    if (!mounted) return;
+    setState(() => _cuotaCtrl.text = formatCOPInput(cuota));
+    mostrarExito(
+      context,
+      'Cuota fija sugerida a $numeroCuotas meses: ${formatCOP(cuota)}.',
+    );
+  }
+
   Future<void> _guardar() async {
     if (!formKey.currentState!.validate()) return;
     setState(() => guardando = true);
@@ -107,6 +160,7 @@ class _DeudaFormState extends State<DeudaForm>
     final tasa = double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
     final tipo = tasa > 0 ? _tipoInteres : 'ninguno';
     final modalidad = tasa > 0 ? _modalidadCalculo : 'simple';
+    final amortizacion = tasa > 0 ? _tipoAmortizacion : 'saldo_original';
     final cuotaText = _cuotaCtrl.text.trim();
     final cuota = cuotaText.isEmpty ? null : parseCOP(cuotaText);
     final notas = _notasCtrl.text.trim();
@@ -126,6 +180,7 @@ class _DeudaFormState extends State<DeudaForm>
             tasaInteres: Value(tasa),
             tipoInteres: Value(tipo),
             modalidadCalculo: Value(modalidad),
+            tipoAmortizacion: Value(amortizacion),
             fechaPrestamo: fechaPrestamo,
             fechaLimite: Value(fechaLimite),
             cuotaMensual: Value(cuota),
@@ -140,6 +195,7 @@ class _DeudaFormState extends State<DeudaForm>
             tasaInteres: tasa,
             tipoInteres: tipo,
             modalidadCalculo: modalidad,
+            tipoAmortizacion: amortizacion,
             fechaPrestamo: fechaPrestamo,
             fechaLimite: Value(fechaLimite),
             cuotaMensual: Value(cuota),
@@ -216,6 +272,7 @@ class _DeudaFormState extends State<DeudaForm>
                     if (!_tieneInteres) {
                       _tipoInteres = 'ninguno';
                       _modalidadCalculo = 'simple';
+                      _tipoAmortizacion = 'saldo_original';
                     }
                   }),
                   validator: (v) {
@@ -260,6 +317,50 @@ class _DeudaFormState extends State<DeudaForm>
                       ? (v) => setState(() => _modalidadCalculo = v ?? 'simple')
                       : null,
                 ),
+                const SizedBox(height: AppSpacing.md),
+                DropdownButtonFormField<String>(
+                  value: _tipoAmortizacion,
+                  decoration: const InputDecoration(
+                    labelText: 'Interés sobre',
+                    prefixIcon: Icon(Icons.account_balance_outlined),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'saldo_original',
+                      child: Text('Saldo original (hasta pagar todo)'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'saldo_insoluto',
+                      child: Text('Saldo insoluto (baja con cada abono)'),
+                    ),
+                  ],
+                  onChanged: tieneInteres
+                      ? (v) => setState(
+                          () => _tipoAmortizacion = v ?? 'saldo_original',
+                        )
+                      : null,
+                ),
+                if (tieneInteres) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    child: Text(
+                      _tipoAmortizacion == 'saldo_insoluto'
+                          ? 'El interés de cada mes se calcula sobre lo que '
+                                'aún debes, no sobre el monto original — así '
+                                'funciona un crédito bancario.'
+                          : 'El interés siempre se calcula sobre el monto '
+                                'original completo, sin importar los abonos '
+                                'que hagas — pensado para deuda informal sin '
+                                'abonos periódicos garantizados.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorSecundario,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -291,10 +392,15 @@ class _DeudaFormState extends State<DeudaForm>
               children: [
                 TextFormField(
                   controller: _cuotaCtrl,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Cuota mensual pactada',
                     hintText: 'Opcional',
-                    prefixIcon: Icon(Icons.payment),
+                    prefixIcon: const Icon(Icons.payment),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.calculate_outlined),
+                      tooltip: 'Calcular cuota sugerida',
+                      onPressed: _calcularCuotaSugerida,
+                    ),
                   ),
                   keyboardType: TextInputType.number,
                   inputFormatters: [
