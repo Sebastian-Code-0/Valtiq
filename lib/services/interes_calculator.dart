@@ -253,7 +253,13 @@ abstract class InteresCalculator {
     interesTotalCausado += interesPeriodo(corte, fin);
     interesPendiente += interesPeriodo(corte, fin);
 
-    final totalAbonadoReal = ordenados.fold<int>(0, (s, a) => s + a.monto);
+    // Un abono con fecha posterior a `fin` ya se ignoró arriba (no reduce
+    // capital ni interés desde la perspectiva de este corte) — por
+    // consistencia, tampoco debe contarse aquí como "abonado", o
+    // totalConInteres - totalAbonado dejaría de coincidir con saldoPendiente.
+    final totalAbonadoReal = ordenados
+        .where((a) => !a.fecha.isAfter(fin))
+        .fold<int>(0, (s, a) => s + a.monto);
     final saldoPendiente = saldoCapital + interesPendiente;
 
     return {

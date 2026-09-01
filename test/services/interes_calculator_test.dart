@@ -337,6 +337,67 @@ void main() {
         // ultimoCumplimiento=Feb 28, diasDif=0 → 4.0 meses.
         expect(interes, closeTo(80000.0, 0.01));
       });
+
+      test('29 feb (año bisiesto) → 29 mar = 1 mes exacto, sin clip', () {
+        final interes = InteresCalculator.calcularInteresSimple(
+          monto: 1000000,
+          tasaInteres: 2,
+          tipoInteres: 'mensual',
+          fechaInicio: DateTime.utc(2028, 2, 29),
+          fechaFin: DateTime.utc(2028, 3, 29),
+        );
+        // 2028 es bisiesto. _aniversario(2028,3,29): marzo tiene 31 días,
+        // día 29 existe → Mar 29 sin recorte. diasDif=0 → 1.0 mes exacto.
+        expect(interes, closeTo(20000.0, 0.01));
+      });
+
+      test(
+        '29 feb (bisiesto) → 28 feb del año siguiente (no bisiesto) = '
+        '12 meses exactos (el aniversario de feb se recorta a 28)',
+        () {
+          final interes = InteresCalculator.calcularInteresSimple(
+            monto: 1000000,
+            tasaInteres: 2,
+            tipoInteres: 'mensual',
+            fechaInicio: DateTime.utc(2028, 2, 29),
+            fechaFin: DateTime.utc(2029, 2, 28),
+          );
+          // 2029 no es bisiesto, así que el 12º aniversario (_aniversario con
+          // día 29 y mes de destino = feb 2029) se recorta a Feb 28 —
+          // exactamente la fecha de fin, sin días parciales. El punto de
+          // esta prueba es fijar que un préstamo que arranca un 29 de
+          // febrero también cae en meses exactos limpios (no arrastra un
+          // día "fantasma" cada año al cruzar a un año no bisiesto).
+          expect(interes, closeTo(240000.0, 0.01));
+        },
+      );
+
+      test('31 ene → 1 mar = 1 mes + 1 día (justo tras el aniversario recortado)', () {
+        final interes = InteresCalculator.calcularInteresSimple(
+          monto: 1000000,
+          tasaInteres: 2,
+          tipoInteres: 'mensual',
+          fechaInicio: DateTime.utc(2026, 1, 31),
+          fechaFin: DateTime.utc(2026, 3, 1),
+        );
+        // Aniversario feb = Feb 28 (recorte). diasDif = Mar1 − Feb28 = 1 día
+        // → 1 + 1/30 meses. 1M × 2% × 1.0333... = 20.666,67 → redondea a 20.667.
+        expect(interes, 20667);
+      });
+    });
+
+    group('fracciones de día mínimas', () {
+      test('exactamente 1 día → fracción 1/30 de mes, sin redondear a 0', () {
+        final interes = InteresCalculator.calcularInteresSimple(
+          monto: 1000000,
+          tasaInteres: 2,
+          tipoInteres: 'mensual',
+          fechaInicio: DateTime.utc(2026, 3, 15),
+          fechaFin: DateTime.utc(2026, 3, 16),
+        );
+        // 1M × 2% × (1/30) = 666,67 → redondea a 667.
+        expect(interes, 667);
+      });
     });
 
     group('saldo_insoluto (amortización bancaria real)', () {
@@ -509,6 +570,43 @@ void main() {
             fechaFin: DateTime.utc(2026, 4, 1),
           );
           expect(desordenado, enOrden);
+        },
+      );
+
+      test(
+        'abono con fecha posterior a fechaFin (fecha de corte) se ignora '
+        'del todo, incluido totalAbonado — no solo del interés/capital',
+        () {
+          final r = InteresCalculator.resumenPrestamo(
+            montoPrestado: 1000000,
+            tasaInteres: 2,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'simple',
+            fechaPrestamo: DateTime.utc(2026, 1, 1),
+            totalAbonado: 0,
+            tipoAmortizacion: 'saldo_insoluto',
+            abonos: [
+              // Fechado DESPUÉS del corte que se está consultando (mayo,
+              // pero fechaFin es marzo): desde la perspectiva de ese corte
+              // todavía no pudo haber ocurrido.
+              AbonoInteres(fecha: DateTime.utc(2026, 5, 1), monto: 500000),
+            ],
+            fechaFin: DateTime.utc(2026, 3, 1),
+          );
+          // Interés de 2 meses completos sobre el millón sin tocar (el
+          // abono futuro no reduce capital): 1.000.000 × 2% × 2 = 40.000.
+          expect(r['interesAcumulado'], 40000);
+          expect(r['montoPrestado'], 1000000);
+          // Si el abono futuro se contara aquí, totalAbonado sería 500.000
+          // pero saldoPendiente NO lo reflejaría (el capital sigue en
+          // 1.000.000) — totalConInteres - totalAbonado dejaría de cuadrar
+          // con saldoPendiente. Debe quedar en 0: no se aplicó nada todavía.
+          expect(r['totalAbonado'], 0);
+          expect(r['saldoPendiente'], 1040000);
+          expect(
+            r['totalConInteres']! - r['totalAbonado']!,
+            r['saldoPendiente'],
+          );
         },
       );
 

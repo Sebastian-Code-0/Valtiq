@@ -258,7 +258,16 @@ extraiga `valtiq.db` fuera del dispositivo.
 ## Servicios
 
 **InteresCalculator** (`services/interes_calculator.dart`)
-Cálculo de interés simple y compuesto por meses calendario.
+Cálculo de interés simple y compuesto. **Convención exacta (no asumir
+por el nombre "interés compuesto"):** meses completos + fracción de
+mes de 30 días, aplicados dentro de la fórmula de interés
+correspondiente. Un usuario podría asumir que "compuesto" significa
+que solo se capitaliza al cumplirse cada mes calendario — no es así:
+el mes en curso, aunque incompleto, entra a la fórmula como fracción
+(días transcurridos desde el último aniversario / 30), nunca se
+ignora hasta el próximo aniversario. Esto es lo que hace el resultado
+reproducible: dos fechas cualquiera siempre producen el mismo
+interés, sin importar qué día se abra la app o se consulte el saldo.
 La unidad base es el mes contado por límites reales del calendario,
 no días fijos. Los días parciales del mes en curso se prorratean
 sobre 30 días. Aplica convención bancaria colombiana para préstamos
