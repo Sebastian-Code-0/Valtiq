@@ -31,6 +31,76 @@ void main() {
       expect(formatCOP(999.4), r'$999');
       expect(formatCOP(999.6), r'$1.000');
     });
+
+    group('rangos intermedios sin palabra propia en español (dígitos agrupados)', () {
+      test('mil pesos', () {
+        expect(formatCOP(1000), r'$1.000');
+      });
+
+      test('diez mil pesos', () {
+        expect(formatCOP(10000), r'$10.000');
+      });
+
+      test('cien mil pesos', () {
+        expect(formatCOP(100000), r'$100.000');
+      });
+
+      test('un millón de pesos', () {
+        expect(formatCOP(1000000), r'$1.000.000');
+      });
+
+      test('diez millones de pesos', () {
+        expect(formatCOP(10000000), r'$10.000.000');
+      });
+
+      test('cien millones de pesos', () {
+        expect(formatCOP(100000000), r'$100.000.000');
+      });
+
+      test('mil millones de pesos (no tiene palabra corta en español)', () {
+        expect(formatCOP(1000000000), r'$1.000.000.000');
+      });
+
+      test('diez mil millones de pesos', () {
+        expect(formatCOP(10000000000), r'$10.000.000.000');
+      });
+
+      test('cien mil millones de pesos (justo debajo del umbral de billón)', () {
+        expect(formatCOP(100000000000), r'$100.000.000.000');
+      });
+    });
+
+    group('escala larga es_CO: billones (1e12) y trillones (1e18)', () {
+      test('exactamente 1e12 → singular "billón", no "billones"', () {
+        expect(formatCOP(1e12), r'$1 billón');
+      });
+
+      test('2e12 → plural "billones"', () {
+        expect(formatCOP(2e12), r'$2 billones');
+      });
+
+      test('5,5e12 → coeficiente con decimales, plural', () {
+        expect(formatCOP(5.5e12), r'$5,50 billones');
+      });
+
+      test('1e15 (mil billones) → sigue en escala de billones, plural', () {
+        expect(formatCOP(1e15), r'$1000 billones');
+      });
+
+      test('exactamente 1e18 → singular "trillón", no "trillones"', () {
+        expect(formatCOP(1e18), r'$1 trillón');
+      });
+
+      test('3e18 → plural "trillones"', () {
+        expect(formatCOP(3e18), r'$3 trillones');
+      });
+
+      test('monto que excede maxCoeficiente → topado con "+", siempre plural', () {
+        final excedido = formatCOP(1e40);
+        expect(excedido, endsWith('+ trillones'));
+        expect(excedido, isNot(contains('trillón ')));
+      });
+    });
   });
 
   group('formatTasaInicial', () {
