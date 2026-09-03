@@ -62,30 +62,46 @@
 | creadoEn     | DATETIME | default now         |
 
 **Ingresos**
-| Columna       | Tipo     | Notas                               |
-|---------------|----------|-------------------------------------|
-| id            | INTEGER  | PK autoincrement                    |
-| concepto      | TEXT     |                                     |
-| monto         | INTEGER  | pesos enteros                       |
-| frecuencia    | TEXT     | 'mensual' / 'quincenal' / 'semanal' |
-| fecha         | DATETIME |                                     |
-| notas         | TEXT     | default ''                          |
-| activo        | BOOLEAN  | default true                        |
-| creadoEn      | DATETIME | default now                         |
-| actualizadoEn | DATETIME | default now                         |
+| Columna       | Tipo     | Notas                                          |
+|---------------|----------|-------------------------------------------------|
+| id            | INTEGER  | PK autoincrement                               |
+| concepto      | TEXT     |                                                 |
+| monto         | INTEGER  | pesos enteros — monto POR PERÍODO, no ya mensual (ver nota abajo) |
+| frecuencia    | TEXT     | 'mensual' / 'quincenal' / 'semanal' / 'unico'  |
+| fecha         | DATETIME |                                                 |
+| notas         | TEXT     | default ''                                     |
+| activo        | BOOLEAN  | default true                                   |
+| creadoEn      | DATETIME | default now                                    |
+| actualizadoEn | DATETIME | default now                                    |
 
 **GastosFijos**
 | Columna       | Tipo     | Notas                               |
 |---------------|----------|-------------------------------------|
 | id            | INTEGER  | PK autoincrement                    |
 | concepto      | TEXT     |                                     |
-| monto         | INTEGER  | pesos enteros                       |
+| monto         | INTEGER  | pesos enteros — monto POR PERÍODO, no ya mensual (ver nota abajo) |
 | frecuencia    | TEXT     | 'mensual' / 'quincenal' / 'semanal' |
 | diaCobro      | INTEGER  | nullable                            |
 | notas         | TEXT     | default ''                          |
 | activo        | BOOLEAN  | default true                        |
 | creadoEn      | DATETIME | default now                         |
 | actualizadoEn | DATETIME | default now                         |
+
+**Qué hace `frecuencia` (2026-09-02):** el `monto` de `Ingresos`/`GastosFijos`
+siempre representa lo que se recibe/paga EN CADA período, nunca un total ya
+mensualizado. `lib/utils/frecuencia.dart` (`factorMensual`) define el
+multiplicador para llevarlo a un equivalente mensual: mensual ×1, quincenal
+×2, semanal ×52/12 (no ×4 — un mes tiene en promedio más de 4 semanas
+exactas). Se usa en `IngresosDao.watchTotalIngresosMes` y
+`GastosFijosDao.watchTotalMensualizado`, consumidos por el dashboard y por
+los totales de `finanzas_screen.dart`. `Ingresos.frecuencia = 'unico'` es
+distinto: no se prorratea, y solo cuenta en el total del mes de su propia
+`fecha` — un ingreso 'unico' cuyo mes ya pasó se desactiva automáticamente al
+abrir la app (`NotificationService.revisarIngresosUnicosVencidos`, llamado
+desde `main.dart` junto a `revisarRecordatorios`), con una notificación
+agrupada avisando cuáles se movieron a Desactivados. No se borra — sigue
+visible en el historial, solo deja de sumar. `GastosFijos` no tiene 'unico'
+ni columna `fecha`: siempre es recurrente.
 
 **Recordatorios**
 | Columna            | Tipo     | Notas                                    |

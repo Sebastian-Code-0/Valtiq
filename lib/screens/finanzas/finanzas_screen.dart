@@ -8,6 +8,7 @@ import '../../utils/date_format.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../../utils/frecuencia.dart';
 import '../../utils/notificaciones.dart';
 import 'gasto_fijo_form.dart';
 import 'gasto_variable_form.dart';
@@ -101,8 +102,11 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
     if (resultado is ({String categoria, DateTime mes}) && mounted) {
       final ahora = DateTime.now();
       final esMesActual =
-          resultado.mes.year == ahora.year && resultado.mes.month == ahora.month;
-      final cuando = esMesActual ? 'este mes' : 'en ${formatMesAnio(resultado.mes)}';
+          resultado.mes.year == ahora.year &&
+          resultado.mes.month == ahora.month;
+      final cuando = esMesActual
+          ? 'este mes'
+          : 'en ${formatMesAnio(resultado.mes)}';
       mostrarAlerta(
         context,
         'Superaste tu presupuesto de ${resultado.categoria} $cuando.',
@@ -522,7 +526,10 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         final gastos = snapshot.data!;
         final total = gastos
             .where((g) => g.activo)
-            .fold<int>(0, (sum, g) => sum + g.monto);
+            .fold<int>(
+              0,
+              (sum, g) => sum + (g.monto * factorMensual(g.frecuencia)).round(),
+            );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -832,7 +839,15 @@ class _IngresoCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (!cuentaEsteMes) ...[
+              if (ingreso.frecuencia == 'quincenal' ||
+                  ingreso.frecuencia == 'semanal') ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '≈ ${formatCOP(ingreso.monto * factorMensual(ingreso.frecuencia))} / mes',
+                  style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+                ),
+              ],
+              if (ingreso.activo && !cuentaEsteMes) ...[
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'No cuenta en el total de este mes',
@@ -995,6 +1010,14 @@ class _GastoFijoCard extends StatelessWidget {
                   ],
                 ],
               ),
+              if (gasto.frecuencia == 'quincenal' ||
+                  gasto.frecuencia == 'semanal') ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '≈ ${formatCOP(gasto.monto * factorMensual(gasto.frecuencia))} / mes',
+                  style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+                ),
+              ],
             ],
           ),
         ),

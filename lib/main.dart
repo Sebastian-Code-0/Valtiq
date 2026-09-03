@@ -37,6 +37,7 @@ void main() async {
   await CryptoService.init();
   await NotificationService.init();
   unawaited(NotificationService.revisarRecordatorios(db));
+  unawaited(NotificationService.revisarIngresosUnicosVencidos(db));
   runApp(ValtiqApp(db: db));
 }
 

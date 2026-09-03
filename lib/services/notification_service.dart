@@ -283,6 +283,51 @@ class NotificationService {
     return notificados;
   }
 
+  // ID fijo y negativo, reservado para esta notificación: los recordatorios
+  // usan su propio `id` autoincrement (siempre positivo) como id de
+  // notificación (ver arriba, `showNotification(id: r.id, ...)`), así que un
+  // id negativo nunca puede colisionar con uno real. Al ser un id fijo (no
+  // uno por ingreso), si se abre la app varias veces con nada nuevo que
+  // avisar simplemente no se muestra nada — y si hay una notificación vieja
+  // de esta clase sin descartar, la próxima la reemplaza en vez de apilarse.
+  static const _idIngresosUnicosVencidos = -1001;
+
+  /// Revisa ingresos 'unico' cuyo mes ya pasó y los desactiva automáticamente
+  /// (dejan de sumarse en `IngresosDao.watchTotalIngresosMes`, pero se
+  /// mantienen visibles en el historial — ver `IngresosDao.desactivarVarios`,
+  /// nunca se borran). Si hubo alguno, dispara UNA sola notificación
+  /// agrupada con los nombres, en vez de una por cada uno.
+  static Future<int> revisarIngresosUnicosVencidos(AppDatabase db) async {
+    final ahora = DateTime.now();
+    final inicioMesActual = DateTime.utc(ahora.year, ahora.month, 1);
+    final vencidos = await db.ingresosDao.getUnicosVencidos(inicioMesActual);
+    if (vencidos.isEmpty) return 0;
+
+    await db.ingresosDao.desactivarVarios(vencidos.map((i) => i.id).toList());
+
+    final nombres = vencidos.map((i) => '"${i.concepto}"').join(', ');
+    final String titulo;
+    final String cuerpo;
+    if (vencidos.length == 1) {
+      titulo = 'Ingreso único desactivado';
+      cuerpo =
+          '$nombres se movió a Desactivados: ya pasó su mes y no cuenta '
+          'más en el total.';
+    } else {
+      titulo = '${vencidos.length} ingresos únicos desactivados';
+      cuerpo =
+          '$nombres se movieron a Desactivados: ya pasó su mes y no '
+          'cuentan más en el total.';
+    }
+    await showNotification(
+      id: _idIngresosUnicosVencidos,
+      title: titulo,
+      body: cuerpo,
+    );
+
+    return vencidos.length;
+  }
+
   static bool _debeAvisar({
     required String frecuencia,
     required DateTime? ultimoAviso,

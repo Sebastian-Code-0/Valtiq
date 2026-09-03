@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../utils/frecuencia.dart';
 import '../database.dart';
 import '../tables.dart';
 
@@ -49,6 +50,23 @@ class GastosFijosDao extends DatabaseAccessor<AppDatabase>
       await attachedDatabase.recordatoriosDao
           .desactivarRecordatoriosPorReferencia('gasto', id);
     });
+  }
+
+  /// Total mensual de gastos fijos activos: el `monto` guardado es POR
+  /// PERÍODO (lo que se paga cada quincena/semana/mes), así que se
+  /// multiplica por `factorMensual` antes de sumar — mismo mecanismo que
+  /// `IngresosDao.watchTotalIngresosMes`. `GastosFijos` no tiene 'unico' ni
+  /// columna `fecha`: siempre es recurrente, así que no hace falta filtrar
+  /// por mes acá, solo prorratear.
+  Stream<int> watchTotalMensualizado() {
+    return (select(
+      gastosFijos,
+    )..where((t) => t.activo.equals(true))).watch().map(
+      (lista) => lista.fold<int>(
+        0,
+        (s, g) => s + (g.monto * factorMensual(g.frecuencia)).round(),
+      ),
+    );
   }
 
   Future<void> setActivo(int id, {required bool activo}) {

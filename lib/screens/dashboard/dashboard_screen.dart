@@ -124,13 +124,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .watchTotalIngresosMes(now.year, now.month)
         .map((v) => v.toDouble());
 
-    final sumGastos = db.gastosFijos.monto.sum();
-    _streamGastos =
-        (db.selectOnly(db.gastosFijos)
-              ..addColumns([sumGastos])
-              ..where(db.gastosFijos.activo.equals(true)))
-            .watchSingle()
-            .map((row) => (row.read(sumGastos) ?? 0).toDouble());
+    _streamGastos = db.gastosFijosDao.watchTotalMensualizado().map(
+      (v) => v.toDouble(),
+    );
 
     _streamGastosVariables = widget.db.gastosVariablesDao
         .watchTotalMes(now.year, now.month)
