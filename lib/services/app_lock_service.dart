@@ -76,7 +76,7 @@ abstract class AppLockService {
   static Future<bool> autenticarConBiometria() async {
     try {
       return await _localAuth.authenticate(
-        localizedReason: 'Confirmá tu identidad para abrir Valtiq',
+        localizedReason: 'Confirma tu identidad para abrir Valtiq',
         options: const AuthenticationOptions(
           biometricOnly: false,
           stickyAuth: true,

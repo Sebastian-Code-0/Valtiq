@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/app_lock_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/notificaciones.dart';
 import '../lock/configurar_pin_screen.dart';
 
 class SeguridadScreen extends StatefulWidget {
@@ -57,23 +58,19 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
     if (ok == true) {
       await _cargar();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bloqueo activado')),
-      );
+      mostrarExito(context, 'Bloqueo activado');
     }
   }
 
   Future<void> _desactivar() async {
     final pin = await _pedirPinActual(
-      titulo: 'Ingresá tu PIN para desactivar el bloqueo',
+      titulo: 'Ingresa tu PIN para desactivar el bloqueo',
     );
     if (pin == null) return;
     final ok = await AppLockService.verificarPin(pin);
     if (!mounted) return;
     if (!ok) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('PIN incorrecto')));
+      mostrarAlerta(context, 'PIN incorrecto');
       return;
     }
     await AppLockService.desactivar();
@@ -88,9 +85,7 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
       ),
     );
     if (ok == true && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('PIN actualizado')));
+      mostrarExito(context, 'PIN actualizado');
     }
   }
 
@@ -140,7 +135,7 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
                   child: SwitchListTile(
                     title: const Text('Bloqueo con PIN/biometría'),
                     subtitle: const Text(
-                      'Pide desbloquear la app cada vez que la abrís',
+                      'Pide desbloquear la app cada vez que la abres',
                     ),
                     value: _bloqueoActivo,
                     onChanged: (v) => v ? _activar() : _desactivar(),

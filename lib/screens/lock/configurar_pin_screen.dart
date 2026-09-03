@@ -29,9 +29,9 @@ class _ConfigurarPinScreenState extends State<ConfigurarPinScreen> {
   static const _minLargo = 4;
 
   String get _titulo => switch (_paso) {
-    _Paso.pinActual => 'Ingresá tu PIN actual',
-    _Paso.pinNuevo => 'Elegí un PIN nuevo',
-    _Paso.confirmarPinNuevo => 'Confirmá el PIN nuevo',
+    _Paso.pinActual => 'Ingresa tu PIN actual',
+    _Paso.pinNuevo => 'Elige un PIN nuevo',
+    _Paso.confirmarPinNuevo => 'Confirma el PIN nuevo',
   };
 
   Future<void> _continuar() async {
