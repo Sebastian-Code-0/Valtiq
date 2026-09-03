@@ -1,5 +1,96 @@
 # Changelog
 
+## Bloqueo PIN/biometría, ingresos variables, fix de corrupción en migraciones (2026-09-01 a 2026-09-02) — v1.7.0+8
+
+Sin cambio de schema (sigue en 12) — ninguno de estos commits agregó
+columnas nuevas, así que no hubo bump de versión.
+
+**Bloqueo de la app con PIN/biometría:** opt-in desde Ajustes →
+Seguridad, desactivado por defecto. `AppLockService`
+(`lib/services/app_lock_service.dart`) guarda todo en
+`shared_preferences`: PIN con hash+salt (10.000 rondas de SHA-256,
+nunca en texto plano, corrido en un isolate vía `compute()`),
+`usaBiometria`, `timeoutReloqueo`. Biometría vía `local_auth` (`^2.3.0`
+— la 3.x pide Dart SDK `^3.9.0`, el proyecto está en `^3.8.1`) en
+Android/iOS/Windows; sin soporte oficial en Linux, descartado antes de
+tocar el plugin. `AppLockOverlay` se monta vía `MaterialApp.builder`
+para cubrir cualquier pantalla sin importar la profundidad de
+navegación, con timeout configurable (Inmediato/30s/1min/5min/15min)
+al volver de segundo plano. Android requirió pasar `MainActivity` de
+`FlutterActivity` a `FlutterFragmentActivity` (el `BiometricPrompt`
+nativo necesita una `FragmentActivity`) más el permiso
+`android.permission.USE_BIOMETRIC`. Es solo un gate de UI a propósito:
+no cifra ni desbloquea la clave AES real de `CryptoService`/SMTP —
+evaluado y diferido para no arriesgar dejar esa configuración
+inaccesible por un bug de esta primera versión.
+
+- Bug real encontrado al primer uso real: `LockScreen` vivía como
+  HERMANO del `Navigator` de la app dentro de un `Stack` suelto, sin
+  ningún `Overlay` ancestro para el `TextField` del PIN — tocarlo
+  tiraba "No Overlay widget found" en cadena. `AppLockOverlay` ahora
+  se renderiza dentro de un `Overlay` propio con un `OverlayEntry`
+  persistente (`initialEntries` de `Overlay` solo se lee una vez, así
+  que hace falta `markNeedsBuild()` a mano en cada cambio de estado).
+- El aviso de un ingreso 'unico' desactivado (ver abajo) se mostró
+  primero como notificación del sistema operativo y se corrigió a un
+  SnackBar (`mostrarInfo`) — decisión explícita: es información de la
+  sesión actual, no algo que amerite una notificación real.
+- SnackBars propios ilegibles (blanco sobre blanco, no usaban el
+  helper `mostrarExito`/`mostrarAlerta` ya existente) y varias cadenas
+  nuevas en voseo inconsistente con el resto de la app (tuteo) —
+  corregidos.
+
+**Ingresos variables (frecuencia):** `Ingresos.frecuencia = 'unico'`
+(pago puntual, ej. un trabajo secundario) se sumaba TODOS los meses
+para siempre en el dashboard, sin filtrar por fecha — el mismo bug
+existía por separado en el total de la pestaña Ingresos de
+`finanzas_screen.dart`. Nuevo `IngresosDao.watchTotalIngresosMes`:
+'unico' solo cuenta en el mes de su propia fecha; recurrentes
+('mensual'/'quincenal'/'semanal') cuentan siempre. Un 'unico' cuyo mes
+ya pasó se desactiva automáticamente al abrir la app
+(`NotificationService.revisarIngresosUnicosVencidos`, llamado desde
+`main.dart`) — nunca se borra, sigue en el historial, solo deja de
+sumar; el aviso agrupado sale como SnackBar (`ShellScreen`, mismo
+patrón que `CryptoService.claveFueRegenerada`).
+
+**`frecuencia` (mensual/quincenal/semanal) pasó a afectar el total,
+no solo mostrarse:** el campo era decorativo tanto en `Ingresos` como
+en `GastosFijos`. El `monto` guardado representa lo que se
+recibe/paga POR PERÍODO; nuevo `lib/utils/frecuencia.dart`
+(`factorMensual`) da el multiplicador para el equivalente mensual:
+mensual ×1, quincenal ×2, semanal ×52/12 (no ×4 — un mes tiene en
+promedio más de 4 semanas exactas). Aplicado en
+`IngresosDao.watchTotalIngresosMes` y el nuevo
+`GastosFijosDao.watchTotalMensualizado`. Las cards de quincenal/semanal
+muestran "≈ $X / mes" para verificar el cálculo.
+
+**Bug de corrupción silenciosa en migraciones de salto múltiple
+(v9/v10 → v12 directo):** los bloques `TableMigration` de `from < 10`
+y `from < 11` (para `deudas`/`prestamos`) no declaraban
+`tipoAmortizacion` en su `newColumns`. Drift reconstruye la tabla con
+el schema ACTUAL de `tables.dart` (que ya incluye esa columna), pero
+sin `newColumns` genera `SELECT ..., "tipo_amortizacion" FROM deudas`
+asumiendo que la columna ya existía — como no existía todavía en ese
+punto de la cadena, SQLite (fuera de modo estricto) reinterpreta el
+identificador entre comillas dobles no reconocido como **string
+literal**, guardando el texto `'tipo_amortizacion'` en vez del default
+`'saldo_original'`. Corrupción silenciosa, sin ningún crash. Solo le
+pega a un usuario que salta varias versiones de golpe (v9 o v10 directo
+a v12) — un upgrade paso a paso (v11→v12) nunca lo dispara.
+`test/db/migration_v12_test.dart` ahora cubre ambos saltos.
+
+**Otros ajustes menores de correctitud:**
+- `InteresCalculator`: convención documentada explícitamente (meses
+  completos + fracción de 30 días, no solo "interés compuesto") y 5
+  tests de borde nuevos (año bisiesto, fracciones de 1 día), que
+  destaparon un bug real en `saldo_insoluto` — un abono fechado
+  después del corte consultado se ignoraba del cálculo pero igual se
+  contaba en `totalAbonado`.
+- `formatCOP`: la escala larga (billón=10¹², trillón=10¹⁸) ya era la
+  correcta para Colombia/LatAm — verificado, no era el bug de escala
+  de EE.UU. que se sospechaba. Se corrigió sí un detalle de gramática:
+  singular "1 billón" en vez de "1 billones".
+
 ## Amortización bancaria real, fixes de presupuestos y cifrado SMTP (2026-08-30) — v1.7.0+8
 
 schemaVersion **11 → 12**: nueva columna `tipoAmortizacion` en `Deudas` y

@@ -3,7 +3,7 @@
 ## Requisitos previos
 
 - Flutter 3.32.1 o superior
-- Android SDK (API 21+) instalado y configurado en `android/local.properties`:
+- Android SDK (API 23+) instalado y configurado en `android/local.properties`:
   ```
   sdk.dir=/ruta/a/tu/android/sdk
   flutter.sdk=/opt/flutter
@@ -65,11 +65,19 @@ release.
 
 | Parámetro | Valor |
 |-----------|-------|
-| `minSdkVersion` | 21 (Android 5.0 Lollipop) |
-| `compileSdk` | `flutter.compileSdkVersion` (35 en Flutter 3.32) |
-| `targetSdk` | `flutter.targetSdkVersion` (35 en Flutter 3.32) |
+| `minSdkVersion` | 23 (Android 6.0 Marshmallow) — forzado en `build.gradle.kts` (`maxOf(flutter.minSdkVersion, 23)`) |
+| `compileSdk` | 36 — forzado (`maxOf(flutter.compileSdkVersion, 36)`) |
+| `targetSdk` | `flutter.targetSdkVersion` (el default de Flutter 3.32) |
 
-El `minSdk = 21` es el valor por defecto de Flutter y cumple el requisito de `flutter_local_notifications`.
+El `minSdk` subió de 21 (default de Flutter) a 23 porque
+`flutter_secure_storage` (usado para la clave AES en Keystore/Keychain,
+ver `docs/ARCHITECTURE.md`) lo requiere. `compileSdk` subió a 36 porque
+`flutter_secure_storage` compila contra ese SDK, por delante del default
+de Flutter 3.32.
+
+`MainActivity.kt` es `FlutterFragmentActivity` (no `FlutterActivity`):
+`local_auth` necesita una `FragmentActivity` para mostrar el
+`BiometricPrompt` nativo del bloqueo con PIN/biometría.
 
 ## Permisos declarados
 
@@ -77,6 +85,7 @@ El `minSdk = 21` es el valor por defecto de Flutter y cumple el requisito de `fl
 |---------|--------|
 | `INTERNET` | Envío de correos SMTP |
 | `POST_NOTIFICATIONS` | Notificaciones del SO (Android 13+) |
+| `USE_BIOMETRIC` | Bloqueo de la app con huella/rostro (opcional, desactivado por defecto) |
 
 En Android 13+ (API 33), el sistema muestra un diálogo pidiendo permiso de notificaciones la primera vez que se inicializa la app.
 

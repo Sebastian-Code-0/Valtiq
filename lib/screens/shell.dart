@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../db/database.dart';
 import '../services/crypto_service.dart';
+import '../services/notification_service.dart';
+import '../utils/notificaciones.dart';
 import 'config/config_smtp_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'deudas/deudas_screen.dart';
@@ -35,6 +37,21 @@ class _ShellScreenState extends State<ShellScreen> {
     if (CryptoService.claveFueRegenerada) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _avisarClavePerdida());
     }
+    if (NotificationService.ingresosUnicosDesactivados.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _avisarIngresosDesactivados(),
+      );
+    }
+  }
+
+  void _avisarIngresosDesactivados() {
+    if (!mounted) return;
+    final nombres = NotificationService.ingresosUnicosDesactivados;
+    final texto = nombres.length == 1
+        ? '"${nombres.first}" se movió a Desactivados: ya pasó su mes.'
+        : '${nombres.length} ingresos únicos se movieron a Desactivados: '
+              'ya pasó su mes.';
+    mostrarInfo(context, texto);
   }
 
   Future<void> _avisarClavePerdida() async {

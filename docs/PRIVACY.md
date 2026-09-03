@@ -1,6 +1,6 @@
 # Política de Privacidad de Valtiq
 
-Última actualización: 11 de julio de 2026
+Última actualización: 2 de septiembre de 2026
 
 ## Resumen
 
@@ -20,9 +20,29 @@ rastreo.
 - Configuración de correo SMTP (si decides usar la función de recordatorios
   por correo)
 - Preferencias de apariencia (tema, color de acento)
+- Si activas el bloqueo de la app (ver abajo): un hash con salt de tu PIN —
+  nunca el PIN en sí
 
 Ninguno de estos datos sale de tu dispositivo, salvo en el caso descrito
 abajo (correo SMTP), y solo si tú activas esa función explícitamente.
+
+## Función opcional: bloqueo con PIN o biometría
+
+Valtiq permite, de forma opcional y desactivada por defecto, pedir PIN o
+biometría (huella, rostro, o el PIN/patrón del sistema) cada vez que abrís
+la app.
+
+- El PIN que elijas nunca se guarda en texto plano: se guarda un hash
+  (SHA-256 con salt aleatorio, 10.000 iteraciones) del que no se puede
+  recuperar el PIN original.
+- La biometría la maneja el sistema operativo directamente (Android,
+  iOS o Windows) a través del paquete oficial `local_auth`. Valtiq nunca
+  recibe, procesa ni almacena tu huella dactilar, tu rostro ni ningún dato
+  biométrico — solo recibe un resultado de "autenticado" o "no
+  autenticado" desde el sistema operativo.
+- Esta función es solo un candado de acceso a la app: no cifra ni protege
+  de forma adicional los datos guardados en el dispositivo (para eso está
+  el cifrado AES-256 de las credenciales SMTP, descrito abajo).
 
 ## Función opcional: recordatorios por correo (SMTP)
 
@@ -46,6 +66,9 @@ tu propia cuenta de Gmail o cualquier proveedor de correo).
   recordatorios por correo SMTP, para conectarse al servidor que
   configuraste. Si no usas esa función, la app no realiza ninguna conexión
   de red.
+- **Biometría (USE_BIOMETRIC)**: usado únicamente si activas el bloqueo
+  de la app y elegís desbloquear con huella o rostro. Si no activas esa
+  función, la app no accede al sensor biométrico.
 
 Valtiq no solicita acceso a contactos, ubicación, cámara, almacenamiento
 compartido, ni ningún otro permiso.

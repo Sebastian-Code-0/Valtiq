@@ -98,9 +98,13 @@ los totales de `finanzas_screen.dart`. `Ingresos.frecuencia = 'unico'` es
 distinto: no se prorratea, y solo cuenta en el total del mes de su propia
 `fecha` — un ingreso 'unico' cuyo mes ya pasó se desactiva automáticamente al
 abrir la app (`NotificationService.revisarIngresosUnicosVencidos`, llamado
-desde `main.dart` junto a `revisarRecordatorios`), con una notificación
-agrupada avisando cuáles se movieron a Desactivados. No se borra — sigue
-visible en el historial, solo deja de sumar. `GastosFijos` no tiene 'unico'
+desde `main.dart` junto a `revisarRecordatorios`). El aviso es un
+**SnackBar** (`mostrarInfo`, vía `NotificationService.ingresosUnicosDesactivados`
+leído una sola vez en `ShellScreen.initState()` — mismo patrón que
+`CryptoService.claveFueRegenerada`), no una notificación del sistema
+operativo: es información de la sesión actual, no algo que amerite salir de
+la app. No se borra — sigue visible en el historial, solo deja de sumar.
+`GastosFijos` no tiene 'unico'
 ni columna `fecha`: siempre es recurrente.
 
 **Recordatorios**
@@ -391,7 +395,12 @@ notificaciones futuras (no se usa `zonedSchedule`/
 `AndroidScheduleMode`): si el usuario no abre la app, no llega ningún
 aviso hasta que vuelva a abrirla. Las referencias de deuda/préstamo/
 gasto de los recordatorios se cargan en batch (no una query por
-recordatorio).
+recordatorio). También aloja `revisarIngresosUnicosVencidos()` (llamado
+igual desde `main.dart`) — un nombre algo genérico para lo que hace hoy,
+porque ya NO dispara una notificación del sistema, solo desactiva
+ingresos 'unico' vencidos y guarda los nombres para que `ShellScreen` los
+muestre con un SnackBar; ver la sección "Ingresos" más arriba para el
+detalle completo.
 
 **SmtpService** (`services/smtp_service.dart`)
 Envía correos usando mailer con la configuración de ConfigSmtps.
@@ -569,11 +578,15 @@ transaccional y respeta integridad referencial (FK enforcement).
 
 ## Flujo de datos
 
-main() carga SharedPreferences (tema, acento) →
-SplashScreen abre AppDatabase →
-NotificationService.init() + revisarRecordatorios() →
-Shell con BottomNavigationBar →
-pantallas acceden a AppDatabase vía constructor.
+main() abre `AppDatabase` → carga SharedPreferences (tema, acento) →
+`CryptoService.init()` → `NotificationService.init()` +
+`revisarRecordatorios()` + `revisarIngresosUnicosVencidos()` (estas dos
+sin `await`, fire-and-forget) → carga `bloqueoInicial`
+(`AppLockService.bloqueoActivo()`) → `runApp` con `MaterialApp.builder`
+envolviendo todo en `AppLockOverlay` → `home: SplashScreen` → tras 2s,
+`ShellScreen` con `BottomNavigationBar` (que ahí sí avisa con SnackBar/
+diálogo si `claveFueRegenerada` o `ingresosUnicosDesactivados` tienen
+algo pendiente) → pantallas acceden a `AppDatabase` vía constructor.
 
 Los streams de drift (watchAll, watchActivos) mantienen las
 listas reactivas: cualquier insert/update/delete reconstruye

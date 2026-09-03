@@ -15,6 +15,7 @@ sin servidores, sin nube, sin cuentas de usuario.
 - Dashboard con balance real: Ingresos − Gastos Fijos − Gastos Variables
 - Comparativo mensual de gastos variables por categoría
 - Recordatorios de pago con notificación del sistema y/o correo SMTP
+- Bloqueo de la app con PIN o biometría (opcional, desactivado por defecto)
 - Tema claro/oscuro con color de acento personalizable
 - Credenciales SMTP cifradas localmente con AES-256
 
@@ -23,10 +24,11 @@ sin servidores, sin nube, sin cuentas de usuario.
 | Componente     | Tecnología                          |
 |----------------|--------------------------------------|
 | Framework      | Flutter 3.32.1 / Dart                |
-| Base de datos  | SQLite vía drift ORM (schemaVersion 11) |
+| Base de datos  | SQLite vía drift ORM (schemaVersion 12) |
 | Notificaciones | flutter_local_notifications          |
 | Correo         | mailer + encrypt (AES-256)           |
-| Plataformas    | Linux, Android (API 21+), Windows    |
+| Seguridad      | local_auth (biometría) + PIN propio (SHA-256 con salt) |
+| Plataformas    | Linux, Android (API 23+), Windows    |
 
 ## Estructura del proyecto
 
@@ -34,7 +36,7 @@ sin servidores, sin nube, sin cuentas de usuario.
 lib/
   db/            # tablas drift, migraciones, DAOs
   screens/       # dashboard, deudas, préstamos, finanzas, recordatorios, ajustes
-  services/      # NotificationService, SmtpService, InteresCalculator, CryptoService
+  services/      # NotificationService, SmtpService, InteresCalculator, CryptoService, AppLockService
   theme/         # AppColors, AppTheme, AppSpacing, AppTypography
   utils/         # formateo COP, fechas, widgets de formulario
 docs/
