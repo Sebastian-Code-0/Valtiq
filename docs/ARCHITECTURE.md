@@ -290,7 +290,49 @@ extraiga `valtiq.db` fuera del dispositivo.
 | Config SMTP   | config_smtp_screen.dart   | Configuración de correo saliente      |
 | Copia de seguridad | respaldo_screen.dart | Exportar/importar todos los datos a JSON |
 | Presupuestos por categoría | presupuestos_screen.dart | Límite mensual de gasto por categoría |
+| Seguridad     | seguridad_screen.dart     | Activar/desactivar bloqueo, biometría, timeout, cambiar PIN |
 | Acerca de     | acerca_de_screen.dart     | Versión, licencia y repositorio       |
+
+## Bloqueo de la app (PIN/biometría)
+
+Opt-in desde Ajustes → Seguridad, desactivado por defecto (nadie queda
+bloqueado afuera por sorpresa tras actualizar). `AppLockService`
+(`services/app_lock_service.dart`) guarda todo en `shared_preferences` (no
+en la base de datos ni en `flutter_secure_storage`): `bloqueoActivo`, hash+
+salt del PIN, `usaBiometria`, `timeoutReloqueo`. El PIN nunca se guarda en
+texto plano — hash iterado (10.000 rondas de SHA-256 con salt aleatorio de
+16 bytes, corrido en un isolate aparte vía `compute()` para no trabar la UI
+en la pantalla de bloqueo), suficiente para el modelo de amenaza real
+(alguien con acceso físico probando PINes a mano, no un ataque remoto
+masivo) sin sumar una dependencia de PBKDF2 solo para esto.
+
+Biometría vía `local_auth` (Android/iOS/Windows — sin implementación
+oficial en Linux, `AppLockService.biometriaDisponible()` descarta esa
+plataforma antes de tocar el plugin, mismo patrón que
+`NotificationService._soportado`). Android requiere `FlutterFragmentActivity`
+en vez de `FlutterActivity` (`MainActivity.kt`) porque el `BiometricPrompt`
+nativo necesita una `FragmentActivity`, y el permiso
+`android.permission.USE_BIOMETRIC` en el manifest. iOS necesitará
+`NSFaceIDUsageDescription` en `Info.plist` cuando se agregue la carpeta
+`ios/` al repo (todavía no existe, ver `crypto_service.dart`).
+
+**Es solo un gate de UI, deliberadamente:** no cifra ni desbloquea la clave
+AES real que protege la contraseña SMTP (`CryptoService`) — se evaluó y se
+decidió diferir esa integración más profunda a un pendiente separado, para
+no arriesgar dejar esa configuración inaccesible por un bug de esta primera
+versión del bloqueo.
+
+`AppLockOverlay` (`screens/lock/app_lock_overlay.dart`) se monta vía
+`MaterialApp.builder` (no `home`) para poder cubrir CUALQUIER pantalla con
+`LockScreen` sin importar la profundidad de navegación — un
+`Navigator.push` normal no alcanzaría a taparse encima de diálogos o rutas
+ya abiertas. Usa `WidgetsBindingObserver` para detectar
+`AppLifecycleState.paused`/`resumed` y volver a bloquear si pasó más tiempo
+que `timeoutReloqueo` desde que la app quedó en segundo plano. El estado
+inicial (`bloqueoInicial`) se calcula en `main()` ANTES de `runApp` — misma
+convención que `themeModeNotifier`/`acentoNotifier` — para que el primer
+frame ya sepa si debe arrancar bloqueada, sin parpadeo de contenido real
+mientras se resuelve el `Future` async.
 
 ## Servicios
 

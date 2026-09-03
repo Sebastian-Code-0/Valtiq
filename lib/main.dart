@@ -5,7 +5,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'db/database.dart';
+import 'screens/lock/app_lock_overlay.dart';
 import 'screens/splash_screen.dart';
+import 'services/app_lock_service.dart';
 import 'services/crypto_service.dart';
 import 'services/notification_service.dart';
 import 'theme/theme.dart';
@@ -38,13 +40,22 @@ void main() async {
   await NotificationService.init();
   unawaited(NotificationService.revisarRecordatorios(db));
   unawaited(NotificationService.revisarIngresosUnicosVencidos(db));
-  runApp(ValtiqApp(db: db));
+
+  // Cargado ANTES de runApp (misma convención que theme/acento arriba) para
+  // que el primer frame ya sepa si debe arrancar bloqueada — evita mostrar
+  // contenido real sin proteger mientras se resuelve un Future async. Barato
+  // acá: SharedPreferences.getInstance() ya está en caché por el `prefs` de
+  // arriba, así que este await no agrega I/O real.
+  final bloqueoInicial = await AppLockService.bloqueoActivo();
+
+  runApp(ValtiqApp(db: db, bloqueoInicial: bloqueoInicial));
 }
 
 class ValtiqApp extends StatelessWidget {
-  const ValtiqApp({super.key, required this.db});
+  const ValtiqApp({super.key, required this.db, required this.bloqueoInicial});
 
   final AppDatabase db;
+  final bool bloqueoInicial;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +79,10 @@ class ValtiqApp extends StatelessWidget {
               ],
               supportedLocales: const [Locale('es', 'CO')],
               home: SplashScreen(db: db),
+              builder: (context, child) => AppLockOverlay(
+                initiallyLocked: bloqueoInicial,
+                child: child ?? const SizedBox.shrink(),
+              ),
             );
           },
         );
