@@ -250,8 +250,9 @@ abstract class InteresCalculator {
       corte = abono.fecha;
     }
 
-    interesTotalCausado += interesPeriodo(corte, fin);
-    interesPendiente += interesPeriodo(corte, fin);
+    final causadoFinal = interesPeriodo(corte, fin);
+    interesTotalCausado += causadoFinal;
+    interesPendiente += causadoFinal;
 
     // Un abono con fecha posterior a `fin` ya se ignoró arriba (no reduce
     // capital ni interés desde la perspectiva de este corte) — por

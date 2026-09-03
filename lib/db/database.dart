@@ -129,6 +129,18 @@ class AppDatabase extends _$AppDatabase {
                 'CAST(ROUND(cuota_mensual) AS INTEGER)',
               ),
             },
+            // `tipoAmortizacion` (agregada en schemaVersion 12, mucho después
+            // de que este bloque se escribiera) todavía no existe en la
+            // tabla real en este punto para cualquier upgrade que arranque
+            // en v9. Sin declararla acá, drift la trata como columna YA
+            // existente y genera `SELECT ..., "tipo_amortizacion" FROM
+            // deudas` — como esa columna no existe en la tabla vieja,
+            // SQLite (fuera de modo estricto) reinterpreta el identificador
+            // entre comillas dobles no reconocido como STRING LITERAL en vez
+            // de lanzar error, dejando el valor 'tipo_amortizacion' guardado
+            // literalmente en la columna. Ver el `if (from >= 11)` en el
+            // bloque `from < 12` de más abajo — mismo mecanismo, misma razón.
+            newColumns: [deudas.tipoAmortizacion],
           ),
         );
         await m.alterTable(
@@ -139,6 +151,7 @@ class AppDatabase extends _$AppDatabase {
                 'CAST(ROUND(monto_prestado) AS INTEGER)',
               ),
             },
+            newColumns: [prestamos.tipoAmortizacion],
           ),
         );
         await m.alterTable(
@@ -238,6 +251,9 @@ class AppDatabase extends _$AppDatabase {
                 "'localtime')) AS INTEGER)",
               ),
             },
+            // Mismo motivo que en el bloque `from < 10`: `tipoAmortizacion`
+            // no existe todavía acá para un upgrade que arranque en v10.
+            newColumns: [deudas.tipoAmortizacion],
           ),
         );
         await m.alterTable(
@@ -253,6 +269,7 @@ class AppDatabase extends _$AppDatabase {
                 "'localtime')) AS INTEGER)",
               ),
             },
+            newColumns: [prestamos.tipoAmortizacion],
           ),
         );
         await m.alterTable(
@@ -323,10 +340,22 @@ class AppDatabase extends _$AppDatabase {
         // para deudas/prestamos) siempre reconstruye la tabla con el schema
         // ACTUAL de tables.dart — es decir, cualquier upgrade que pase por
         // esos bloques ya recibe `tipoAmortizacion` gratis (con su default)
-        // en el rebuild. Agregar la columna otra vez aquí para esos casos
-        // rompería con "duplicate column name". El `addColumn` explícito
-        // solo hace falta cuando NINGÚN rebuild anterior tocó la tabla en
-        // este mismo upgrade, es decir cuando `from` ya era >= 11.
+        // en el rebuild, SIEMPRE Y CUANDO esos bloques declaren la columna
+        // en su propio `newColumns` (ya se agregó ahí — ver los comentarios
+        // en `from < 10`/`from < 11`). Sin ese `newColumns`, drift no sabe
+        // que la columna es nueva y genera `SELECT ..., "tipo_amortizacion"
+        // FROM deudas`; como esa columna no existe todavía en la tabla vieja
+        // en ese punto, SQLite reinterpreta el identificador entre comillas
+        // dobles no reconocido como STRING LITERAL en vez de lanzar error —
+        // corrupción silenciosa, no un crash, y por eso el test de salto
+        // múltiple (`migration_v12_test.dart`) es el que lo destapó, no
+        // `flutter analyze` ni un test que solo cubra v11→v12 directo.
+        //
+        // El `addColumn` explícito de acá abajo solo hace falta cuando
+        // NINGÚN rebuild anterior tocó la tabla en este mismo upgrade, es
+        // decir cuando `from` ya era >= 11 (agregarlo también para
+        // `from < 11` rompería con "duplicate column name", ese sí un error
+        // ruidoso e inofensivo comparado con el de arriba).
         if (from >= 11) {
           await m.addColumn(deudas, deudas.tipoAmortizacion);
           await m.addColumn(prestamos, prestamos.tipoAmortizacion);

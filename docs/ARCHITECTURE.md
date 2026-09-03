@@ -211,6 +211,27 @@ ni columna `fecha`: siempre es recurrente.
             las deudas/préstamos existentes). Ver `InteresCalculator`
             más abajo para el significado de cada modo.
 
+**Regla importante para migraciones futuras (encontrada 2026-09-02 con un
+test de salto múltiple):** si una columna nueva se agrega con `addColumn`
+en un bloque `from < N`, y hay bloques `TableMigration` ANTERIORES (`from <
+M` con `M < N`) sobre la misma tabla, esos bloques anteriores deben declarar
+la columna nueva en su propio `newColumns: [...]` — aunque esos bloques ya
+estén "sellados" y no se les vaya a agregar transformación alguna para esa
+columna. `TableMigration` reconstruye la tabla con el schema ACTUAL de
+`tables.dart` (por eso la columna nueva SÍ aparece en la tabla resultante
+del rebuild), pero sin `newColumns` drift no sabe que esa columna no
+existía en la tabla vieja real en ese punto de la cadena, y genera `SELECT
+..., "columna_nueva" FROM tabla_vieja` — como esa columna no existe ahí,
+SQLite (fuera de modo estricto) reinterpreta el identificador entre
+comillas dobles no reconocido como **string literal** en vez de lanzar
+error: el valor guardado queda siendo literalmente el texto
+`"columna_nueva"`, corrupción silenciosa, sin ningún crash que lo delate.
+Esto solo se manifiesta para un usuario que salta VARIAS versiones de
+golpe (ej. v9 o v10 directo a v12) — un upgrade paso a paso (v11→v12)
+nunca lo dispara, porque para entonces la columna ya se agregó por
+`addColumn`. `test/db/migration_v12_test.dart` cubre ambos saltos (v9→v12,
+v10→v12) para que esto no se vuelva a colar sin test.
+
 ### Fechas de negocio vs. timestamps de auditoría
 
 Desde schemaVersion 11, los campos de fecha se dividen en dos
