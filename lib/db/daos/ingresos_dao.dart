@@ -53,4 +53,28 @@ class IngresosDao extends DatabaseAccessor<AppDatabase>
     final row = await query.getSingle();
     return row.read(sum) ?? 0;
   }
+
+  /// Total de ingresos que cuentan para `anio`/`mes`: las fuentes recurrentes
+  /// (`frecuencia` distinta de 'unico') se cuentan siempre, sin importar su
+  /// `fecha` — representan un ingreso continuo (salario, renta), igual que
+  /// `GastosFijos`. Un ingreso 'unico' (pago puntual, ej. un trabajo
+  /// secundario) solo cuenta en el mes de su propia `fecha` — igual que
+  /// `GastosVariables.watchTotalMes` — para no seguir sumándolo para siempre
+  /// una vez pasado ese mes.
+  Stream<int> watchTotalIngresosMes(int anio, int mes) {
+    final inicio = DateTime.utc(anio, mes, 1);
+    final fin = DateTime.utc(anio, mes + 1, 1);
+    final sum = ingresos.monto.sum();
+    final esUnico = ingresos.frecuencia.equals('unico');
+    final dentroDelMes =
+        ingresos.fecha.isBiggerOrEqualValue(inicio) &
+        ingresos.fecha.isSmallerThanValue(fin);
+    return (selectOnly(ingresos)
+          ..addColumns([sum])
+          ..where(
+            ingresos.activo.equals(true) & (esUnico.not() | dentroDelMes),
+          ))
+        .watchSingle()
+        .map((row) => row.read(sum) ?? 0);
+  }
 }

@@ -26,6 +26,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
   String _modo = 'ingresos';
 
   late final Stream<List<Ingreso>> _streamIngresos;
+  late final Stream<int> _streamTotalIngresosMes;
   late Stream<List<GastosVariable>> _streamGastosVariables;
   late final Stream<List<GastosFijo>> _streamGastos;
 
@@ -35,6 +36,17 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
   String _capitalizar(String s) =>
       s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
 
+  // Un ingreso 'unico' (pago puntual, ej. un trabajo secundario) solo cuenta
+  // en el mes de su propia fecha — misma convención que
+  // IngresosDao.watchTotalIngresosMes, replicada acá para poder marcar en la
+  // card las fuentes que NO están sumando en el total mostrado arriba.
+  bool _cuentaEsteMes(Ingreso ingreso) {
+    if (ingreso.frecuencia != 'unico') return true;
+    final now = DateTime.now();
+    final fecha = fechaCivilGuardada(ingreso.fecha);
+    return fecha.year == now.year && fecha.month == now.month;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +54,10 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
       widget.db.ingresos,
     )..orderBy([(i) => OrderingTerm.desc(i.fecha)])).watch();
     final now = DateTime.now();
+    _streamTotalIngresosMes = widget.db.ingresosDao.watchTotalIngresosMes(
+      now.year,
+      now.month,
+    );
     _mesVariables = DateTime(now.year, now.month, 1);
     _cargarStreamsVariables();
     _streamGastos = (widget.db.select(
@@ -437,14 +453,20 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         final ingresos = snapshot.data!;
-        final total = ingresos
-            .where((i) => i.activo)
-            .fold<int>(0, (sum, i) => sum + i.monto);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _totalRow(theme: theme, total: total, color: AppColors.positivo),
+            StreamBuilder<int>(
+              stream: _streamTotalIngresosMes,
+              builder: (context, totalSnap) {
+                return _totalRow(
+                  theme: theme,
+                  total: totalSnap.data ?? 0,
+                  color: AppColors.positivo,
+                );
+              },
+            ),
             const SizedBox(height: AppSpacing.md),
             Expanded(
               child: ingresos.isEmpty
@@ -466,6 +488,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                           ingreso: ing,
                           colorSec: colorSec,
                           frecuenciaLabel: _capitalizar(ing.frecuencia),
+                          cuentaEsteMes: _cuentaEsteMes(ing),
                           onTap: () => _abrirIngresoForm(ingreso: ing),
                           onLongPress: () => _confirmarEliminarIngreso(ing),
                           onEditar: () => _abrirIngresoForm(ingreso: ing),
@@ -672,6 +695,7 @@ class _IngresoCard extends StatelessWidget {
     required this.ingreso,
     required this.colorSec,
     required this.frecuenciaLabel,
+    required this.cuentaEsteMes,
     required this.onTap,
     required this.onLongPress,
     required this.onEditar,
@@ -682,6 +706,7 @@ class _IngresoCard extends StatelessWidget {
   final Ingreso ingreso;
   final Color colorSec;
   final String frecuenciaLabel;
+  final bool cuentaEsteMes;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onEditar;
@@ -807,6 +832,16 @@ class _IngresoCard extends StatelessWidget {
                   ),
                 ],
               ),
+              if (!cuentaEsteMes) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'No cuenta en el total de este mes',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.alerta,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

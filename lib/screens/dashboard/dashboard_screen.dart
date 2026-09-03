@@ -116,13 +116,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return total;
     });
 
-    final sumIngresos = db.ingresos.monto.sum();
-    _streamIngresos =
-        (db.selectOnly(db.ingresos)
-              ..addColumns([sumIngresos])
-              ..where(db.ingresos.activo.equals(true)))
-            .watchSingle()
-            .map((row) => (row.read(sumIngresos) ?? 0).toDouble());
+    final now = DateTime.now();
+    // Las fuentes recurrentes cuentan siempre; un ingreso 'unico' (ej. un
+    // trabajo secundario puntual) solo cuenta en el mes de su propia fecha —
+    // ver IngresosDao.watchTotalIngresosMes para el porqué.
+    _streamIngresos = db.ingresosDao
+        .watchTotalIngresosMes(now.year, now.month)
+        .map((v) => v.toDouble());
 
     final sumGastos = db.gastosFijos.monto.sum();
     _streamGastos =
@@ -132,7 +132,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .watchSingle()
             .map((row) => (row.read(sumGastos) ?? 0).toDouble());
 
-    final now = DateTime.now();
     _streamGastosVariables = widget.db.gastosVariablesDao
         .watchTotalMes(now.year, now.month)
         .map((v) => v.toDouble());
