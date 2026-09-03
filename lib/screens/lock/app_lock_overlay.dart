@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../main.dart';
 import '../../services/app_lock_service.dart';
 import 'lock_screen.dart';
 
@@ -101,6 +102,7 @@ class _AppLockOverlayState extends State<AppLockOverlay>
   void _desbloquear() {
     _bloqueado = false;
     _entry.markNeedsBuild();
+    appDesbloqueadaNotifier.value = true;
   }
 
   @override

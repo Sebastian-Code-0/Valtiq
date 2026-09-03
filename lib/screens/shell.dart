@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../db/database.dart';
+import '../main.dart';
 import '../services/crypto_service.dart';
 import '../services/notification_service.dart';
 import '../utils/notificaciones.dart';
@@ -27,6 +28,27 @@ class _ShellScreenState extends State<ShellScreen> {
   @override
   void initState() {
     super.initState();
+    // ShellScreen monta igual aunque el bloqueo PIN/biometría esté activo
+    // (SplashScreen navega acá con su propio timer, sin esperar a que se
+    // desbloquee — el bloqueo es solo un overlay visual encima). Mostrar
+    // estos avisos sin importar eso sería un hueco de seguridad real:
+    // información sobre el estado de la cuenta quedaría lista/mostrándose
+    // antes de que alguien probara el PIN. `appDesbloqueadaNotifier` (ver
+    // main.dart) es falso mientras la app arranca bloqueada.
+    if (appDesbloqueadaNotifier.value) {
+      _revisarAvisosPendientes();
+    } else {
+      appDesbloqueadaNotifier.addListener(_onAppDesbloqueada);
+    }
+  }
+
+  void _onAppDesbloqueada() {
+    if (!appDesbloqueadaNotifier.value) return;
+    appDesbloqueadaNotifier.removeListener(_onAppDesbloqueada);
+    _revisarAvisosPendientes();
+  }
+
+  void _revisarAvisosPendientes() {
     // CryptoService.claveFueRegenerada queda fijo desde CryptoService.init()
     // en main(), antes de runApp() — es seguro leerlo una sola vez aquí. Si
     // la clave se regeneró (corrupta o migración fallida desde el archivo
@@ -42,6 +64,12 @@ class _ShellScreenState extends State<ShellScreen> {
         (_) => _avisarIngresosDesactivados(),
       );
     }
+  }
+
+  @override
+  void dispose() {
+    appDesbloqueadaNotifier.removeListener(_onAppDesbloqueada);
+    super.dispose();
   }
 
   void _avisarIngresosDesactivados() {

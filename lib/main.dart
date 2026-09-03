@@ -18,6 +18,19 @@ final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(
 
 final ValueNotifier<Color> acentoNotifier = ValueNotifier(AppColors.acento);
 
+/// Falso mientras la app está bloqueada esperando PIN/biometría. `main()`
+/// lo pone en `false` antes de `runApp` si arranca bloqueada;
+/// `AppLockOverlay` lo pone en `true` al desbloquear. `ShellScreen` lo usa
+/// para no mostrar avisos (diálogos/SnackBars con info real, ej. "se perdió
+/// la config SMTP" o "se desactivaron N ingresos") hasta que la app esté
+/// realmente desbloqueada — `ShellScreen` monta igual aunque el bloqueo
+/// esté activo (el bloqueo es solo un overlay visual encima, no pausa la
+/// navegación de `SplashScreen`), así que sin este chequeo esos avisos se
+/// dispararían mientras la pantalla de bloqueo todavía está tapando todo:
+/// un hueco de seguridad real, no solo cosmético — información real
+/// quedaría lista/mostrándose antes de que alguien probara el PIN.
+final ValueNotifier<bool> appDesbloqueadaNotifier = ValueNotifier(true);
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final db = AppDatabase(AppDatabase.openConnection());
@@ -47,6 +60,7 @@ void main() async {
   // acá: SharedPreferences.getInstance() ya está en caché por el `prefs` de
   // arriba, así que este await no agrega I/O real.
   final bloqueoInicial = await AppLockService.bloqueoActivo();
+  if (bloqueoInicial) appDesbloqueadaNotifier.value = false;
 
   runApp(ValtiqApp(db: db, bloqueoInicial: bloqueoInicial));
 }
