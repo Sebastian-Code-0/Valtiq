@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../utils/categoria_gasto.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/format.dart';
+import '../../utils/notificaciones.dart';
 
 class PresupuestosScreen extends StatefulWidget {
   const PresupuestosScreen({super.key, required this.db});
@@ -18,6 +19,8 @@ class PresupuestosScreen extends StatefulWidget {
 }
 
 class _PresupuestosScreenState extends State<PresupuestosScreen> {
+  bool _errorAvisado = false;
+
   PresupuestosCategoria? _presupuestoPara(
     List<PresupuestosCategoria> lista,
     CategoriaGasto categoria,
@@ -57,6 +60,14 @@ class _PresupuestosScreenState extends State<PresupuestosScreen> {
       body: StreamBuilder<List<PresupuestosCategoria>>(
         stream: widget.db.presupuestosCategoriasDao.watchPresupuestos(),
         builder: (context, snapshot) {
+          if (snapshot.hasError && !_errorAvisado) {
+            _errorAvisado = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                mostrarAlerta(context, 'No se pudieron cargar los presupuestos.');
+              }
+            });
+          }
           final lista = snapshot.data ?? const [];
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),

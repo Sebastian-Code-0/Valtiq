@@ -213,7 +213,8 @@ class NotificationService {
           conexion = PersistentConnection(
             SmtpService.buildServer(config, password),
           );
-        } catch (_) {
+        } catch (e) {
+          debugPrint('NotificationService: no se pudo abrir la conexión SMTP: $e');
           conexion = null;
         }
       }
@@ -266,7 +267,11 @@ class NotificationService {
               if (res.exito) {
                 await db.recordatoriosDao.marcarEnvioCorreo(r.id, ahora);
               }
-            } catch (_) {
+            } catch (e) {
+              debugPrint(
+                'NotificationService: fallo al enviar el correo del '
+                'recordatorio ${r.id}: $e',
+              );
               // Un envío fallido no debe impedir que se intenten los siguientes.
             }
           }
@@ -276,7 +281,9 @@ class NotificationService {
       if (conexion != null) {
         try {
           await conexion.close();
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('NotificationService: fallo al cerrar la conexión SMTP: $e');
+        }
       }
     }
 
@@ -353,7 +360,11 @@ class NotificationService {
         diasFaltantes,
         estado,
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint(
+        'NotificationService: fallo al construir el cuerpo enriquecido del '
+        'recordatorio ${r.id}, usando el cuerpo simple: $e',
+      );
       return (
         sistema: estado,
         email: '📋 Recordatorio: ${r.titulo}\n\n⏰ $estado',
@@ -466,6 +477,8 @@ class NotificationService {
     try {
       // cancel() requires MSIX packaging on Windows; ignore the error otherwise.
       await _plugin.cancel(id: id);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('NotificationService: fallo al cancelar la notificación $id: $e');
+    }
   }
 }
