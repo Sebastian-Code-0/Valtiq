@@ -236,6 +236,32 @@ nunca lo dispara, porque para entonces la columna ya se agregó por
 `addColumn`. `test/db/migration_v12_test.dart` cubre ambos saltos (v9→v12,
 v10→v12) para que esto no se vuelva a colar sin test.
 
+**Segunda regla, encontrada 2026-09-04 con el test de cadena completa
+v1→v9→v12:** el mismo tipo de bug puede darse al revés — un
+`TableMigration` que asume que la tabla YA EXISTÍA con un schema
+histórico específico, cuando en realidad para un `from` suficientemente
+viejo esa tabla se acaba de crear en el mismo upgrade con el schema
+ACTUAL (vía `createTable`, que usa `tables.dart` de hoy, no el de
+entonces). El caso real: el bloque `from < 3` migra la columna
+`contrasena` (texto plano, existía en la v2 real) hacia
+`tieneContrasena` con un `CustomExpression` que referencia `contrasena`
+directamente. Para un `from < 2` (instalación en schemaVersion 1, antes
+de que `ConfigSmtps` existiera), el bloque `from < 2` justo termina de
+crear esa tabla con el schema actual — que ya no tiene `contrasena` en
+absoluto. A diferencia del bug de `newColumns` (que corrompe en
+silencio), acá el nombre de columna en el `CustomExpression` no va entre
+comillas dobles, así que SQLite no lo reinterpreta como string literal:
+tira `SqliteException: no such column: contrasena` y la apertura de la
+base **crashea por completo** para cualquier instalación que arranque en
+schemaVersion 1 y salte directo a la actual. Fix: envolver ese
+`TableMigration` en `if (from >= 2)`, igual que el `if (from >= 11)` ya
+existente para `tipoAmortizacion`. Regla general: si un `TableMigration`
+asume una columna vieja que solo existió en un rango histórico de
+versiones (no en el schema actual ni en una tabla recién creada), hay que
+guardarlo con el rango `from` correcto — no basta con que el bloque
+`if (from < N)` que lo contiene ya limite cuándo corre.
+`test/db/migration_v1_test.dart` cubre el salto completo v1→v12.
+
 ### Fechas de negocio vs. timestamps de auditoría
 
 Desde schemaVersion 11, los campos de fecha se dividen en dos

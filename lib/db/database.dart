@@ -65,26 +65,45 @@ class AppDatabase extends _$AppDatabase {
         );
       }
       if (from < 3) {
-        await m.alterTable(
-          TableMigration(
-            configSmtps,
-            columnTransformer: {
-              // Este es el único lugar del proyecto con SQL en texto plano
-              // dentro de una migración. El valor de abajo es estático y
-              // fijo para esta migración puntual. No interpolar nunca una
-              // variable externa aquí sin parametrizarla: esto no pasa por
-              // el query builder de drift, así que cualquier interpolación
-              // directa de un valor externo sería una inyección SQL.
-              configSmtps.tieneContrasena: const CustomExpression(
-                "CASE WHEN contrasena != '' THEN 1 ELSE 0 END",
-              ),
-            },
-          ),
-        );
+        // El `alterTable` de abajo migra la columna `contrasena` (texto
+        // plano) de la v2 real hacia `tieneContrasena`. Si `from < 2`,
+        // `configSmtps` no existía todavía y el bloque de arriba la acaba
+        // de crear en este mismo upgrade con el schema ACTUAL (que ya no
+        // tiene `contrasena`, solo `contrasenaEncriptada`/`tieneContrasena`)
+        // — sin este `if (from >= 2)`, el `CustomExpression` de abajo
+        // referencia una columna que nunca existió, y SQLite tira
+        // "no such column: contrasena" (error real, no silencioso: crashea
+        // la apertura de la base para cualquier instalación que arranque en
+        // schemaVersion 1 y salte directo a la versión actual).
+        if (from >= 2) {
+          await m.alterTable(
+            TableMigration(
+              configSmtps,
+              columnTransformer: {
+                // Este es el único lugar del proyecto con SQL en texto plano
+                // dentro de una migración. El valor de abajo es estático y
+                // fijo para esta migración puntual. No interpolar nunca una
+                // variable externa aquí sin parametrizarla: esto no pasa por
+                // el query builder de drift, así que cualquier interpolación
+                // directa de un valor externo sería una inyección SQL.
+                configSmtps.tieneContrasena: const CustomExpression(
+                  "CASE WHEN contrasena != '' THEN 1 ELSE 0 END",
+                ),
+              },
+            ),
+          );
+        }
         await m.createTable(pagosDeuda);
       }
       if (from < 4) {
-        await m.addColumn(configSmtps, configSmtps.contrasenaEncriptada);
+        // Mismo motivo que el `if (from >= 2)` del bloque `from < 3` de
+        // arriba: si `from < 2`, `configSmtps` se acaba de crear en este
+        // mismo upgrade con el schema ACTUAL (que ya incluye
+        // `contrasenaEncriptada`) — agregarla de nuevo con `addColumn`
+        // tiraría "duplicate column name".
+        if (from >= 2) {
+          await m.addColumn(configSmtps, configSmtps.contrasenaEncriptada);
+        }
       }
       if (from < 5) {
         await m.addColumn(recordatorios, recordatorios.frecuenciaAviso);
