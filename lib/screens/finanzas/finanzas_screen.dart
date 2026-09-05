@@ -383,7 +383,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                             )
                           : ListView.separated(
                               itemCount: gastos.length,
-                              separatorBuilder: (_, __) =>
+                              separatorBuilder: (_, _) =>
                                   const SizedBox(height: AppSpacing.sm),
                               itemBuilder: (_, i) {
                                 final g = gastos[i];
