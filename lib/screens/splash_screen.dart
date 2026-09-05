@@ -19,7 +19,13 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 2), _navegar);
+    // Puramente decorativo: para cuando esta pantalla llega a pintarse,
+    // main() ya terminó todo su trabajo async real (crypto, notificaciones,
+    // estado de bloqueo) — no hay nada más que esperar acá. Antes eran 2s
+    // fijos en CADA apertura de la app, sin relación con ningún trabajo
+    // real; bajado a un valor que alcanza a mostrar el logo sin sentirse
+    // como una espera.
+    Timer(const Duration(milliseconds: 500), _navegar);
   }
 
   void _navegar() {

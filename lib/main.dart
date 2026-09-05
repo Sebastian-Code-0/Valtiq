@@ -63,6 +63,13 @@ void main() async {
   if (bloqueoInicial) appDesbloqueadaNotifier.value = false;
 
   runApp(ValtiqApp(db: db, bloqueoInicial: bloqueoInicial));
+
+  // Después de runApp: en Android 13+ esto espera la respuesta real del
+  // diálogo nativo de permisos. Si corriera antes de runApp (como hacía
+  // NotificationService.init() antes), el primer frame de la app quedaría
+  // bloqueado hasta que el usuario decida — así la app ya se ve mientras
+  // el diálogo aparece encima.
+  unawaited(NotificationService.solicitarPermisoNotificaciones());
 }
 
 class ValtiqApp extends StatelessWidget {

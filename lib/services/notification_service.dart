@@ -60,10 +60,25 @@ class NotificationService {
         importance: Importance.high,
       );
       await androidImpl?.createNotificationChannel(canal);
-      await androidImpl?.requestNotificationsPermission();
     }
 
     _initialized = true;
+  }
+
+  /// Pide el permiso de notificaciones en Android (13+ pide diálogo nativo
+  /// al usuario). Separado de `init()` a propósito: `init()` corre antes de
+  /// `runApp()` en `main()`, y esperar la respuesta real del diálogo ahí
+  /// bloquearía el primer frame de la app hasta que el usuario decida —
+  /// llamar esto DESPUÉS de `runApp()` (sin esperar el resultado) deja que
+  /// la app se muestre de inmediato, con el diálogo apareciendo encima.
+  static Future<void> solicitarPermisoNotificaciones() async {
+    if (!_soportado || !Platform.isAndroid) return;
+    await init();
+    final androidImpl = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await androidImpl?.requestNotificationsPermission();
   }
 
   static Future<void> showNotification({

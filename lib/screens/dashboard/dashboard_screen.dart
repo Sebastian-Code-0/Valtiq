@@ -191,7 +191,18 @@ class _ResumenCard extends StatelessWidget {
                     ),
                   );
                 }
-                final valor = snapshot.data ?? 0.0;
+                if (!snapshot.hasData) {
+                  // Sin esto, el primer valor real (que puede tardar un rato
+                  // en llegar por el join con InteresCalculator) se ve como
+                  // "$0" antes de saltar al monto correcto — un estado
+                  // engañoso, no solo lento.
+                  return const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
+                }
+                final valor = snapshot.data!;
                 return FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
@@ -231,6 +242,18 @@ class _BalanceMensualCard extends StatelessWidget {
                     child: Text(
                       'Error al cargar los datos.',
                       style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  );
+                }
+                if (!snap.hasData) {
+                  return const SizedBox(
+                    height: 130,
+                    child: Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     ),
                   );
                 }
@@ -378,6 +401,18 @@ class _PosicionPrestamosCard extends StatelessWidget {
                     child: Text(
                       'Error al cargar los datos.',
                       style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  );
+                }
+                if (!snapPres.hasData || !snapDeu.hasData) {
+                  return const SizedBox(
+                    height: 130,
+                    child: Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     ),
                   );
                 }
