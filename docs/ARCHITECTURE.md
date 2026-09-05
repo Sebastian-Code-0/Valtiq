@@ -478,20 +478,35 @@ acepta ese tipo. `importarDatos()` pasa cada fila por
 conocidas de cada tabla antes de deserializar, así un backup viejo se
 sigue pudiendo restaurar sin fallar.
 
+## Dashboard: DashboardService y widgets propios (2026-09-04)
+
+`dashboard_screen.dart` bajó de ~1200 a ~340 líneas: las agregaciones
+(joins de deudas/préstamos con `InteresCalculator`, y el combine-latest
+manual de ingresos/gastos/gastos variables) se movieron a
+`lib/services/dashboard_service.dart` — testeable sin levantar widgets,
+ver `test/services/dashboard_service_test.dart`. Los tres widgets grandes
+que antes vivían como clases privadas dentro de `dashboard_screen.dart`
+ahora son públicos en `lib/screens/dashboard/widgets/`:
+`BalanceDonut`/`BalanceDonutPainter` (`balance_donut.dart`),
+`ComparativoCategorias` (`comparativo_categorias.dart`) y
+`PresupuestosCard` (`presupuestos_card.dart`). Refactor puro — mismo
+comportamiento, mismas queries, sin cambio de UI.
+
 ## Donut de balance mensual
 
-`_BalanceDonut` / `_BalanceDonutPainter` (`dashboard_screen.dart`, dentro
-de `_BalanceMensualCard`): anillo proporcional (gastos fijos / gastos
-variables / disponible) pintado a mano con `CustomPainter`, animado con
-`TweenAnimationBuilder` (600ms). Los arcos se dibujan con un solape fijo
-de 0.025 radianes y `isAntiAlias = true` para que los colores se toquen
-de más en vez de dejar una costura visible entre segmentos. `_BalanceDonut`
-recibe un `diametro` parametrizable (`_BalanceMensualCard` lo elige según
-un `LayoutBuilder`: apilado con donut más grande en pantallas angostas,
+`BalanceDonut` / `BalanceDonutPainter` (`lib/screens/dashboard/widgets/balance_donut.dart`,
+usado dentro de `_BalanceMensualCard` en `dashboard_screen.dart`): anillo
+proporcional (gastos fijos / gastos variables / disponible) pintado a
+mano con `CustomPainter`, animado con `TweenAnimationBuilder` (600ms).
+Los arcos se dibujan con un solape fijo de 0.025 radianes y
+`isAntiAlias = true` para que los colores se toquen de más en vez de
+dejar una costura visible entre segmentos. `BalanceDonut` recibe un
+`diametro` parametrizable (`_BalanceMensualCard` lo elige según un
+`LayoutBuilder`: apilado con donut más grande en pantallas angostas,
 lado a lado con donut más chico en pantallas anchas) y mide el monto
 "Disponible" formateado con `TextPainter` antes de decidir dónde
 mostrarlo: si cabe legible dentro del anillo a tamaño mínimo, va centrado
-con `FittedBox(scaleDown)`; si no, el `_BalanceDonutPainter` recibe
+con `FittedBox(scaleDown)`; si no, el `BalanceDonutPainter` recibe
 `relleno: true` y pinta una torta sólida (mismas fracciones y colores,
 `PaintingStyle.fill`) en vez de un anillo — nunca se muestra vacío o
 parcial — y el monto se ubica debajo en su propia línea.
