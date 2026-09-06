@@ -1,5 +1,79 @@
 # Changelog
 
+## Auditoría continuada: errores/UX, dependencias, migración v1, dashboard testeable, velocidad de arranque (2026-09-03 a 2026-09-05) — v1.7.0+8
+
+Sin cambio de schema (sigue en 12) — ninguno de estos commits agregó
+columnas nuevas, así que no hubo bump de versión.
+
+**Manejo de errores y UX** (`d9e7da3`): de los 3 `StreamBuilder` que
+una auditoría anterior marcaba sin `snapshot.hasError`
+(`deuda_detalle.dart`, `prestamo_detalle.dart`,
+`presupuestos_screen.dart`), solo `presupuestos_screen.dart` seguía
+sin manejarlo — corregido mostrando el error con el helper
+`mostrarAlerta` ya existente (`lib/utils/notificaciones.dart`), en vez
+de un SnackBar improvisado. Los 5 `catch (_) {}` silenciosos de
+`notification_service.dart` ahora hacen `debugPrint` del error real
+antes de continuar (diagnóstico interno, sin cambiar el comportamiento
+de no interrumpir el flujo de notificaciones).
+
+**Dependencias** (`f659df0`): `flutter pub upgrade` (18 dependencias
+transitivas dentro de las restricciones ya declaradas) y
+`flutter_lints` `^5.0.0`→`^6.0.0`. `google_fonts`,
+`flutter_local_notifications` y `package_info_plus` quedan sin tocar
+por decisión explícita: los dos primeros exigen Flutter 3.38+/Dart
+3.10+ (el instalado es 3.32.1/Dart 3.8.1), y `package_info_plus`
+exige un bump de AGP/Gradle/Kotlin que afecta todo el toolchain
+Android — ninguno es un problema del paquete en sí.
+
+**Migración de cadena completa v1→v12 + 2 bugs de crash reales**
+(`178eab7`): `test/db/migration_v1_test.dart` reconstruye el schema
+real de schemaVersion 1 (antes de `ConfigSmtps`/`PagosDeuda`/
+`GastosVariables`/`PresupuestosCategorias`) para una instalación que
+nunca se actualizó desde el día 1. Escribir este test destapó 2 bugs
+nunca antes ejercitados:
+
+- El bloque `from < 3` migraba la columna `contrasena` (texto plano,
+  real en v2) asumiendo que la tabla ya existía con ese schema viejo
+  — pero para `from < 2`, `configSmtps` se acababa de crear en el
+  MISMO upgrade con el schema actual (sin `contrasena`), y SQLite
+  tiraba `no such column: contrasena` (crash real).
+- El bloque `from < 4` tenía el problema al revés: `addColumn` sobre
+  una columna que, para `from < 2`, ya existía desde la creación
+  fresca — `duplicate column name`.
+- Fix: ambos bloques ahora corren solo `if (from >= 2)`, mismo patrón
+  que el `if (from >= 11)` ya existente para `tipoAmortizacion`.
+
+También se agregó `test/services/notification_service_test.dart` (5
+tests) cubriendo la deduplicación de `revisarRecordatorios()` por
+`frecuenciaAviso`, con un fake mínimo de
+`FlutterLocalNotificationsPlatform` para no depender de un plugin real
+en el entorno de test.
+
+**`DashboardService` nuevo** (`0d282ac`): `dashboard_screen.dart` bajó
+de ~1200 a ~340 líneas. Las agregaciones (joins de deudas/préstamos
+con `InteresCalculator`, combine-latest manual de ingresos/gastos
+fijos/gastos variables) se movieron a
+`lib/services/dashboard_service.dart`, testeable sin levantar
+widgets. Los 3 widgets grandes que ya vivían como clases privadas
+(`_BalanceDonut`, `_ComparativoCategorias`, `_PresupuestosCard`) ahora
+son públicos y viven en `lib/screens/dashboard/widgets/`. Refactor
+puro, sin cambio de comportamiento.
+
+**Velocidad de arranque** (`e9a8bea`): medido con instrumentación
+temporal que `SplashScreen` tenía un `Timer` fijo de 2 segundos en
+CADA apertura de la app, sin depender de ningún trabajo real (todo el
+async de `main()` ya termina antes de que esa pantalla se pinte) —
+bajado a 500ms. En Android, `NotificationService.init()` llamaba a
+`requestNotificationsPermission()` ANTES de `runApp()`, y ese método
+espera la respuesta real del diálogo nativo de permisos (Android
+13+): el primer frame de la app quedaba bloqueado hasta que el
+usuario decidiera. Separado en
+`NotificationService.solicitarPermisoNotificaciones()`, llamado sin
+esperar después de `runApp()`. Las cards de resumen del dashboard
+mostraban literalmente "$0" mientras cargaban su primer valor (sin
+chequear `hasData`) — ahora muestran un `CircularProgressIndicator`
+chico en su lugar.
+
 ## Bloqueo PIN/biometría, ingresos variables, fix de corrupción en migraciones (2026-09-01 a 2026-09-02) — v1.7.0+8
 
 Sin cambio de schema (sigue en 12) — ninguno de estos commits agregó

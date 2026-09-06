@@ -87,7 +87,7 @@ de Flutter 3.32.
 | `POST_NOTIFICATIONS` | Notificaciones del SO (Android 13+) |
 | `USE_BIOMETRIC` | Bloqueo de la app con huella/rostro (opcional, desactivado por defecto) |
 
-En Android 13+ (API 33), el sistema muestra un diálogo pidiendo permiso de notificaciones la primera vez que se inicializa la app.
+En Android 13+ (API 33), el sistema muestra un diálogo pidiendo permiso de notificaciones la primera vez que se inicializa la app. Ese diálogo se pide DESPUÉS de que la app ya se muestra (`NotificationService.solicitarPermisoNotificaciones()`, llamado sin esperar tras `runApp()` en `main.dart`) — pedirlo antes bloqueaba el primer frame hasta que el usuario respondiera (corregido 2026-09-04).
 
 ## Diferencias de comportamiento vs Linux/Windows
 

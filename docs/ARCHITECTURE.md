@@ -624,10 +624,17 @@ main() abre `AppDatabase` → carga SharedPreferences (tema, acento) →
 `revisarRecordatorios()` + `revisarIngresosUnicosVencidos()` (estas dos
 sin `await`, fire-and-forget) → carga `bloqueoInicial`
 (`AppLockService.bloqueoActivo()`) → `runApp` con `MaterialApp.builder`
-envolviendo todo en `AppLockOverlay` → `home: SplashScreen` → tras 2s,
-`ShellScreen` con `BottomNavigationBar` (que ahí sí avisa con SnackBar/
-diálogo si `claveFueRegenerada` o `ingresosUnicosDesactivados` tienen
-algo pendiente) → pantallas acceden a `AppDatabase` vía constructor.
+envolviendo todo en `AppLockOverlay` → `home: SplashScreen` → tras
+500ms, `ShellScreen` con `BottomNavigationBar` (que ahí sí avisa con
+SnackBar/diálogo si `claveFueRegenerada` o `ingresosUnicosDesactivados`
+tienen algo pendiente) → pantallas acceden a `AppDatabase` vía
+constructor. **DESPUÉS de `runApp`** (2026-09-04): se llama sin
+esperar (`unawaited`) a `NotificationService.solicitarPermisoNotificaciones()`
+— en Android eso espera la respuesta real del diálogo nativo de
+permisos (13+), y correrlo antes de `runApp` bloqueaba el primer frame
+hasta que el usuario respondiera. `SplashScreen` bajó su timer fijo de
+2s a 500ms: para cuando esa pantalla se pinta, todo el async real de
+arriba ya terminó, así que el delay era puramente decorativo.
 
 Los streams de drift (watchAll, watchActivos) mantienen las
 listas reactivas: cualquier insert/update/delete reconstruye
