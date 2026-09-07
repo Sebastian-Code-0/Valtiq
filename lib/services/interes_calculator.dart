@@ -289,11 +289,19 @@ abstract class InteresCalculator {
     required int numeroCuotas,
   }) {
     if (numeroCuotas <= 0 || capital <= 0) return 0;
-    if (tasaPeriodica <= 0) return (capital / numeroCuotas).round();
+    if (tasaPeriodica <= 0) {
+      return _redondearACentena(capital / numeroCuotas);
+    }
     final factor = math.pow(1 + tasaPeriodica, numeroCuotas).toDouble();
     final cuota = capital * (tasaPeriodica * factor) / (factor - 1);
-    return cuota.round();
+    return _redondearACentena(cuota);
   }
+
+  /// Redondea a la centena de peso más cercana (ej. 351.050 → 351.100) — una
+  /// cuota "sugerida" con sueltos de $1-$99 no es realista como cuota fija
+  /// pactada; el usuario prefiere un número redondo aunque implique que la
+  /// última cuota del crédito real quede un poco distinta.
+  static int _redondearACentena(double valor) => (valor / 100).round() * 100;
 
   /// Igual que [calcularCuotaFija] pero recibiendo la tasa con la misma
   /// convención que el resto de la app (`tasaInteres` en porcentaje,

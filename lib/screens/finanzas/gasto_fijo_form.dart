@@ -149,6 +149,8 @@ class _GastoFijoFormState extends State<GastoFijoForm>
               children: [
                 DropdownButtonFormField<String>(
                   value: _frecuencia,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   decoration: const InputDecoration(
                     labelText: 'Frecuencia',
                     prefixIcon: Icon(Icons.repeat),

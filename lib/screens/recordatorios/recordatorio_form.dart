@@ -185,6 +185,7 @@ class _RecordatorioFormState extends State<RecordatorioForm>
             prefixIcon: Icon(Icons.credit_card),
           ),
           isExpanded: true,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           items: _deudas
               .map(
                 (d) => DropdownMenuItem(
@@ -209,6 +210,7 @@ class _RecordatorioFormState extends State<RecordatorioForm>
             prefixIcon: Icon(Icons.handshake_outlined),
           ),
           isExpanded: true,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           items: _prestamos
               .map(
                 (p) => DropdownMenuItem(
@@ -233,6 +235,7 @@ class _RecordatorioFormState extends State<RecordatorioForm>
             prefixIcon: Icon(Icons.receipt_long),
           ),
           isExpanded: true,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           items: _gastosFijos
               .map(
                 (g) => DropdownMenuItem(
@@ -315,6 +318,8 @@ class _RecordatorioFormState extends State<RecordatorioForm>
               children: [
                 DropdownButtonFormField<String>(
                   value: _tipoNotificacion,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   decoration: const InputDecoration(
                     labelText: 'Tipo de notificación',
                     prefixIcon: Icon(Icons.send_outlined),
@@ -330,6 +335,8 @@ class _RecordatorioFormState extends State<RecordatorioForm>
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   value: _frecuenciaAviso,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   decoration: const InputDecoration(
                     labelText: 'Frecuencia del aviso',
                     prefixIcon: Icon(Icons.repeat_one_outlined),
@@ -369,6 +376,8 @@ class _RecordatorioFormState extends State<RecordatorioForm>
               children: [
                 DropdownButtonFormField<String>(
                   value: _tipoReferencia,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   decoration: const InputDecoration(
                     labelText: 'Vincular con',
                     prefixIcon: Icon(Icons.link),

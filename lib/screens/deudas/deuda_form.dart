@@ -286,6 +286,8 @@ class _DeudaFormState extends State<DeudaForm>
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   value: _tipoInteres,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   decoration: const InputDecoration(
                     labelText: 'Tipo de interés',
                     prefixIcon: Icon(Icons.swap_horiz),
@@ -302,6 +304,8 @@ class _DeudaFormState extends State<DeudaForm>
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   value: _modalidadCalculo,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   decoration: const InputDecoration(
                     labelText: 'Modalidad de cálculo',
                     prefixIcon: Icon(Icons.calculate_outlined),
@@ -320,6 +324,8 @@ class _DeudaFormState extends State<DeudaForm>
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   value: _tipoAmortizacion,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   decoration: const InputDecoration(
                     labelText: 'Interés sobre',
                     prefixIcon: Icon(Icons.account_balance_outlined),

@@ -124,6 +124,8 @@ class _LockScreenState extends State<LockScreen> {
                         letterSpacing: 4,
                       ),
                       decoration: InputDecoration(
+                        filled: true,
+                        fillColor: AppColors.superficieOscuro,
                         labelText: 'PIN',
                         labelStyle: const TextStyle(color: Colors.white70),
                         errorText: _error,

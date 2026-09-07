@@ -659,9 +659,10 @@ void main() {
             numeroCuotas: 12,
           );
           // Cuota = 10.000.000 × [0.015×(1.015)^12] / [(1.015)^12 − 1]
+          // redondeada a la centena de peso más cercana.
           final factor = math.pow(1.015, 12);
-          final esperada =
-              (10000000 * (0.015 * factor) / (factor - 1)).round();
+          final crudo = 10000000 * (0.015 * factor) / (factor - 1);
+          final esperada = (crudo / 100).round() * 100;
           expect(cuota, esperada);
         },
       );

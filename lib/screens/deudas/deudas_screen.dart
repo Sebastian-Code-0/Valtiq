@@ -493,7 +493,8 @@ class _DeudaCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: AppSpacing.sm),
                   child: Text(
-                    'Vence: ${formatFecha(fechaCivilGuardada(deuda.fechaLimite!))}',
+                    '${vencida ? 'Venció' : 'Vence'}: '
+                    '${formatFecha(fechaCivilGuardada(deuda.fechaLimite!))}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: vencida ? AppColors.alerta : colorSec,
                       fontWeight: vencida ? FontWeight.bold : null,

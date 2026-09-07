@@ -183,6 +183,8 @@ class _GastoVariableFormState extends State<GastoVariableForm>
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String>(
                   value: _categoria,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   decoration: const InputDecoration(
                     labelText: 'Categoría',
                     prefixIcon: Icon(Icons.category_outlined),
