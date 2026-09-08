@@ -48,8 +48,9 @@ class _RecordatorioFormState extends State<RecordatorioForm>
     _diasCtrl = TextEditingController(
       text: (r?.diasAnticipacion ?? 3).toString(),
     );
-    _fechaAlerta =
-        r?.fechaAlerta ?? DateTime.now().add(const Duration(days: 1));
+    _fechaAlerta = r != null
+        ? fechaCivilGuardada(r.fechaAlerta)
+        : DateTime.now().add(const Duration(days: 1));
     _tipoNotificacion = r?.tipoNotificacion ?? 'sistema';
     _repetir = r?.repetir ?? false;
     _tipoReferencia = r?.referenciaTabla ?? 'ninguna';

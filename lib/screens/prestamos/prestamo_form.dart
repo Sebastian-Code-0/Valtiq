@@ -52,8 +52,12 @@ class _PrestamoFormState extends State<PrestamoForm>
     _tipoInteres = p?.tipoInteres ?? 'ninguno';
     _modalidadCalculo = p?.modalidadCalculo ?? 'simple';
     _tipoAmortizacion = p?.tipoAmortizacion ?? 'saldo_original';
-    _fechaPrestamo = p?.fechaPrestamo ?? DateTime.now();
-    _fechaPactada = p?.fechaPactadaPago;
+    _fechaPrestamo = p != null
+        ? fechaCivilGuardada(p.fechaPrestamo)
+        : DateTime.now();
+    _fechaPactada = p?.fechaPactadaPago == null
+        ? null
+        : fechaCivilGuardada(p!.fechaPactadaPago!);
   }
 
   @override

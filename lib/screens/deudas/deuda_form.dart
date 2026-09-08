@@ -54,8 +54,12 @@ class _DeudaFormState extends State<DeudaForm>
     _tipoInteres = d?.tipoInteres ?? 'ninguno';
     _modalidadCalculo = d?.modalidadCalculo ?? 'simple';
     _tipoAmortizacion = d?.tipoAmortizacion ?? 'saldo_original';
-    _fechaPrestamo = d?.fechaPrestamo ?? DateTime.now();
-    _fechaLimite = d?.fechaLimite;
+    _fechaPrestamo = d != null
+        ? fechaCivilGuardada(d.fechaPrestamo)
+        : DateTime.now();
+    _fechaLimite = d?.fechaLimite == null
+        ? null
+        : fechaCivilGuardada(d!.fechaLimite!);
   }
 
   @override

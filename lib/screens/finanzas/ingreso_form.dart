@@ -39,7 +39,7 @@ class _IngresoFormState extends State<IngresoForm>
     );
     _notasCtrl = TextEditingController(text: i?.notas ?? '');
     _frecuencia = i?.frecuencia ?? 'mensual';
-    _fecha = i?.fecha ?? DateTime.now();
+    _fecha = i != null ? fechaCivilGuardada(i.fecha) : DateTime.now();
   }
 
   @override

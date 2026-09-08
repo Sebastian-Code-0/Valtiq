@@ -40,7 +40,7 @@ class _GastoVariableFormState extends State<GastoVariableForm>
     );
     _notasCtrl = TextEditingController(text: g?.notas ?? '');
     _categoria = g?.categoria;
-    _fecha = g?.fecha ?? DateTime.now();
+    _fecha = g != null ? fechaCivilGuardada(g.fecha) : DateTime.now();
   }
 
   @override
