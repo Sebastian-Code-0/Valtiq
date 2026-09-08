@@ -1,5 +1,59 @@
 # Changelog
 
+## Transparencia del cálculo de interés, guía en la app y fixes de UI (2026-09-06 a 2026-09-07) — v1.7.0+8
+
+Sin cambio de schema (sigue en 12).
+
+**Fixes de UI en formularios de deuda/préstamo y pantalla de bloqueo**
+(`afee1cd`): los `DropdownButtonFormField` de los 6 formularios
+principales (deuda, préstamo, gasto fijo, gasto variable, ingreso,
+recordatorio) no tenían `isExpanded: true`, así que un valor largo
+desbordaba el ancho del campo — se agregó junto con `borderRadius`
+para que el menú desplegado tenga esquinas redondeadas como el resto
+de la UI. El campo de PIN en `lock_screen.dart` no tenía `fillColor`,
+así que en tema claro el texto y los puntos quedaban invisibles sobre
+fondo blanco. La etiqueta "Vence: `<fecha>`" de una deuda vencida
+ahora cambia a "Venció: `<fecha>`" (antes seguía diciendo "Vence"
+incluso pasada la fecha límite, aunque el color del badge sí
+cambiaba). El botón "Calcular cuota fija sugerida" pasó de
+`TextButton` a `OutlinedButton` para verse como un botón real. La
+cuota fija sugerida ahora se redondea a la centena de peso más
+cercana (`_redondearACentena` en `InteresCalculator`) — antes
+sugería cifras con sueltos de $1-$99, poco realistas como cuota
+pactada.
+
+**Corrección de fechas al editar** (`c7e634e`): abrir "Editar" en una
+deuda, préstamo, ingreso, gasto variable o recordatorio corría la
+fecha mostrada un día hacia atrás en husos horarios negativos (ej.
+UTC-5, Bogotá) — reportado como "pongo 1 de enero y al editar aparece
+31 de diciembre". Causa: los 5 formularios leían
+`d?.fechaPrestamo`/`fecha`/`fechaAlerta` directo del registro cargado
+de la base de datos en `initState()`, sin pasar por
+`fechaCivilGuardada()` — violando la regla ya documentada en
+ARCHITECTURE.md ("Fechas de negocio vs. timestamps de auditoría"). Las
+pantallas de detalle nunca tuvieron este bug porque sí usaban
+`fechaCivilGuardada()` al mostrar; los formularios de edición se
+saltaban ese paso al precargar el estado. Fix en los 5 formularios
+(`deuda_form.dart`, `prestamo_form.dart`, `gasto_variable_form.dart`,
+`ingreso_form.dart`, `recordatorio_form.dart`).
+
+**Transparencia del cálculo de interés + guía "Cómo funciona Valtiq"**
+(`03a2431`): motivado porque un usuario probando la app no tenía forma
+de saber que Valtiq prorratea con meses de 30 días fijos (no los días
+reales del mes calendario) sin leer el código fuente. Nueva pantalla
+`como_funciona_screen.dart` (Ajustes → "Cómo funciona Valtiq") con FAQ
+en lenguaje simple sobre interés simple/compuesto, saldo original vs.
+insoluto, prorrateo de ingresos/gastos, recordatorios, PIN y dónde se
+guardan los datos. Nueva tarjeta expandible "¿Cómo se calculó?"
+(`InteresDesgloseCard` en `utils/form_widgets.dart`) en
+`deuda_detalle.dart`/`prestamo_detalle.dart` — solo visible si hay
+tasa de interés > 0 — que muestra el desglose real tramo por tramo del
+interés acumulado (fecha, fórmula, meses completos + días, y la
+división por los 30 días de convención), para que el usuario pueda
+auditar el número en vez de solo confiar en él. Ver ARCHITECTURE.md
+("Desglose auditable del interés") para el detalle técnico de
+`TramoInteres`/`desglosePrestamo`.
+
 ## Auditoría continuada: errores/UX, dependencias, migración v1, dashboard testeable, velocidad de arranque (2026-09-03 a 2026-09-05) — v1.7.0+8
 
 Sin cambio de schema (sigue en 12) — ninguno de estos commits agregó

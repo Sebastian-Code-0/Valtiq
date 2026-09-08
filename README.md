@@ -11,6 +11,8 @@ sin servidores, sin nube, sin cuentas de usuario.
 - Registro de préstamos otorgados, con interés simple y compuesto
   (convención bancaria colombiana para días 29-31)
 - Registro de deudas propias con seguimiento de abonos
+- Desglose auditable del interés ("¿Cómo se calculó?") y guía integrada
+  ("Cómo funciona Valtiq") que explica cada cálculo en lenguaje simple
 - Ingresos, gastos fijos y gastos variables por categoría
 - Dashboard con balance real: Ingresos − Gastos Fijos − Gastos Variables
 - Comparativo mensual de gastos variables por categoría

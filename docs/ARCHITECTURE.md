@@ -321,6 +321,7 @@ extraiga `valtiq.db` fuera del dispositivo.
 | Copia de seguridad | respaldo_screen.dart | Exportar/importar todos los datos a JSON |
 | Presupuestos por categoría | presupuestos_screen.dart | Límite mensual de gasto por categoría |
 | Seguridad     | seguridad_screen.dart     | Activar/desactivar bloqueo, biometría, timeout, cambiar PIN |
+| Cómo funciona Valtiq | como_funciona_screen.dart | Guía de conceptos (interés, prorrateo, saldo insoluto, etc.) en lenguaje simple |
 | Acerca de     | acerca_de_screen.dart     | Versión, licencia y repositorio       |
 
 ## Bloqueo de la app (PIN/biometría)
@@ -409,7 +410,31 @@ plazo): `Cuota = Capital × [i×(1+i)^n] / [(1+i)^n − 1]` — el mismo
 que usan los bancos colombianos para créditos de libre inversión,
 vehículo e hipotecario. Es un cálculo independiente (no cambia cómo
 se acumula el interés de una deuda ya creada); sirve para sugerir una
-cuota mensual fija dado un capital, tasa y número de cuotas.
+cuota mensual fija dado un capital, tasa y número de cuotas. El
+resultado se redondea a la centena de peso más cercana
+(`_redondearACentena`, ej. 351.050 → 351.100) — una cuota sugerida con
+sueltos de $1-$99 no es realista como cuota pactada, aunque implique
+que la última cuota del crédito real quede un poco distinta.
+
+**Desglose auditable del interés (2026-09-07):** `TramoInteres`
+(clase pública en el mismo archivo) y `InteresCalculator.desglosePrestamo(...)`
+devuelven, en vez de solo el total, la lista de tramos que lo componen
+— cada uno con `capitalBase`, `mesesCompletos`, `diasParciales`,
+`mesesTotal`, `tasaMensualPct` e `interes`. En `saldo_original` siempre
+hay un único tramo (todo el préstamo corre sobre el mismo capital); en
+`saldo_insoluto` hay un tramo por cada corte entre abonos, porque el
+capital baja con cada uno — reutiliza exactamente el mismo recorrido
+abono-a-abono que ya usaba `resumenPrestamo` (refactorizado a
+`_procesarSaldoInsoluto`, que ahora calcula resumen y tramos a la vez
+en un solo recorrido, para no arriesgar que las dos lógicas diverjan).
+La convención de 30 días/mes para el prorrateo, antes solo interna
+(`_diasPorMes`), ahora es la constante pública
+`InteresCalculator.diasPorMesConvencion` para que la UI muestre
+siempre el mismo número que usa el motor. Consumido por
+`InteresDesgloseCard` (ver `utils/form_widgets.dart` más abajo), la
+tarjeta "¿Cómo se calculó?" en `deuda_detalle.dart`/
+`prestamo_detalle.dart` — solo se muestra si la deuda/préstamo tiene
+tasa de interés > 0.
 
 **NotificationService** (`services/notification_service.dart`)
 Inicializa flutter_local_notifications en Linux, Android y Windows.
@@ -616,6 +641,13 @@ transaccional y respeta integridad referencial (FK enforcement).
   del comparativo del Dashboard.
 - `theme/app_chip.dart` — `AppChip` y `AtenuableCard`, reemplazan
   chips y el patrón `Opacity(0.6)` duplicados en varias pantallas.
+- `utils/form_widgets.dart` — `InteresDesgloseCard` (2026-09-07):
+  tarjeta expandible "¿Cómo se calculó?" que renderiza la lista de
+  `TramoInteres` de `InteresCalculator.desglosePrestamo(...)` — fecha
+  del tramo, fórmula (`capital × tasa% × meses`, o la variante
+  compuesta), meses completos + días sobrantes, la división por
+  `diasPorMesConvencion` y el resultado en dinero. Compartida entre
+  `deuda_detalle.dart` y `prestamo_detalle.dart`.
 
 ## Flujo de datos
 
