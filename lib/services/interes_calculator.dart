@@ -299,8 +299,8 @@ abstract class InteresCalculator {
       if (desglose.mesesTotal <= 0) return;
       tramos.add(
         TramoInteres(
-          fechaInicio: desde,
-          fechaFin: hasta,
+          fechaInicio: _diaCivil(desde),
+          fechaFin: _diaCivil(hasta),
           capitalBase: saldoCapital,
           mesesCompletos: desglose.mesesCompletos,
           diasParciales: desglose.diasParciales,
@@ -408,8 +408,8 @@ abstract class InteresCalculator {
           );
     return [
       TramoInteres(
-        fechaInicio: fechaPrestamo,
-        fechaFin: fin,
+        fechaInicio: _diaCivil(fechaPrestamo),
+        fechaFin: _diaCivil(fin),
         capitalBase: montoPrestado,
         mesesCompletos: desglose.mesesCompletos,
         diasParciales: desglose.diasParciales,

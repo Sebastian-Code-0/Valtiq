@@ -1,5 +1,28 @@
 # Changelog
 
+## Fix: fecha corrida un día en "¿Cómo se calculó?" (2026-09-07) — v1.7.0+8
+
+Sin cambio de schema (sigue en 12).
+
+**Bug real reportado por el usuario:** una deuda creada desde el
+01/09/2026 mostraba "del 31/08/2026" al abrir "¿Cómo se calculó?" —
+mismo mecanismo que el fix de fechas al editar (ver abajo), pero en un
+lugar nuevo: `InteresCalculator.desglosePrestamo(...)` guardaba
+`fechaInicio`/`fechaFin` de cada `TramoInteres` con el `DateTime`
+crudo tal como lo recibía (directo de `deuda.fechaPrestamo` o de
+`AbonoInteres.fecha`, ambos "locales" según drift aunque representen
+medianoche UTC), sin pasar por el helper interno `_diaCivil()` que el
+resto de la clase sí usa para el cálculo numérico. El monto de interés
+mostrado ya era correcto (esos helpers internos sí normalizan antes de
+calcular) — solo las fechas de metadata para mostrar en pantalla
+quedaban sin normalizar. Fix: `_diaCivil()` envuelve `fechaInicio`/
+`fechaFin` en los dos lugares donde se construye un `TramoInteres`
+(`desglosePrestamo` y `_procesarSaldoInsoluto`). Agregados 2 tests de
+regresión en `test/services/interes_calculator_test.dart` que
+simulan una fecha "cruda tipo drift" y confirman que ya no se corre un
+día (verificados fallando antes del fix y pasando después, en un
+entorno con huso UTC-5).
+
 ## Transparencia del cálculo de interés, guía en la app y fixes de UI (2026-09-06 a 2026-09-07) — v1.7.0+8
 
 Sin cambio de schema (sigue en 12).

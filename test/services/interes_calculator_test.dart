@@ -701,5 +701,64 @@ void main() {
         expect(desdeAnual, desdeMensual);
       });
     });
+
+    group('desglosePrestamo', () {
+      // Simula exactamente lo que devuelve drift al leer una fecha de
+      // negocio ya guardada: un DateTime "local" (isUtc == false) que en
+      // realidad representa medianoche UTC del día civil. Bug real
+      // reportado por el usuario: creó una deuda desde el 01/09/2026 y
+      // "¿Cómo se calculó?" mostraba "del 31/08/2026" — el huso de este
+      // entorno de test ya es UTC-5 (igual que Bogotá), así que este test
+      // reproduce el bug tal cual sin necesidad de forzar TZ.
+      DateTime comoLoDevuelveDrift(int anio, int mes, int dia) =>
+          DateTime.fromMillisecondsSinceEpoch(
+            DateTime.utc(anio, mes, dia).millisecondsSinceEpoch,
+          );
+
+      test(
+        'fechaInicio/fechaFin del tramo son la fecha civil exacta, no '
+        'corrida un día (saldo_original)',
+        () {
+          final tramos = InteresCalculator.desglosePrestamo(
+            montoPrestado: 5000000,
+            tasaInteres: 1,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'simple',
+            fechaPrestamo: comoLoDevuelveDrift(2026, 9, 1),
+            fechaFin: comoLoDevuelveDrift(2026, 10, 15),
+          );
+          expect(tramos, hasLength(1));
+          expect(tramos.single.fechaInicio, DateTime(2026, 9, 1));
+          expect(tramos.single.fechaFin, DateTime(2026, 10, 15));
+        },
+      );
+
+      test(
+        'fechaInicio/fechaFin de cada tramo son la fecha civil exacta '
+        '(saldo_insoluto, con fechas "crudas" tipo drift)',
+        () {
+          final tramos = InteresCalculator.desglosePrestamo(
+            montoPrestado: 1000000,
+            tasaInteres: 2,
+            tipoInteres: 'mensual',
+            modalidadCalculo: 'simple',
+            tipoAmortizacion: 'saldo_insoluto',
+            fechaPrestamo: comoLoDevuelveDrift(2026, 1, 1),
+            abonos: [
+              AbonoInteres(
+                fecha: comoLoDevuelveDrift(2026, 4, 1),
+                monto: 400000,
+              ),
+            ],
+            fechaFin: comoLoDevuelveDrift(2026, 9, 7),
+          );
+          expect(tramos, hasLength(2));
+          expect(tramos[0].fechaInicio, DateTime(2026, 1, 1));
+          expect(tramos[0].fechaFin, DateTime(2026, 4, 1));
+          expect(tramos[1].fechaInicio, DateTime(2026, 4, 1));
+          expect(tramos[1].fechaFin, DateTime(2026, 9, 7));
+        },
+      );
+    });
   });
 }
