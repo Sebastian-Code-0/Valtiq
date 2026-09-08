@@ -12,8 +12,42 @@ class AbonoInteres {
   final int monto;
 }
 
+/// Un tramo continuo del cálculo de interés: un período en el que el
+/// interés corrió sobre un [capitalBase] fijo a la tasa mensual dada. En
+/// modalidad `saldo_original` siempre hay un único tramo (todo el préstamo
+/// corre sobre el mismo capital). En `saldo_insoluto` hay un tramo por cada
+/// corte entre abonos, porque el capital baja con cada uno. Pensado para
+/// que la UI le muestre al usuario el desglose real detrás del número final
+/// ("¿Cómo se calculó?"), no solo el total.
+class TramoInteres {
+  const TramoInteres({
+    required this.fechaInicio,
+    required this.fechaFin,
+    required this.capitalBase,
+    required this.mesesCompletos,
+    required this.diasParciales,
+    required this.mesesTotal,
+    required this.tasaMensualPct,
+    required this.interes,
+  });
+
+  final DateTime fechaInicio;
+  final DateTime fechaFin;
+  final int capitalBase;
+  final int mesesCompletos;
+  final int diasParciales;
+  final double mesesTotal;
+  final double tasaMensualPct;
+  final int interes;
+}
+
 abstract class InteresCalculator {
-  static const double _diasPorMes = 30;
+  /// Convención de días por mes usada para prorratear el período parcial
+  /// (el sobrante después de contar los meses completos por aniversario) —
+  /// un mes de 30 días fijo, no los días reales del mes calendario. Pública
+  /// para que la UI pueda explicarle esta convención al usuario (ver
+  /// pantalla "Cómo funciona Valtiq") con el mismo número que usa el motor.
+  static const int diasPorMesConvencion = 30;
 
   /// Devuelve la fecha de aniversario aplicando convención bancaria:
   /// si el día no existe en el mes destino, usa el último día de ese mes.
@@ -36,10 +70,18 @@ abstract class InteresCalculator {
     return DateTime(u.year, u.month, u.day);
   }
 
-  static double _mesesTranscurridos(DateTime inicio, DateTime fin) {
+  /// Desglosa el tiempo entre dos fechas en meses completos (por
+  /// aniversario del día de inicio) + días sobrantes, con la misma
+  /// convención de [diasPorMesConvencion] que usa el resto del motor.
+  /// Expuesto vía [desglosarPeriodo] para que la UI muestre exactamente el
+  /// mismo desglose que produjo el número final, sin duplicar la lógica.
+  static ({int mesesCompletos, int diasParciales, double mesesTotal})
+  _desglosarMeses(DateTime inicio, DateTime fin) {
     final inicioNorm = _diaCivil(inicio);
     final finNorm = _diaCivil(fin);
-    if (!finNorm.isAfter(inicioNorm)) return 0;
+    if (!finNorm.isAfter(inicioNorm)) {
+      return (mesesCompletos: 0, diasParciales: 0, mesesTotal: 0);
+    }
 
     int mesesCompletos = 0;
     while (true) {
@@ -57,16 +99,33 @@ abstract class InteresCalculator {
       inicioNorm.month + mesesCompletos,
       inicioNorm.day,
     );
-    final diasDiferencia = finNorm.difference(ultimoCumplimiento).inDays;
-    int diasParciales = diasDiferencia;
+    int diasParciales = finNorm.difference(ultimoCumplimiento).inDays;
 
-    if (diasParciales >= _diasPorMes) {
+    if (diasParciales >= diasPorMesConvencion) {
       mesesCompletos += 1;
-      diasParciales -= _diasPorMes.toInt();
+      diasParciales -= diasPorMesConvencion;
     }
 
-    return mesesCompletos + diasParciales / _diasPorMes;
+    final mesesTotal = mesesCompletos + diasParciales / diasPorMesConvencion;
+    return (
+      mesesCompletos: mesesCompletos,
+      diasParciales: diasParciales,
+      mesesTotal: mesesTotal,
+    );
   }
+
+  static double _mesesTranscurridos(DateTime inicio, DateTime fin) =>
+      _desglosarMeses(inicio, fin).mesesTotal;
+
+  /// Versión pública de [_desglosarMeses] — para que una pantalla de
+  /// detalle pueda mostrarle al usuario el desglose real (meses completos +
+  /// días sobrantes) detrás del número de interés que ve.
+  static ({int mesesCompletos, int diasParciales, double mesesTotal})
+  desglosarPeriodo(DateTime inicio, DateTime fin) =>
+      _desglosarMeses(inicio, fin);
+
+  static double _tasaMensualPct(double tasaInteres, String tipoInteres) =>
+      tipoInteres == 'anual' ? tasaInteres / 12 : tasaInteres;
 
   /// El monto de entrada es un peso entero (int); el cálculo intermedio usa
   /// double porque la fórmula es continua (fracciones de mes, interés
@@ -84,7 +143,7 @@ abstract class InteresCalculator {
     final fin = fechaFin ?? normalizarFechaCivil(DateTime.now());
     final meses = _mesesTranscurridos(fechaInicio, fin);
     if (meses <= 0) return 0;
-    final tasaMensual = tipoInteres == 'anual' ? tasaInteres / 12 : tasaInteres;
+    final tasaMensual = _tasaMensualPct(tasaInteres, tipoInteres);
     return (monto * (tasaMensual / 100) * meses).round();
   }
 
@@ -99,9 +158,7 @@ abstract class InteresCalculator {
     final fin = fechaFin ?? normalizarFechaCivil(DateTime.now());
     final meses = _mesesTranscurridos(fechaInicio, fin);
     if (meses <= 0) return 0;
-    final tasaMensual = tipoInteres == 'anual'
-        ? tasaInteres / 12 / 100
-        : tasaInteres / 100;
+    final tasaMensual = _tasaMensualPct(tasaInteres, tipoInteres) / 100;
     final factor = math.pow(1 + tasaMensual, meses).toDouble();
     return (monto * (factor - 1)).round();
   }
@@ -155,7 +212,7 @@ abstract class InteresCalculator {
     DateTime? fechaFin,
   }) {
     if (tipoAmortizacion == 'saldo_insoluto') {
-      return _resumenSaldoInsoluto(
+      return _procesarSaldoInsoluto(
         montoPrestado: montoPrestado,
         tasaInteres: tasaInteres,
         tipoInteres: tipoInteres,
@@ -163,7 +220,7 @@ abstract class InteresCalculator {
         fechaPrestamo: fechaPrestamo,
         abonos: abonos,
         fechaFin: fechaFin,
-      );
+      ).resumen;
     }
     final interes = modalidadCalculo == 'compuesto'
         ? calcularInteresCompuesto(
@@ -192,7 +249,14 @@ abstract class InteresCalculator {
     };
   }
 
-  static Map<String, int> _resumenSaldoInsoluto({
+  /// Igual que [resumenPrestamo]/[desglosePrestamo] pero calcula ambos a la
+  /// vez para modalidad `saldo_insoluto`, sin duplicar el recorrido
+  /// abono-a-abono (que ya es delicado: interés pendiente que se arrastra
+  /// entre cortes, capital que solo baja con lo que sobra tras pagar ese
+  /// interés). `resumenPrestamo` usa solo `.resumen`; `desglosePrestamo`
+  /// usa solo `.tramos`.
+  static ({Map<String, int> resumen, List<TramoInteres> tramos})
+  _procesarSaldoInsoluto({
     required int montoPrestado,
     required double tasaInteres,
     required String tipoInteres,
@@ -208,6 +272,7 @@ abstract class InteresCalculator {
     int interesTotalCausado = 0;
     int interesPendiente = 0;
     DateTime corte = fechaPrestamo;
+    final tramos = <TramoInteres>[];
 
     int interesPeriodo(DateTime desde, DateTime hasta) {
       if (saldoCapital <= 0) return 0;
@@ -228,6 +293,24 @@ abstract class InteresCalculator {
             );
     }
 
+    void agregarTramo(DateTime desde, DateTime hasta, int interes) {
+      if (saldoCapital <= 0) return;
+      final desglose = _desglosarMeses(desde, hasta);
+      if (desglose.mesesTotal <= 0) return;
+      tramos.add(
+        TramoInteres(
+          fechaInicio: desde,
+          fechaFin: hasta,
+          capitalBase: saldoCapital,
+          mesesCompletos: desglose.mesesCompletos,
+          diasParciales: desglose.diasParciales,
+          mesesTotal: desglose.mesesTotal,
+          tasaMensualPct: _tasaMensualPct(tasaInteres, tipoInteres),
+          interes: interes,
+        ),
+      );
+    }
+
     for (final abono in ordenados) {
       // Un abono fechado después del corte pedido (fechaFin) no pudo haber
       // ocurrido todavía desde la perspectiva de ese corte — se ignora, no
@@ -235,6 +318,7 @@ abstract class InteresCalculator {
       if (abono.fecha.isAfter(fin)) continue;
 
       final causado = interesPeriodo(corte, abono.fecha);
+      agregarTramo(corte, abono.fecha, causado);
       interesTotalCausado += causado;
       interesPendiente += causado;
 
@@ -251,6 +335,7 @@ abstract class InteresCalculator {
     }
 
     final causadoFinal = interesPeriodo(corte, fin);
+    agregarTramo(corte, fin, causadoFinal);
     interesTotalCausado += causadoFinal;
     interesPendiente += causadoFinal;
 
@@ -263,14 +348,76 @@ abstract class InteresCalculator {
         .fold<int>(0, (s, a) => s + a.monto);
     final saldoPendiente = saldoCapital + interesPendiente;
 
-    return {
-      'montoPrestado': montoPrestado,
-      'interesAcumulado': interesTotalCausado,
-      'totalConInteres': montoPrestado + interesTotalCausado,
-      'totalAbonado': totalAbonadoReal,
-      'saldoPendiente': saldoPendiente < 0 ? 0 : saldoPendiente,
-      'gananciaInteres': interesTotalCausado,
-    };
+    return (
+      resumen: {
+        'montoPrestado': montoPrestado,
+        'interesAcumulado': interesTotalCausado,
+        'totalConInteres': montoPrestado + interesTotalCausado,
+        'totalAbonado': totalAbonadoReal,
+        'saldoPendiente': saldoPendiente < 0 ? 0 : saldoPendiente,
+        'gananciaInteres': interesTotalCausado,
+      },
+      tramos: tramos,
+    );
+  }
+
+  /// Desglose tramo por tramo del interés acumulado, pensado para que la UI
+  /// le muestre al usuario "¿Cómo se calculó?" en vez de solo el total. Ver
+  /// [TramoInteres] y [resumenPrestamo] (mismos parámetros; este método usa
+  /// la misma lógica pero devuelve el detalle en vez del resumen).
+  static List<TramoInteres> desglosePrestamo({
+    required int montoPrestado,
+    required double tasaInteres,
+    required String tipoInteres,
+    required String modalidadCalculo,
+    required DateTime fechaPrestamo,
+    String tipoAmortizacion = 'saldo_original',
+    List<AbonoInteres> abonos = const [],
+    DateTime? fechaFin,
+  }) {
+    if (tipoInteres == 'ninguno' || tasaInteres == 0) return const [];
+    if (tipoAmortizacion == 'saldo_insoluto') {
+      return _procesarSaldoInsoluto(
+        montoPrestado: montoPrestado,
+        tasaInteres: tasaInteres,
+        tipoInteres: tipoInteres,
+        modalidadCalculo: modalidadCalculo,
+        fechaPrestamo: fechaPrestamo,
+        abonos: abonos,
+        fechaFin: fechaFin,
+      ).tramos;
+    }
+
+    final fin = fechaFin ?? normalizarFechaCivil(DateTime.now());
+    final desglose = _desglosarMeses(fechaPrestamo, fin);
+    if (montoPrestado <= 0 || desglose.mesesTotal <= 0) return const [];
+    final interes = modalidadCalculo == 'compuesto'
+        ? calcularInteresCompuesto(
+            monto: montoPrestado,
+            tasaInteres: tasaInteres,
+            tipoInteres: tipoInteres,
+            fechaInicio: fechaPrestamo,
+            fechaFin: fin,
+          )
+        : calcularInteresSimple(
+            monto: montoPrestado,
+            tasaInteres: tasaInteres,
+            tipoInteres: tipoInteres,
+            fechaInicio: fechaPrestamo,
+            fechaFin: fin,
+          );
+    return [
+      TramoInteres(
+        fechaInicio: fechaPrestamo,
+        fechaFin: fin,
+        capitalBase: montoPrestado,
+        mesesCompletos: desglose.mesesCompletos,
+        diasParciales: desglose.diasParciales,
+        mesesTotal: desglose.mesesTotal,
+        tasaMensualPct: _tasaMensualPct(tasaInteres, tipoInteres),
+        interes: interes,
+      ),
+    ];
   }
 
   /// Cuota fija mensual bajo el sistema de amortización francés (cuota fija

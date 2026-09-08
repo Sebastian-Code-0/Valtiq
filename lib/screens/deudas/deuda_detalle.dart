@@ -252,6 +252,21 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
                       totalAbonado: totalAbonado,
                       abonos: abonosInteres,
                     ),
+                    if (deuda.tasaInteres > 0) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      InteresDesgloseCard(
+                        tramos: InteresCalculator.desglosePrestamo(
+                          montoPrestado: deuda.montoOriginal,
+                          tasaInteres: deuda.tasaInteres,
+                          tipoInteres: deuda.tipoInteres,
+                          modalidadCalculo: deuda.modalidadCalculo,
+                          fechaPrestamo: deuda.fechaPrestamo,
+                          tipoAmortizacion: deuda.tipoAmortizacion,
+                          abonos: abonosInteres,
+                        ),
+                        modalidadCalculo: deuda.modalidadCalculo,
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.md),
                     _InfoCard(deuda: deuda),
                     const SizedBox(height: AppSpacing.md),

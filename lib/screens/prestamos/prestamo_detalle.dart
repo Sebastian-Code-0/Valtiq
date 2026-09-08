@@ -253,6 +253,21 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
                       totalAbonado: totalAbonado,
                       abonos: abonosInteres,
                     ),
+                    if (prestamo.tasaInteres > 0) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      InteresDesgloseCard(
+                        tramos: InteresCalculator.desglosePrestamo(
+                          montoPrestado: prestamo.montoPrestado,
+                          tasaInteres: prestamo.tasaInteres,
+                          tipoInteres: prestamo.tipoInteres,
+                          modalidadCalculo: prestamo.modalidadCalculo,
+                          fechaPrestamo: prestamo.fechaPrestamo,
+                          tipoAmortizacion: prestamo.tipoAmortizacion,
+                          abonos: abonosInteres,
+                        ),
+                        modalidadCalculo: prestamo.modalidadCalculo,
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.md),
                     _InfoCard(prestamo: prestamo),
                     const SizedBox(height: AppSpacing.md),

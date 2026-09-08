@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/interes_calculator.dart';
 import '../theme/theme.dart';
 import 'categoria_gasto.dart';
 import 'date_format.dart';
@@ -208,6 +209,153 @@ class InfoRow extends StatelessWidget {
           Expanded(child: Text(valor, style: theme.textTheme.bodyMedium)),
         ],
       ),
+    );
+  }
+}
+
+String _fmtDecimal(double v) {
+  if (v == v.truncateToDouble()) return v.toStringAsFixed(0);
+  return v.toStringAsFixed(1);
+}
+
+/// Tarjeta expandible "¿Cómo se calculó?" — desglosa el interés acumulado
+/// tramo por tramo (uno solo en modalidad `saldo_original`, uno por cada
+/// abono en `saldo_insoluto`) mostrando la misma fórmula y convención de 30
+/// días/mes que usa [InteresCalculator], para que el usuario pueda auditar
+/// el número en vez de solo confiar en él. No se muestra si [tramos] está
+/// vacío (sin interés o sin tiempo transcurrido todavía).
+class InteresDesgloseCard extends StatelessWidget {
+  const InteresDesgloseCard({
+    super.key,
+    required this.tramos,
+    required this.modalidadCalculo,
+  });
+
+  final List<TramoInteres> tramos;
+  final String modalidadCalculo;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tramos.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final colorSec = theme.colorSecundario;
+    final interesTotal = tramos.fold<int>(0, (s, t) => s + t.interes);
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          leading: Icon(
+            Icons.calculate_outlined,
+            color: theme.colorScheme.primary,
+          ),
+          title: Text(
+            '¿Cómo se calculó?',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            0,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          children: [
+            for (var i = 0; i < tramos.length; i++) ...[
+              if (i > 0) const Divider(height: AppSpacing.lg),
+              _TramoDetalle(
+                tramo: tramos[i],
+                modalidadCalculo: modalidadCalculo,
+                colorSec: colorSec,
+                theme: theme,
+              ),
+            ],
+            if (tramos.length > 1) ...[
+              const Divider(height: AppSpacing.lg),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Interés total:',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorSec,
+                    ),
+                  ),
+                  Text(
+                    formatCOP(interesTotal),
+                    style: monoStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TramoDetalle extends StatelessWidget {
+  const _TramoDetalle({
+    required this.tramo,
+    required this.modalidadCalculo,
+    required this.colorSec,
+    required this.theme,
+  });
+
+  final TramoInteres tramo;
+  final String modalidadCalculo;
+  final Color colorSec;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final tasaTxt = formatTasaInicial(tramo.tasaMensualPct);
+    final mesesTxt = _fmtDecimal(tramo.mesesTotal);
+    final formula = modalidadCalculo == 'compuesto'
+        ? '${formatCOP(tramo.capitalBase)} × [(1 + $tasaTxt%) ^ $mesesTxt − 1]'
+        : '${formatCOP(tramo.capitalBase)} × $tasaTxt% × $mesesTxt meses';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Del ${formatFecha(tramo.fechaInicio)} al ${formatFecha(tramo.fechaFin)}',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorSec,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(formula, style: monoStyle(fontSize: 13)),
+        const SizedBox(height: 2),
+        Text(
+          '${tramo.mesesCompletos} ${tramo.mesesCompletos == 1 ? 'mes completo' : 'meses completos'}'
+          '${tramo.diasParciales > 0 ? ' + ${tramo.diasParciales} días' : ''}',
+          style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+        ),
+        if (tramo.diasParciales > 0)
+          Text(
+            '${tramo.diasParciales} días ÷ ${InteresCalculator.diasPorMesConvencion} = '
+            '${_fmtDecimal(tramo.diasParciales / InteresCalculator.diasPorMesConvencion)} meses',
+            style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+          ),
+        const SizedBox(height: AppSpacing.xs),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            '= ${formatCOP(tramo.interes)}',
+            style: monoStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
