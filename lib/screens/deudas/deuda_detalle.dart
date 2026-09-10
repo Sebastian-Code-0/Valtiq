@@ -14,6 +14,15 @@ import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
 import 'deuda_form.dart';
 
+/// Congela el cálculo de interés en la fecha real de pago para una deuda ya
+/// pagada — sin esto, `InteresCalculator` sigue calculando hasta HOY por
+/// defecto (ver `fechaFin` en `interes_calculator.dart`), y una deuda
+/// cerrada hace meses mostraría interés creciendo para siempre.
+DateTime? _fechaFinCongelada(Deuda deuda) {
+  if (deuda.estado != 'pagada' || deuda.fechaPagoReal == null) return null;
+  return fechaCivilGuardada(deuda.fechaPagoReal!);
+}
+
 class DeudaDetalle extends StatefulWidget {
   const DeudaDetalle({super.key, required this.db, required this.deudaId});
 
@@ -88,6 +97,7 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
       totalAbonado: totalAbonado,
       tipoAmortizacion: deuda.tipoAmortizacion,
       abonos: abonos,
+      fechaFin: _fechaFinCongelada(deuda),
     );
     // Sin recortar a 0: resumen['saldoPendiente'] sí lo recorta (para no
     // mostrar saldo negativo en la UI), pero eso permitiría abonar de a $1
@@ -263,6 +273,7 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
                           fechaPrestamo: deuda.fechaPrestamo,
                           tipoAmortizacion: deuda.tipoAmortizacion,
                           abonos: abonosInteres,
+                          fechaFin: _fechaFinCongelada(deuda),
                         ),
                         modalidadCalculo: deuda.modalidadCalculo,
                       ),
@@ -312,6 +323,7 @@ class _ResumenCard extends StatelessWidget {
       totalAbonado: totalAbonado,
       tipoAmortizacion: deuda.tipoAmortizacion,
       abonos: abonos,
+      fechaFin: _fechaFinCongelada(deuda),
     );
     final interes = resumen['interesAcumulado']!;
     final totalConInteres = resumen['totalConInteres']!;

@@ -52,12 +52,13 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     });
   }
 
-  Future<bool> marcarComoPagado(int id) {
+  Future<bool> marcarComoPagado(int id, DateTime fechaPago) {
     return transaction(() async {
       final count = await (update(prestamos)..where((t) => t.id.equals(id)))
           .write(
             PrestamosCompanion(
               estado: const Value('pagado'),
+              fechaPagoReal: Value(fechaPago),
               actualizadoEn: Value(DateTime.now()),
             ),
           );
@@ -72,6 +73,7 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
       await (update(prestamos)..where((p) => p.id.equals(id))).write(
         PrestamosCompanion(
           estado: const Value('activo'),
+          fechaPagoReal: const Value(null),
           actualizadoEn: Value(DateTime.now()),
         ),
       );

@@ -7,7 +7,7 @@ import 'package:valtiq/db/database.dart';
 /// que existieran `ConfigSmtps`, `PagosDeuda`, `GastosVariables` y
 /// `PresupuestosCategorias`) sobre una base sqlite en memoria, con `PRAGMA
 /// user_version = 1`. Al abrirla con la `AppDatabase` real (schemaVersion
-/// 12), drift dispara los 11 bloques `if (from < N)` de `onUpgrade` en
+/// 13), drift dispara los 12 bloques `if (from < N)` de `onUpgrade` en
 /// cadena — el camino que recorrerá cualquier instalación que nunca se haya
 /// actualizado desde el día 1.
 ///
@@ -169,11 +169,12 @@ void expectMismoInstante(DateTime actual, DateTime esperado) {
 
 void main() {
   test(
-    'migración de CADENA COMPLETA v1 → v12 (instalación nunca actualizada '
+    'migración de CADENA COMPLETA v1 → v13 (instalación nunca actualizada '
     'desde el día 1): no crashea al abrir, y arrastra todas las '
     'transformaciones intermedias (montos a INTEGER en v9→v10, fechas a '
-    'UTC-civil en v10→v11, tipoAmortizacion en v11→v12) sobre una base que '
-    'nunca tuvo ConfigSmtps/PagosDeuda/GastosVariables/PresupuestosCategorias',
+    'UTC-civil en v10→v11, tipoAmortizacion en v11→v12, '
+    'Prestamos.fechaPagoReal en v12→v13) sobre una base que nunca tuvo '
+    'ConfigSmtps/PagosDeuda/GastosVariables/PresupuestosCategorias',
     () async {
       final fechaPrestamoDeuda = DateTime(2023, 3, 10, 22, 40);
       final fechaPrestamoPrestamo = DateTime(2023, 5, 2, 6, 10);
@@ -198,6 +199,7 @@ void main() {
       expect(prestamo.montoPrestado, 1200); // 1200.4 redondeado
       expect(prestamo.modalidadCalculo, 'simple'); // ya existía desde v1
       expect(prestamo.tipoAmortizacion, 'saldo_original');
+      expect(prestamo.fechaPagoReal, isNull); // columna nueva (v13)
       expectMismoInstante(
         prestamo.fechaPrestamo,
         diaCivilEsperado(fechaPrestamoPrestamo),

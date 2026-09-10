@@ -14,6 +14,17 @@ import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
 import 'prestamo_form.dart';
 
+/// Congela el cálculo de interés en la fecha real de pago para un préstamo
+/// ya pagado — sin esto, `InteresCalculator` sigue calculando hasta HOY por
+/// defecto (ver `fechaFin` en `interes_calculator.dart`), y un préstamo
+/// cerrado hace meses mostraría interés creciendo para siempre.
+DateTime? _fechaFinCongelada(Prestamo prestamo) {
+  if (prestamo.estado != 'pagado' || prestamo.fechaPagoReal == null) {
+    return null;
+  }
+  return fechaCivilGuardada(prestamo.fechaPagoReal!);
+}
+
 class PrestamoDetalle extends StatefulWidget {
   const PrestamoDetalle({
     super.key,
@@ -75,7 +86,10 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
       ),
     );
     if (ok != true) return;
-    await widget.db.prestamosDao.marcarComoPagado(widget.prestamoId);
+    await widget.db.prestamosDao.marcarComoPagado(
+      widget.prestamoId,
+      normalizarFechaCivil(DateTime.now()),
+    );
     if (mounted) Navigator.pop(context);
   }
 
@@ -93,6 +107,7 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
       totalAbonado: totalAbonado,
       tipoAmortizacion: prestamo.tipoAmortizacion,
       abonos: abonos,
+      fechaFin: _fechaFinCongelada(prestamo),
     );
     // Sin recortar a 0: resumen['saldoPendiente'] sí lo recorta (para no
     // mostrar saldo negativo en la UI), pero eso permitiría abonar de a $1
@@ -131,7 +146,10 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
       final saldoPendienteActual =
           resumenActual['totalConInteres']! - resumenActual['totalAbonado']!;
       if (saldoPendienteActual <= 0) {
-        await widget.db.prestamosDao.marcarComoPagado(widget.prestamoId);
+        await widget.db.prestamosDao.marcarComoPagado(
+          widget.prestamoId,
+          normalizarFechaCivil(DateTime.now()),
+        );
         if (mounted) {
           mostrarExito(
             context,
@@ -264,6 +282,7 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
                           fechaPrestamo: prestamo.fechaPrestamo,
                           tipoAmortizacion: prestamo.tipoAmortizacion,
                           abonos: abonosInteres,
+                          fechaFin: _fechaFinCongelada(prestamo),
                         ),
                         modalidadCalculo: prestamo.modalidadCalculo,
                       ),
@@ -313,6 +332,7 @@ class _ResumenCard extends StatelessWidget {
       totalAbonado: totalAbonado,
       tipoAmortizacion: prestamo.tipoAmortizacion,
       abonos: abonos,
+      fechaFin: _fechaFinCongelada(prestamo),
     );
 
     final saldo = resumen['saldoPendiente']!;

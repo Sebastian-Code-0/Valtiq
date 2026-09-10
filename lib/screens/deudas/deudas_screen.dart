@@ -12,6 +12,13 @@ import '../../utils/notificaciones.dart';
 import 'deuda_detalle.dart';
 import 'deuda_form.dart';
 
+/// Congela el cálculo de interés en la fecha real de pago para una deuda ya
+/// pagada — ver la misma función en `deuda_detalle.dart`.
+DateTime? _fechaFinCongelada(Deuda deuda) {
+  if (deuda.estado != 'pagada' || deuda.fechaPagoReal == null) return null;
+  return fechaCivilGuardada(deuda.fechaPagoReal!);
+}
+
 class _DeudaConAbonos {
   _DeudaConAbonos(this.deuda, this.abonos);
   final Deuda deuda;
@@ -329,6 +336,7 @@ class _DeudaCard extends StatelessWidget {
       totalAbonado: abonado,
       tipoAmortizacion: deuda.tipoAmortizacion,
       abonos: abonos,
+      fechaFin: _fechaFinCongelada(deuda),
     );
     final totalConInteres = abonado + saldo;
     final fraccionPagada = totalConInteres > 0

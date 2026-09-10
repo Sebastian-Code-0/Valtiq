@@ -78,7 +78,7 @@ void main() {
         _prestamo(montoPrestado: 50000),
       );
       await db.prestamosDao.insertPrestamo(_prestamo(montoPrestado: 75000));
-      await db.prestamosDao.marcarComoPagado(id1);
+      await db.prestamosDao.marcarComoPagado(id1, DateTime.utc(2026, 1, 1));
 
       final total = await DashboardService.watchTotalPrestamosActivos(
         db,

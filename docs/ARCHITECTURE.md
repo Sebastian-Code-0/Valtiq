@@ -1,6 +1,6 @@
 # Arquitectura de Valtiq
 
-## Base de datos (SQLite vía drift, schemaVersion 12)
+## Base de datos (SQLite vía drift, schemaVersion 13)
 
 ### Tablas
 
@@ -47,6 +47,7 @@
 | fechaPrestamo    | DATETIME |                                 |
 | fechaPactadaPago | DATETIME | nullable                        |
 | estado           | TEXT     | 'activo' / 'pagado'             |
+| fechaPagoReal    | DATETIME | nullable, desde schemaVersion 13 |
 | notas            | TEXT     | default ''                      |
 | creadoEn         | DATETIME | default now                     |
 | actualizadoEn    | DATETIME | default now                     |
@@ -214,6 +215,21 @@ ni columna `fecha`: siempre es recurrente.
             preserva exactamente el comportamiento que ya tenían todas
             las deudas/préstamos existentes). Ver `InteresCalculator`
             más abajo para el significado de cada modo.
+- v12 → v13: agregar Prestamos.fechaPagoReal (nullable — Deudas ya la
+            tenía desde antes, Prestamos no). Motivo: ninguna pantalla
+            de detalle/lista pasaba `fechaFin` a `InteresCalculator`,
+            que por defecto calcula siempre hasta HOY — una deuda o
+            préstamo ya marcado como pagado seguía mostrando interés
+            creciendo para siempre. `PrestamosDao.marcarComoPagado`
+            ahora recibe la fecha real de pago (igual que
+            `DeudasDao.marcarComoPagada`) y `deuda_detalle.dart`/
+            `prestamo_detalle.dart`/`deudas_screen.dart`/
+            `prestamos_screen.dart` pasan `fechaFin:
+            fechaCivilGuardada(x.fechaPagoReal!)` cuando el estado es
+            pagado/pagada. Préstamos ya marcados pagados bajo el schema
+            viejo quedan con `fechaPagoReal = null` (no hay forma de
+            reconstruir esa fecha retroactivamente) hasta que el
+            usuario los reactive y los vuelva a marcar como pagados.
 
 **Regla importante para migraciones futuras (encontrada 2026-09-02 con un
 test de salto múltiple):** si una columna nueva se agrega con `addColumn`

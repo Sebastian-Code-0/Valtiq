@@ -1420,6 +1420,18 @@ class $PrestamosTable extends Prestamos
     requiredDuringInsert: false,
     defaultValue: const Constant('activo'),
   );
+  static const VerificationMeta _fechaPagoRealMeta = const VerificationMeta(
+    'fechaPagoReal',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fechaPagoReal =
+      GeneratedColumn<DateTime>(
+        'fecha_pago_real',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _notasMeta = const VerificationMeta('notas');
   @override
   late final GeneratedColumn<String> notas = GeneratedColumn<String>(
@@ -1468,6 +1480,7 @@ class $PrestamosTable extends Prestamos
     fechaPrestamo,
     fechaPactadaPago,
     estado,
+    fechaPagoReal,
     notas,
     creadoEn,
     actualizadoEn,
@@ -1580,6 +1593,15 @@ class $PrestamosTable extends Prestamos
         estado.isAcceptableOrUnknown(data['estado']!, _estadoMeta),
       );
     }
+    if (data.containsKey('fecha_pago_real')) {
+      context.handle(
+        _fechaPagoRealMeta,
+        fechaPagoReal.isAcceptableOrUnknown(
+          data['fecha_pago_real']!,
+          _fechaPagoRealMeta,
+        ),
+      );
+    }
     if (data.containsKey('notas')) {
       context.handle(
         _notasMeta,
@@ -1654,6 +1676,10 @@ class $PrestamosTable extends Prestamos
         DriftSqlType.string,
         data['${effectivePrefix}estado'],
       )!,
+      fechaPagoReal: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fecha_pago_real'],
+      ),
       notas: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notas'],
@@ -1687,6 +1713,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
   final DateTime fechaPrestamo;
   final DateTime? fechaPactadaPago;
   final String estado;
+  final DateTime? fechaPagoReal;
   final String notas;
   final DateTime creadoEn;
   final DateTime actualizadoEn;
@@ -1702,6 +1729,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
     required this.fechaPrestamo,
     this.fechaPactadaPago,
     required this.estado,
+    this.fechaPagoReal,
     required this.notas,
     required this.creadoEn,
     required this.actualizadoEn,
@@ -1722,6 +1750,9 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
       map['fecha_pactada_pago'] = Variable<DateTime>(fechaPactadaPago);
     }
     map['estado'] = Variable<String>(estado);
+    if (!nullToAbsent || fechaPagoReal != null) {
+      map['fecha_pago_real'] = Variable<DateTime>(fechaPagoReal);
+    }
     map['notas'] = Variable<String>(notas);
     map['creado_en'] = Variable<DateTime>(creadoEn);
     map['actualizado_en'] = Variable<DateTime>(actualizadoEn);
@@ -1743,6 +1774,9 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
           ? const Value.absent()
           : Value(fechaPactadaPago),
       estado: Value(estado),
+      fechaPagoReal: fechaPagoReal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fechaPagoReal),
       notas: Value(notas),
       creadoEn: Value(creadoEn),
       actualizadoEn: Value(actualizadoEn),
@@ -1768,6 +1802,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
         json['fechaPactadaPago'],
       ),
       estado: serializer.fromJson<String>(json['estado']),
+      fechaPagoReal: serializer.fromJson<DateTime?>(json['fechaPagoReal']),
       notas: serializer.fromJson<String>(json['notas']),
       creadoEn: serializer.fromJson<DateTime>(json['creadoEn']),
       actualizadoEn: serializer.fromJson<DateTime>(json['actualizadoEn']),
@@ -1788,6 +1823,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
       'fechaPrestamo': serializer.toJson<DateTime>(fechaPrestamo),
       'fechaPactadaPago': serializer.toJson<DateTime?>(fechaPactadaPago),
       'estado': serializer.toJson<String>(estado),
+      'fechaPagoReal': serializer.toJson<DateTime?>(fechaPagoReal),
       'notas': serializer.toJson<String>(notas),
       'creadoEn': serializer.toJson<DateTime>(creadoEn),
       'actualizadoEn': serializer.toJson<DateTime>(actualizadoEn),
@@ -1806,6 +1842,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
     DateTime? fechaPrestamo,
     Value<DateTime?> fechaPactadaPago = const Value.absent(),
     String? estado,
+    Value<DateTime?> fechaPagoReal = const Value.absent(),
     String? notas,
     DateTime? creadoEn,
     DateTime? actualizadoEn,
@@ -1823,6 +1860,9 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
         ? fechaPactadaPago.value
         : this.fechaPactadaPago,
     estado: estado ?? this.estado,
+    fechaPagoReal: fechaPagoReal.present
+        ? fechaPagoReal.value
+        : this.fechaPagoReal,
     notas: notas ?? this.notas,
     creadoEn: creadoEn ?? this.creadoEn,
     actualizadoEn: actualizadoEn ?? this.actualizadoEn,
@@ -1858,6 +1898,9 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
           ? data.fechaPactadaPago.value
           : this.fechaPactadaPago,
       estado: data.estado.present ? data.estado.value : this.estado,
+      fechaPagoReal: data.fechaPagoReal.present
+          ? data.fechaPagoReal.value
+          : this.fechaPagoReal,
       notas: data.notas.present ? data.notas.value : this.notas,
       creadoEn: data.creadoEn.present ? data.creadoEn.value : this.creadoEn,
       actualizadoEn: data.actualizadoEn.present
@@ -1880,6 +1923,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
           ..write('fechaPrestamo: $fechaPrestamo, ')
           ..write('fechaPactadaPago: $fechaPactadaPago, ')
           ..write('estado: $estado, ')
+          ..write('fechaPagoReal: $fechaPagoReal, ')
           ..write('notas: $notas, ')
           ..write('creadoEn: $creadoEn, ')
           ..write('actualizadoEn: $actualizadoEn')
@@ -1900,6 +1944,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
     fechaPrestamo,
     fechaPactadaPago,
     estado,
+    fechaPagoReal,
     notas,
     creadoEn,
     actualizadoEn,
@@ -1919,6 +1964,7 @@ class Prestamo extends DataClass implements Insertable<Prestamo> {
           other.fechaPrestamo == this.fechaPrestamo &&
           other.fechaPactadaPago == this.fechaPactadaPago &&
           other.estado == this.estado &&
+          other.fechaPagoReal == this.fechaPagoReal &&
           other.notas == this.notas &&
           other.creadoEn == this.creadoEn &&
           other.actualizadoEn == this.actualizadoEn);
@@ -1936,6 +1982,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
   final Value<DateTime> fechaPrestamo;
   final Value<DateTime?> fechaPactadaPago;
   final Value<String> estado;
+  final Value<DateTime?> fechaPagoReal;
   final Value<String> notas;
   final Value<DateTime> creadoEn;
   final Value<DateTime> actualizadoEn;
@@ -1951,6 +1998,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     this.fechaPrestamo = const Value.absent(),
     this.fechaPactadaPago = const Value.absent(),
     this.estado = const Value.absent(),
+    this.fechaPagoReal = const Value.absent(),
     this.notas = const Value.absent(),
     this.creadoEn = const Value.absent(),
     this.actualizadoEn = const Value.absent(),
@@ -1967,6 +2015,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     required DateTime fechaPrestamo,
     this.fechaPactadaPago = const Value.absent(),
     this.estado = const Value.absent(),
+    this.fechaPagoReal = const Value.absent(),
     this.notas = const Value.absent(),
     this.creadoEn = const Value.absent(),
     this.actualizadoEn = const Value.absent(),
@@ -1985,6 +2034,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     Expression<DateTime>? fechaPrestamo,
     Expression<DateTime>? fechaPactadaPago,
     Expression<String>? estado,
+    Expression<DateTime>? fechaPagoReal,
     Expression<String>? notas,
     Expression<DateTime>? creadoEn,
     Expression<DateTime>? actualizadoEn,
@@ -2001,6 +2051,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
       if (fechaPrestamo != null) 'fecha_prestamo': fechaPrestamo,
       if (fechaPactadaPago != null) 'fecha_pactada_pago': fechaPactadaPago,
       if (estado != null) 'estado': estado,
+      if (fechaPagoReal != null) 'fecha_pago_real': fechaPagoReal,
       if (notas != null) 'notas': notas,
       if (creadoEn != null) 'creado_en': creadoEn,
       if (actualizadoEn != null) 'actualizado_en': actualizadoEn,
@@ -2019,6 +2070,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     Value<DateTime>? fechaPrestamo,
     Value<DateTime?>? fechaPactadaPago,
     Value<String>? estado,
+    Value<DateTime?>? fechaPagoReal,
     Value<String>? notas,
     Value<DateTime>? creadoEn,
     Value<DateTime>? actualizadoEn,
@@ -2035,6 +2087,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
       fechaPrestamo: fechaPrestamo ?? this.fechaPrestamo,
       fechaPactadaPago: fechaPactadaPago ?? this.fechaPactadaPago,
       estado: estado ?? this.estado,
+      fechaPagoReal: fechaPagoReal ?? this.fechaPagoReal,
       notas: notas ?? this.notas,
       creadoEn: creadoEn ?? this.creadoEn,
       actualizadoEn: actualizadoEn ?? this.actualizadoEn,
@@ -2077,6 +2130,9 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
     if (estado.present) {
       map['estado'] = Variable<String>(estado.value);
     }
+    if (fechaPagoReal.present) {
+      map['fecha_pago_real'] = Variable<DateTime>(fechaPagoReal.value);
+    }
     if (notas.present) {
       map['notas'] = Variable<String>(notas.value);
     }
@@ -2103,6 +2159,7 @@ class PrestamosCompanion extends UpdateCompanion<Prestamo> {
           ..write('fechaPrestamo: $fechaPrestamo, ')
           ..write('fechaPactadaPago: $fechaPactadaPago, ')
           ..write('estado: $estado, ')
+          ..write('fechaPagoReal: $fechaPagoReal, ')
           ..write('notas: $notas, ')
           ..write('creadoEn: $creadoEn, ')
           ..write('actualizadoEn: $actualizadoEn')
@@ -6874,6 +6931,7 @@ typedef $$PrestamosTableCreateCompanionBuilder =
       required DateTime fechaPrestamo,
       Value<DateTime?> fechaPactadaPago,
       Value<String> estado,
+      Value<DateTime?> fechaPagoReal,
       Value<String> notas,
       Value<DateTime> creadoEn,
       Value<DateTime> actualizadoEn,
@@ -6891,6 +6949,7 @@ typedef $$PrestamosTableUpdateCompanionBuilder =
       Value<DateTime> fechaPrestamo,
       Value<DateTime?> fechaPactadaPago,
       Value<String> estado,
+      Value<DateTime?> fechaPagoReal,
       Value<String> notas,
       Value<DateTime> creadoEn,
       Value<DateTime> actualizadoEn,
@@ -6983,6 +7042,11 @@ class $$PrestamosTableFilterComposer
 
   ColumnFilters<String> get estado => $composableBuilder(
     column: $table.estado,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fechaPagoReal => $composableBuilder(
+    column: $table.fechaPagoReal,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7091,6 +7155,11 @@ class $$PrestamosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get fechaPagoReal => $composableBuilder(
+    column: $table.fechaPagoReal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get notas => $composableBuilder(
     column: $table.notas,
     builder: (column) => ColumnOrderings(column),
@@ -7166,6 +7235,11 @@ class $$PrestamosTableAnnotationComposer
 
   GeneratedColumn<String> get estado =>
       $composableBuilder(column: $table.estado, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fechaPagoReal => $composableBuilder(
+    column: $table.fechaPagoReal,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get notas =>
       $composableBuilder(column: $table.notas, builder: (column) => column);
@@ -7243,6 +7317,7 @@ class $$PrestamosTableTableManager
                 Value<DateTime> fechaPrestamo = const Value.absent(),
                 Value<DateTime?> fechaPactadaPago = const Value.absent(),
                 Value<String> estado = const Value.absent(),
+                Value<DateTime?> fechaPagoReal = const Value.absent(),
                 Value<String> notas = const Value.absent(),
                 Value<DateTime> creadoEn = const Value.absent(),
                 Value<DateTime> actualizadoEn = const Value.absent(),
@@ -7258,6 +7333,7 @@ class $$PrestamosTableTableManager
                 fechaPrestamo: fechaPrestamo,
                 fechaPactadaPago: fechaPactadaPago,
                 estado: estado,
+                fechaPagoReal: fechaPagoReal,
                 notas: notas,
                 creadoEn: creadoEn,
                 actualizadoEn: actualizadoEn,
@@ -7275,6 +7351,7 @@ class $$PrestamosTableTableManager
                 required DateTime fechaPrestamo,
                 Value<DateTime?> fechaPactadaPago = const Value.absent(),
                 Value<String> estado = const Value.absent(),
+                Value<DateTime?> fechaPagoReal = const Value.absent(),
                 Value<String> notas = const Value.absent(),
                 Value<DateTime> creadoEn = const Value.absent(),
                 Value<DateTime> actualizadoEn = const Value.absent(),
@@ -7290,6 +7367,7 @@ class $$PrestamosTableTableManager
                 fechaPrestamo: fechaPrestamo,
                 fechaPactadaPago: fechaPactadaPago,
                 estado: estado,
+                fechaPagoReal: fechaPagoReal,
                 notas: notas,
                 creadoEn: creadoEn,
                 actualizadoEn: actualizadoEn,

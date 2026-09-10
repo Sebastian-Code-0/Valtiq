@@ -21,6 +21,15 @@ class PrestamosScreen extends StatefulWidget {
   State<PrestamosScreen> createState() => _PrestamosScreenState();
 }
 
+/// Congela el cálculo de interés en la fecha real de pago para un préstamo
+/// ya pagado — ver la misma función en `prestamo_detalle.dart`.
+DateTime? _fechaFinCongelada(Prestamo prestamo) {
+  if (prestamo.estado != 'pagado' || prestamo.fechaPagoReal == null) {
+    return null;
+  }
+  return fechaCivilGuardada(prestamo.fechaPagoReal!);
+}
+
 class _PrestamoConAbonos {
   _PrestamoConAbonos(this.prestamo, this.abonos);
   final Prestamo prestamo;
@@ -111,7 +120,10 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
       ),
     );
     if (ok == true) {
-      await widget.db.prestamosDao.marcarComoPagado(prestamo.id);
+      await widget.db.prestamosDao.marcarComoPagado(
+        prestamo.id,
+        normalizarFechaCivil(DateTime.now()),
+      );
     }
   }
 
@@ -328,6 +340,7 @@ class _PrestamoCard extends StatelessWidget {
       totalAbonado: abonado,
       tipoAmortizacion: prestamo.tipoAmortizacion,
       abonos: abonos,
+      fechaFin: _fechaFinCongelada(prestamo),
     );
     final totalConInteres = abonado + saldo;
     final fraccionCobrada = totalConInteres > 0

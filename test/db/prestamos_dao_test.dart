@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valtiq/db/database.dart';
+import 'package:valtiq/utils/fecha_civil.dart';
 
 AppDatabase _createInMemoryDb() => AppDatabase(NativeDatabase.memory());
 
@@ -65,12 +66,35 @@ void main() {
         ),
       );
 
-      await db.prestamosDao.marcarComoPagado(id);
+      await db.prestamosDao.marcarComoPagado(id, DateTime.utc(2026, 2, 1));
 
       final recordatorios = await db.recordatoriosDao
           .getRecordatoriosPorReferencia('prestamo', id);
       expect(recordatorios.single.activo, isFalse);
     });
+
+    test(
+      'marcarComoPagado guarda fechaPagoReal, y reactivarPrestamo la '
+      'limpia — sin esto InteresCalculator no tiene forma de congelar el '
+      'interés mostrado en la fecha real de pago (ver prestamo_detalle.dart)',
+      () async {
+        final id = await db.prestamosDao.insertPrestamo(_prestamo());
+        final fechaPago = DateTime.utc(2026, 3, 15);
+
+        await db.prestamosDao.marcarComoPagado(id, fechaPago);
+        var prestamo = await db.prestamosDao.getPrestamoById(id);
+        expect(prestamo!.estado, 'pagado');
+        // Drift reconstruye el DateTime leído como "local" aunque el
+        // instante guardado sea medianoche UTC — comparar con
+        // fechaCivilGuardada(), nunca el campo crudo (ver fecha_civil.dart).
+        expect(fechaCivilGuardada(prestamo.fechaPagoReal!), fechaPago);
+
+        await db.prestamosDao.reactivarPrestamo(id);
+        prestamo = await db.prestamosDao.getPrestamoById(id);
+        expect(prestamo!.estado, 'activo');
+        expect(prestamo.fechaPagoReal, isNull);
+      },
+    );
 
     group('deletePrestamoConPagos', () {
       test('borra el préstamo y sus pagos en cascada', () async {

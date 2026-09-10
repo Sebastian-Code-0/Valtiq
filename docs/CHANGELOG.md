@@ -1,5 +1,32 @@
 # Changelog
 
+## Fix: préstamos/deudas pagados seguían acumulando interés después de pagados (2026-09-09) — v1.8.0+9, schemaVersion 13
+
+**Bug real:** ninguna de las pantallas que muestran interés (`deuda_detalle.dart`,
+`prestamo_detalle.dart`, y las tarjetas de lista en `deudas_screen.dart`/
+`prestamos_screen.dart`) pasaba `fechaFin` a `InteresCalculator` — que por
+defecto calcula siempre hasta HOY. Resultado: una deuda o préstamo ya
+marcado como pagado seguía mostrando el interés (y el "total con interés")
+creciendo indefinidamente cada vez que se abría, mucho después de haberse
+saldado. `Deudas.fechaPagoReal` ya existía y se guardaba correctamente al
+marcar como pagada, pero nunca se leía de vuelta hacia el motor de interés.
+
+**Fix:**
+- Nueva columna `Prestamos.fechaPagoReal` (schemaVersion 12→13) — `Prestamos`
+  no tenía ningún campo para registrar cuándo se pagó, a diferencia de
+  `Deudas`. `PrestamosDao.marcarComoPagado` ahora recibe la fecha (igual que
+  `DeudasDao.marcarComoPagada`) y `reactivarPrestamo` la limpia a `null`.
+- Las 4 pantallas que llaman a `InteresCalculator` para una deuda/préstamo ya
+  pagado ahora pasan `fechaFin: fechaCivilGuardada(x.fechaPagoReal!)`,
+  congelando el cálculo en la fecha real de pago en vez de seguir hasta hoy.
+- Instalaciones existentes: los préstamos ya marcados "pagado" bajo el
+  schema viejo quedan con `fechaPagoReal = null` (sin fecha de pago
+  registrada) hasta que el usuario los reactive y los vuelva a marcar como
+  pagados — no hay forma de reconstruir esa fecha retroactivamente.
+- Tests nuevos: `test/db/migration_v13_test.dart` (round-trip v12→v13) y un
+  caso en `test/db/prestamos_dao_test.dart` que verifica que
+  `marcarComoPagado`/`reactivarPrestamo` guardan y limpian `fechaPagoReal`.
+
 ## Fix: fecha corrida un día en "¿Cómo se calculó?" (2026-09-07) — v1.7.0+8
 
 Sin cambio de schema (sigue en 12).

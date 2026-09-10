@@ -41,6 +41,7 @@ class Prestamos extends Table {
   DateTimeColumn get fechaPrestamo => dateTime()();
   DateTimeColumn get fechaPactadaPago => dateTime().nullable()();
   TextColumn get estado => text().withDefault(const Constant('activo'))();
+  DateTimeColumn get fechaPagoReal => dateTime().nullable()();
   TextColumn get notas => text().withDefault(const Constant(''))();
   DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get actualizadoEn =>

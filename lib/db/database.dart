@@ -45,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor openConnection() => conn.openValtiqConnection();
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -170,7 +170,10 @@ class AppDatabase extends _$AppDatabase {
                 'CAST(ROUND(monto_prestado) AS INTEGER)',
               ),
             },
-            newColumns: [prestamos.tipoAmortizacion],
+            // `fechaPagoReal` (agregada en schemaVersion 13) tampoco existe
+            // todavía acá para un upgrade que arranque en v9 — mismo motivo
+            // que `tipoAmortizacion` arriba.
+            newColumns: [prestamos.tipoAmortizacion, prestamos.fechaPagoReal],
           ),
         );
         await m.alterTable(
@@ -288,7 +291,10 @@ class AppDatabase extends _$AppDatabase {
                 "'localtime')) AS INTEGER)",
               ),
             },
-            newColumns: [prestamos.tipoAmortizacion],
+            // Mismo motivo que en el bloque `from < 10`: `fechaPagoReal`
+            // (schemaVersion 13) no existe todavía acá para un upgrade que
+            // arranque en v10.
+            newColumns: [prestamos.tipoAmortizacion, prestamos.fechaPagoReal],
           ),
         );
         await m.alterTable(
@@ -378,6 +384,27 @@ class AppDatabase extends _$AppDatabase {
         if (from >= 11) {
           await m.addColumn(deudas, deudas.tipoAmortizacion);
           await m.addColumn(prestamos, prestamos.tipoAmortizacion);
+        }
+      }
+      if (from < 13) {
+        // `Prestamos` gana `fechaPagoReal`, igual que `Deudas` ya tenía desde
+        // antes — sin este campo, la pantalla de detalle no tenía forma de
+        // congelar el cálculo de interés en la fecha real de pago, y seguía
+        // mostrando interés creciendo para siempre sobre préstamos ya
+        // marcados como pagados (ver `interes_calculator.dart`/
+        // `prestamo_detalle.dart`, ambos ahora pasan `fechaFin` cuando
+        // `estado == 'pagado'`). Préstamos existentes quedan en `null`
+        // (mismo comportamiento que tenían: sin fecha de pago registrada).
+        //
+        // Mismo gotcha que `tipoAmortizacion` en el bloque `from < 12`: el
+        // `addColumn` explícito solo hace falta cuando NINGÚN rebuild
+        // anterior en este mismo upgrade ya tocó la tabla, es decir cuando
+        // `from` ya era >= 12 (agregarlo también para `from < 12` rompería
+        // con "duplicate column name", ya que los bloques `from < 10` y
+        // `from < 11` de arriba declaran `prestamos.fechaPagoReal` en su
+        // propio `newColumns` y la habrían creado en su rebuild).
+        if (from >= 12) {
+          await m.addColumn(prestamos, prestamos.fechaPagoReal);
         }
       }
     },
