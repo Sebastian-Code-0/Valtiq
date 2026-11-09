@@ -1,0 +1,415 @@
+import 'package:drift/drift.dart';
+
+import 'connection.dart' as conn;
+import 'daos/config_smtp_dao.dart';
+import 'daos/deudas_dao.dart';
+import 'daos/gastos_fijos_dao.dart';
+import 'daos/ingresos_dao.dart';
+import 'daos/pagos_deuda_dao.dart';
+import 'daos/prestamos_dao.dart';
+import 'daos/gastos_variables_dao.dart';
+import 'daos/presupuestos_categorias_dao.dart';
+import 'daos/recordatorios_dao.dart';
+import 'tables.dart';
+
+part 'database.g.dart';
+
+@DriftDatabase(
+  tables: [
+    Deudas,
+    PagosDeuda,
+    Prestamos,
+    PagosRecibidos,
+    Ingresos,
+    GastosFijos,
+    Recordatorios,
+    ConfigSmtps,
+    GastosVariables,
+    PresupuestosCategorias,
+  ],
+  daos: [
+    DeudasDao,
+    PagosDeudaDao,
+    PrestamosDao,
+    IngresosDao,
+    GastosFijosDao,
+    RecordatoriosDao,
+    ConfigSmtpDao,
+    GastosVariablesDao,
+    PresupuestosCategoriasDao,
+  ],
+)
+class AppDatabase extends _$AppDatabase {
+  AppDatabase(super.e);
+
+  static QueryExecutor openConnection() => conn.openValtiqConnection();
+
+  @override
+  int get schemaVersion => 13;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) async {
+      await m.createAll();
+      await into(configSmtps).insert(
+        const ConfigSmtpsCompanion(id: Value(1)),
+        mode: InsertMode.insertOrIgnore,
+      );
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(configSmtps);
+        await into(configSmtps).insert(
+          const ConfigSmtpsCompanion(id: Value(1)),
+          mode: InsertMode.insertOrIgnore,
+        );
+      }
+      if (from < 3) {
+        // El `alterTable` de abajo migra la columna `contrasena` (texto
+        // plano) de la v2 real hacia `tieneContrasena`. Si `from < 2`,
+        // `configSmtps` no existía todavía y el bloque de arriba la acaba
+        // de crear en este mismo upgrade con el schema ACTUAL (que ya no
+        // tiene `contrasena`, solo `contrasenaEncriptada`/`tieneContrasena`)
+        // — sin este `if (from >= 2)`, el `CustomExpression` de abajo
+        // referencia una columna que nunca existió, y SQLite tira
+        // "no such column: contrasena" (error real, no silencioso: crashea
+        // la apertura de la base para cualquier instalación que arranque en
+        // schemaVersion 1 y salte directo a la versión actual).
+        if (from >= 2) {
+          await m.alterTable(
+            TableMigration(
+              configSmtps,
+              columnTransformer: {
+                // Este es el único lugar del proyecto con SQL en texto plano
+                // dentro de una migración. El valor de abajo es estático y
+                // fijo para esta migración puntual. No interpolar nunca una
+                // variable externa aquí sin parametrizarla: esto no pasa por
+                // el query builder de drift, así que cualquier interpolación
+                // directa de un valor externo sería una inyección SQL.
+                configSmtps.tieneContrasena: const CustomExpression(
+                  "CASE WHEN contrasena != '' THEN 1 ELSE 0 END",
+                ),
+              },
+            ),
+          );
+        }
+        await m.createTable(pagosDeuda);
+      }
+      if (from < 4) {
+        // Mismo motivo que el `if (from >= 2)` del bloque `from < 3` de
+        // arriba: si `from < 2`, `configSmtps` se acaba de crear en este
+        // mismo upgrade con el schema ACTUAL (que ya incluye
+        // `contrasenaEncriptada`) — agregarla de nuevo con `addColumn`
+        // tiraría "duplicate column name".
+        if (from >= 2) {
+          await m.addColumn(configSmtps, configSmtps.contrasenaEncriptada);
+        }
+      }
+      if (from < 5) {
+        await m.addColumn(recordatorios, recordatorios.frecuenciaAviso);
+        await m.addColumn(recordatorios, recordatorios.ultimaNotificacion);
+        await m.addColumn(recordatorios, recordatorios.ultimoEnvioCorreo);
+      }
+      if (from < 6) {
+        await m.addColumn(recordatorios, recordatorios.horaAviso);
+        await m.addColumn(recordatorios, recordatorios.minutoAviso);
+      }
+      if (from < 7) {
+        await m.createTable(gastosVariables);
+      }
+      if (from < 8) {
+        await m.addColumn(deudas, deudas.modalidadCalculo);
+      }
+      if (from < 9) {
+        await m.createTable(presupuestosCategorias);
+        // Los @TableIndex ya cubren instalaciones nuevas (onCreate); estas dos
+        // líneas son solo para bases de datos existentes que están actualizando.
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_pagos_deuda_deuda_id ON pagos_deuda (deuda_id)',
+        );
+        await m.database.customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_pagos_recibidos_prestamo_id ON pagos_recibidos (prestamo_id)',
+        );
+      }
+      if (from < 10) {
+        // Todas las columnas de dinero pasan de REAL (double) a INTEGER
+        // (peso colombiano entero, sin centavos) para evitar deriva de
+        // precisión de punto flotante en cálculos de interés y sumas de
+        // abonos. Los valores existentes se redondean al peso más cercano
+        // (no se truncan). Las tasas de interés (porcentajes) no se tocan.
+        await m.alterTable(
+          TableMigration(
+            deudas,
+            columnTransformer: {
+              deudas.montoOriginal: const CustomExpression(
+                'CAST(ROUND(monto_original) AS INTEGER)',
+              ),
+              deudas.cuotaMensual: const CustomExpression(
+                'CAST(ROUND(cuota_mensual) AS INTEGER)',
+              ),
+            },
+            // `tipoAmortizacion` (agregada en schemaVersion 12, mucho después
+            // de que este bloque se escribiera) todavía no existe en la
+            // tabla real en este punto para cualquier upgrade que arranque
+            // en v9. Sin declararla acá, drift la trata como columna YA
+            // existente y genera `SELECT ..., "tipo_amortizacion" FROM
+            // deudas` — como esa columna no existe en la tabla vieja,
+            // SQLite (fuera de modo estricto) reinterpreta el identificador
+            // entre comillas dobles no reconocido como STRING LITERAL en vez
+            // de lanzar error, dejando el valor 'tipo_amortizacion' guardado
+            // literalmente en la columna. Ver el `if (from >= 11)` en el
+            // bloque `from < 12` de más abajo — mismo mecanismo, misma razón.
+            newColumns: [deudas.tipoAmortizacion],
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            prestamos,
+            columnTransformer: {
+              prestamos.montoPrestado: const CustomExpression(
+                'CAST(ROUND(monto_prestado) AS INTEGER)',
+              ),
+            },
+            // `fechaPagoReal` (agregada en schemaVersion 13) tampoco existe
+            // todavía acá para un upgrade que arranque en v9 — mismo motivo
+            // que `tipoAmortizacion` arriba.
+            newColumns: [prestamos.tipoAmortizacion, prestamos.fechaPagoReal],
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            pagosRecibidos,
+            columnTransformer: {
+              pagosRecibidos.montoAbonado: const CustomExpression(
+                'CAST(ROUND(monto_abonado) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            pagosDeuda,
+            columnTransformer: {
+              pagosDeuda.montoAbonado: const CustomExpression(
+                'CAST(ROUND(monto_abonado) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            ingresos,
+            columnTransformer: {
+              ingresos.monto: const CustomExpression(
+                'CAST(ROUND(monto) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            gastosFijos,
+            columnTransformer: {
+              gastosFijos.monto: const CustomExpression(
+                'CAST(ROUND(monto) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            gastosVariables,
+            columnTransformer: {
+              gastosVariables.monto: const CustomExpression(
+                'CAST(ROUND(monto) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            presupuestosCategorias,
+            columnTransformer: {
+              presupuestosCategorias.limiteMensual: const CustomExpression(
+                'CAST(ROUND(limite_mensual) AS INTEGER)',
+              ),
+            },
+          ),
+        );
+      }
+      if (from < 11) {
+        // Las fechas de NEGOCIO (fecha de una transacción, no un timestamp
+        // de auditoría) pasan de instante crudo a fecha civil normalizada:
+        // medianoche UTC del día que representan. Sin esto, si el usuario
+        // viaja y cambia la zona horaria del dispositivo, una transacción
+        // guardada cerca de medianoche puede "saltar" de día al mostrarse.
+        //
+        // El valor existente se interpreta en el huso horario ACTUAL del
+        // dispositivo que corre la migración (no hay forma de saber en qué
+        // huso se creó cada dato viejo, así que se usa el de ahora mismo,
+        // igual que lo vería el usuario si abriera la app en este momento):
+        // 'localtime' convierte el epoch guardado a la fecha civil local,
+        // y strftime('%s', <fecha>) la reconvierte a epoch asumiendo UTC
+        // (comportamiento por defecto de SQLite con strings de fecha sin
+        // zona), dando la medianoche UTC de esa misma fecha civil.
+        //
+        // creadoEn/actualizadoEn (y Recordatorios.ultimaNotificacion/
+        // ultimoEnvioCorreo) NO se tocan: son instantes de auditoría reales,
+        // no fechas civiles — ver lib/utils/fecha_civil.dart.
+        await m.alterTable(
+          TableMigration(
+            deudas,
+            columnTransformer: {
+              deudas.fechaPrestamo: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_prestamo, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+              deudas.fechaLimite: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_limite, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+              deudas.fechaPagoReal: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_pago_real, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+            // Mismo motivo que en el bloque `from < 10`: `tipoAmortizacion`
+            // no existe todavía acá para un upgrade que arranque en v10.
+            newColumns: [deudas.tipoAmortizacion],
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            prestamos,
+            columnTransformer: {
+              prestamos.fechaPrestamo: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_prestamo, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+              prestamos.fechaPactadaPago: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_pactada_pago, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+            // Mismo motivo que en el bloque `from < 10`: `fechaPagoReal`
+            // (schemaVersion 13) no existe todavía acá para un upgrade que
+            // arranque en v10.
+            newColumns: [prestamos.tipoAmortizacion, prestamos.fechaPagoReal],
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            pagosDeuda,
+            columnTransformer: {
+              pagosDeuda.fechaPago: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_pago, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            pagosRecibidos,
+            columnTransformer: {
+              pagosRecibidos.fechaPago: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_pago, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            ingresos,
+            columnTransformer: {
+              ingresos.fecha: const CustomExpression(
+                "CAST(strftime('%s', date(fecha, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            gastosVariables,
+            columnTransformer: {
+              gastosVariables.fecha: const CustomExpression(
+                "CAST(strftime('%s', date(fecha, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+        await m.alterTable(
+          TableMigration(
+            recordatorios,
+            columnTransformer: {
+              recordatorios.fechaAlerta: const CustomExpression(
+                "CAST(strftime('%s', date(fecha_alerta, 'unixepoch', "
+                "'localtime')) AS INTEGER)",
+              ),
+            },
+          ),
+        );
+      }
+      if (from < 12) {
+        // Nueva modalidad de amortización explícita ('saldo_original' vs
+        // 'saldo_insoluto', ver tables.dart e interes_calculator.dart).
+        // Deudas/préstamos existentes quedan en 'saldo_original' (el default
+        // de la columna), que es exactamente el comportamiento que ya tenían
+        // antes de que existiera esta opción — no cambia ningún cálculo para
+        // datos ya creados.
+        //
+        // OJO: `TableMigration` (usado arriba en `from < 10` y `from < 11`
+        // para deudas/prestamos) siempre reconstruye la tabla con el schema
+        // ACTUAL de tables.dart — es decir, cualquier upgrade que pase por
+        // esos bloques ya recibe `tipoAmortizacion` gratis (con su default)
+        // en el rebuild, SIEMPRE Y CUANDO esos bloques declaren la columna
+        // en su propio `newColumns` (ya se agregó ahí — ver los comentarios
+        // en `from < 10`/`from < 11`). Sin ese `newColumns`, drift no sabe
+        // que la columna es nueva y genera `SELECT ..., "tipo_amortizacion"
+        // FROM deudas`; como esa columna no existe todavía en la tabla vieja
+        // en ese punto, SQLite reinterpreta el identificador entre comillas
+        // dobles no reconocido como STRING LITERAL en vez de lanzar error —
+        // corrupción silenciosa, no un crash, y por eso el test de salto
+        // múltiple (`migration_v12_test.dart`) es el que lo destapó, no
+        // `flutter analyze` ni un test que solo cubra v11→v12 directo.
+        //
+        // El `addColumn` explícito de acá abajo solo hace falta cuando
+        // NINGÚN rebuild anterior tocó la tabla en este mismo upgrade, es
+        // decir cuando `from` ya era >= 11 (agregarlo también para
+        // `from < 11` rompería con "duplicate column name", ese sí un error
+        // ruidoso e inofensivo comparado con el de arriba).
+        if (from >= 11) {
+          await m.addColumn(deudas, deudas.tipoAmortizacion);
+          await m.addColumn(prestamos, prestamos.tipoAmortizacion);
+        }
+      }
+      if (from < 13) {
+        // `Prestamos` gana `fechaPagoReal`, igual que `Deudas` ya tenía desde
+        // antes — sin este campo, la pantalla de detalle no tenía forma de
+        // congelar el cálculo de interés en la fecha real de pago, y seguía
+        // mostrando interés creciendo para siempre sobre préstamos ya
+        // marcados como pagados (ver `interes_calculator.dart`/
+        // `prestamo_detalle.dart`, ambos ahora pasan `fechaFin` cuando
+        // `estado == 'pagado'`). Préstamos existentes quedan en `null`
+        // (mismo comportamiento que tenían: sin fecha de pago registrada).
+        //
+        // Mismo gotcha que `tipoAmortizacion` en el bloque `from < 12`: el
+        // `addColumn` explícito solo hace falta cuando NINGÚN rebuild
+        // anterior en este mismo upgrade ya tocó la tabla, es decir cuando
+        // `from` ya era >= 12 (agregarlo también para `from < 12` rompería
+        // con "duplicate column name", ya que los bloques `from < 10` y
+        // `from < 11` de arriba declaran `prestamos.fechaPagoReal` en su
+        // propio `newColumns` y la habrían creado en su rebuild).
+        if (from >= 12) {
+          await m.addColumn(prestamos, prestamos.fechaPagoReal);
+        }
+      }
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
+}

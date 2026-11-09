@@ -1,0 +1,28 @@
+name: Build Windows exe
+
+# Manual only — no need to install Visual Studio/Flutter locally on Windows
+# just to test a build. Trigger from the Actions tab ("Run workflow") or
+# with `gh workflow run build-windows.yml`, then download the "valtiq-windows"
+# artifact from the finished run and unzip it on any Windows 10/11 machine.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.1'
+          channel: stable
+
+      - run: flutter config --enable-windows-desktop
+      - run: flutter pub get
+      - run: flutter build windows --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: valtiq-windows
+          path: build/windows/x64/runner/Release/

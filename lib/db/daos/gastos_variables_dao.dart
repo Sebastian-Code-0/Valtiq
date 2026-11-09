@@ -1,0 +1,78 @@
+import 'package:drift/drift.dart';
+import '../database.dart';
+import '../tables.dart';
+
+part 'gastos_variables_dao.g.dart';
+
+@DriftAccessor(tables: [GastosVariables])
+class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
+    with _$GastosVariablesDaoMixin {
+  GastosVariablesDao(super.db);
+
+  Future<List<GastosVariable>> getAllGastosVariables() => (select(
+    gastosVariables,
+  )..orderBy([(g) => OrderingTerm.desc(g.fecha)])).get();
+
+  Stream<List<GastosVariable>> watchGastosVariables() => (select(
+    gastosVariables,
+  )..orderBy([(g) => OrderingTerm.desc(g.fecha)])).watch();
+
+  Stream<List<GastosVariable>> watchGastosPorMes(int anio, int mes) {
+    final inicio = DateTime.utc(anio, mes, 1);
+    final fin = DateTime.utc(anio, mes + 1, 1);
+    return (select(gastosVariables)
+          ..where(
+            (g) =>
+                g.fecha.isBiggerOrEqualValue(inicio) &
+                g.fecha.isSmallerThanValue(fin),
+          )
+          ..orderBy([(g) => OrderingTerm.desc(g.fecha)]))
+        .watch();
+  }
+
+  Stream<Map<String, int>> watchTotalPorCategoria(int anio, int mes) {
+    final inicio = DateTime.utc(anio, mes, 1);
+    final fin = DateTime.utc(anio, mes + 1, 1);
+    final sumMonto = gastosVariables.monto.sum();
+    return (selectOnly(gastosVariables)
+          ..addColumns([gastosVariables.categoria, sumMonto])
+          ..where(
+            gastosVariables.fecha.isBiggerOrEqualValue(inicio) &
+                gastosVariables.fecha.isSmallerThanValue(fin),
+          )
+          ..groupBy([gastosVariables.categoria]))
+        .watch()
+        .map((rows) {
+          final mapa = <String, int>{};
+          for (final row in rows) {
+            final cat = row.read(gastosVariables.categoria) ?? '';
+            final total = row.read(sumMonto) ?? 0;
+            mapa[cat] = total;
+          }
+          return mapa;
+        });
+  }
+
+  Stream<int> watchTotalMes(int anio, int mes) {
+    final inicio = DateTime.utc(anio, mes, 1);
+    final fin = DateTime.utc(anio, mes + 1, 1);
+    final sumMonto = gastosVariables.monto.sum();
+    return (selectOnly(gastosVariables)
+          ..addColumns([sumMonto])
+          ..where(
+            gastosVariables.fecha.isBiggerOrEqualValue(inicio) &
+                gastosVariables.fecha.isSmallerThanValue(fin),
+          ))
+        .watch()
+        .map((rows) => rows.isEmpty ? 0 : (rows.first.read(sumMonto) ?? 0));
+  }
+
+  Future<int> insertGastoVariable(GastosVariablesCompanion gasto) =>
+      into(gastosVariables).insert(gasto);
+
+  Future<bool> updateGastoVariable(GastosVariable gasto) =>
+      update(gastosVariables).replace(gasto);
+
+  Future<int> deleteGastoVariable(int id) =>
+      (delete(gastosVariables)..where((g) => g.id.equals(id))).go();
+}

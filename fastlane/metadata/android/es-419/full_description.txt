@@ -1,0 +1,19 @@
+Valtiq es una app de finanzas personales pensada para Colombia, enfocada en algo que casi ninguna otra cubre bien: deudas y préstamos con interés real.
+
+Qué hace:
+
+Deudas y préstamos con interés real. Simple o compuesto, sobre saldo original o saldo insoluto (el capital baja con cada abono, como un crédito bancario real). Cada cálculo tiene una tarjeta "¿Cómo se calculó?" que muestra la fórmula completa, tramo por tramo, para que nunca sea una caja negra.
+
+Presupuestos por categoría, con aviso cuando te estás acercando o pasando del límite.
+
+Ingresos y gastos, fijos y variables, con comparativos mensuales.
+
+Recordatorios con notificación local y, si configurás tu propio correo SMTP, aviso también por email.
+
+Bloqueo de la app con PIN o biometría (huella/rostro), opcional.
+
+Todo 100% local. Sin cuenta, sin nube, sin analítica ni SDKs de terceros. Tus datos viven solo en tu dispositivo — hay una función de respaldo para exportarlos e importarlos vos mismo cuando cambies de celular.
+
+Código abierto bajo licencia GPLv3.
+
+Valtiq usa pesos colombianos y una convención de cálculo de interés explicada dentro de la propia app (Ajustes → Cómo funciona Valtiq), pensada para que cualquiera pueda verificar el número a mano si quiere.
