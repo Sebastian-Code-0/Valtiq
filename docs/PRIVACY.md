@@ -79,6 +79,9 @@ Valtiq no integra ningún SDK de analítica, publicidad, rastreo de
 comportamiento ni servicios de terceros. El código fuente completo es
 público y auditable bajo la licencia GNU GPLv3.
 
+Las fuentes tipográficas (Manrope y JetBrains Mono, licencia SIL OFL 1.1)
+van incluidas dentro de la aplicación: no se descargan de ningún servidor.
+
 ## Menores de edad
 
 Valtiq no está dirigida a menores de 13 años y no recolecta

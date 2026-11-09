@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-TextTheme textTheme() => GoogleFonts.interTextTheme();
+/// Fuentes incluidas en `assets/fonts/` (declaradas en pubspec.yaml).
+/// Nunca se descargan de internet.
+const String fuenteTexto = 'Manrope';
+const String fuenteMono = 'JetBrains Mono';
+
+TextTheme textTheme() => ThemeData.light().textTheme.apply(
+      fontFamily: fuenteTexto,
+    );
 
 TextStyle monoStyle({double? fontSize, FontWeight? fontWeight, Color? color}) {
-  return GoogleFonts.jetBrainsMono(
+  return TextStyle(
+    fontFamily: fuenteMono,
     fontSize: fontSize,
     fontWeight: fontWeight,
     color: color,

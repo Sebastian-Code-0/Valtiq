@@ -64,3 +64,6 @@ Valtiq no recolecta ni transmite datos. Ver la
 ## Licencia
 
 GNU General Public License v3.0. Ver [LICENSE](LICENSE).
+
+Las fuentes Manrope y JetBrains Mono incluidas en `assets/fonts/` usan la
+SIL Open Font License 1.1 (texto junto a cada fuente).

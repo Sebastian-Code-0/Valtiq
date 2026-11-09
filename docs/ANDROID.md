@@ -104,7 +104,7 @@ En Android 13+ (API 33), el sistema muestra un diálogo pidiendo permiso de noti
 
 - **Notificaciones programadas:** La app revisa recordatorios al inicio (`revisarRecordatorios()`). No hay notificaciones en segundo plano cuando la app está cerrada.
 - **SMTP en Android:** Funciona sobre red móvil y WiFi. En redes corporativas con firewall puede haber bloqueos de puertos SMTP (465, 587).
-- **Fuentes Google:** `google_fonts` descarga las fuentes la primera vez que la app se ejecuta con conexión a internet. Sin conexión usa el fallback del sistema.
+- **Fuentes:** Manrope y JetBrains Mono van incluidas en la app (`assets/fonts/`, licencia OFL). No se descarga nada de internet.
 
 ## Estructura de archivos Android relevantes
 

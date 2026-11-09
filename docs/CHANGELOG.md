@@ -1,5 +1,20 @@
 # Changelog
 
+## Fuentes incluidas en la app, sin descargas de internet (2026-11-09)
+
+**Problema:** `google_fonts` descargaba Inter y JetBrains Mono desde los
+servidores de Google la primera vez que la app se abría. Eso contradecía la
+política de privacidad ("sin SMTP no hay conexiones de red"), exponía la IP del
+usuario a Google y podía bloquear la publicación en F-Droid.
+
+**Cambio:**
+- Se incluyen Manrope (texto) y JetBrains Mono (montos) en `assets/fonts/`,
+  en los pesos 400/500/600/700, con su `OFL.txt`. Manrope se distribuye como
+  fuente variable; se generaron las 4 instancias estáticas con `fonttools`.
+- `lib/theme/app_typography.dart` usa `fontFamily` en vez de `GoogleFonts`.
+- Se elimina la dependencia `google_fonts`.
+- El texto pasa de Inter a Manrope (cambio visual leve).
+
 ## Fix: préstamos/deudas pagados seguían acumulando interés después de pagados (2026-09-09) — v1.8.0+9, schemaVersion 13
 
 **Bug real:** ninguna de las pantallas que muestran interés (`deuda_detalle.dart`,

@@ -43,7 +43,6 @@ dependencies:
   path: ^1.9.1
   mailer: ^7.1.0
   flutter_local_notifications: ^20.1.0
-  google_fonts: ^6.3.2
   encrypt: ^5.0.3
   url_launcher: ^6.3.1
   shared_preferences: ^2.5.3
@@ -92,6 +91,28 @@ flutter:
     - assets/logo_icono.png
     - assets/splash_blank.png
     - assets/splash_icon.png
+
+  # Fuentes incluidas en la app (licencia OFL 1.1, texto en cada carpeta).
+  # No se descargan de internet: la app no hace conexiones de red por esto.
+  fonts:
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/manrope/Manrope-Regular.ttf
+        - asset: assets/fonts/manrope/Manrope-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/manrope/Manrope-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/manrope/Manrope-Bold.ttf
+          weight: 700
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/jetbrains_mono/JetBrainsMono-Regular.ttf
+        - asset: assets/fonts/jetbrains_mono/JetBrainsMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/jetbrains_mono/JetBrainsMono-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/jetbrains_mono/JetBrainsMono-Bold.ttf
+          weight: 700
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
