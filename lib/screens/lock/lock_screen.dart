@@ -105,7 +105,7 @@ class _LockScreenState extends State<LockScreen> {
                   Text(
                     'Valtiq está bloqueado',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
+                      color: AppColors.textoOscuro,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -119,17 +119,17 @@ class _LockScreenState extends State<LockScreen> {
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textoOscuro,
                         letterSpacing: 4,
                       ),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: AppColors.superficieOscuro,
                         labelText: 'PIN',
-                        labelStyle: const TextStyle(color: Colors.white70),
+                        labelStyle: const TextStyle(color: AppColors.textoSecundarioOscuro),
                         errorText: _error,
                         enabledBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white38),
+                          borderSide: BorderSide(color: AppColors.textoSecundarioOscuro),
                         ),
                         focusedBorder: UnderlineInputBorder(
                           borderSide: BorderSide(
@@ -151,7 +151,7 @@ class _LockScreenState extends State<LockScreen> {
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: AppColors.textoOscuro,
                               ),
                             )
                           : const Text('Desbloquear'),
@@ -163,11 +163,11 @@ class _LockScreenState extends State<LockScreen> {
                       onPressed: _intentarBiometria,
                       icon: const Icon(
                         Icons.fingerprint,
-                        color: Colors.white70,
+                        color: AppColors.textoSecundarioOscuro,
                       ),
                       label: const Text(
                         'Usar biometría',
-                        style: TextStyle(color: Colors.white70),
+                        style: TextStyle(color: AppColors.textoSecundarioOscuro),
                       ),
                     ),
                   ],

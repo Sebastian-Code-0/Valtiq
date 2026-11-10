@@ -5,25 +5,39 @@ import 'package:flutter/material.dart';
 /// elige el valor correcto según el tema claro u oscuro. Cambiar la paleta
 /// de la app = cambiar valores aquí y en [ValtiqColores.claro]/[oscuro].
 abstract class AppColors {
-  static const primario = Color(0xFF1E3A5F);
-  static const acento = Color(0xFF1E8A63);
-  static const alerta = Color(0xFFE05C5C);
+  // Vino (acento). En oscuro hay dos tonos: uno profundo para rellenar
+  // botones y otro más claro para texto/íconos, porque un vino profundo
+  // sobre negro no se lee.
+  static const vinoRellenoOscuro = Color(0xFF6A1628);
+  static const vinoTextoOscuro = Color(0xFFC25A70);
+  static const vinoClaro = Color(0xFF5A1222);
+  static const sobreVino = Color(0xFFF7EEE3);
 
-  // Hoy comparte el mismo valor que acento. Debe seguir siendo un verde de
-  // éxito aunque el acento cambie de color.
-  static const positivo = Color(0xFF1E8A63);
+  // Morado (apoyo)
+  static const moradoOscuro = Color(0xFF7E5FA6);
+  static const moradoClaro = Color(0xFF523270);
 
-  static const fondoClaro = Color(0xFFF5F0E6);
-  static const superficieClaro = Color(0xFFFAF6ED);
-  static const textoClaro = Color(0xFF211E19);
-  static const textoSecundarioClaro = Color(0xFF756F63);
-  static const divisorClaro = Color(0xFFE4DECF);
+  // Verde (dinero que entra)
+  static const verdeOscuro = Color(0xFF6FBF94);
+  static const verdeClaro = Color(0xFF2F6B4F);
 
-  static const fondoOscuro = Color(0xFF121212);
-  static const superficieOscuro = Color(0xFF1C1C1C);
-  static const textoOscuro = Color(0xFFF1EFE9);
-  static const textoSecundarioOscuro = Color(0xFF9A9D97);
-  static const divisorOscuro = Color(0xFF2A2A2A);
+  // Rojo (alerta)
+  static const alertaOscuro = Color(0xFFFF5C5C);
+  static const alertaClaro = Color(0xFFC21F1F);
+
+  // Tema oscuro: negro puro
+  static const fondoOscuro = Color(0xFF000000);
+  static const superficieOscuro = Color(0xFF141112);
+  static const divisorOscuro = Color(0xFF262022);
+  static const textoOscuro = Color(0xFFEFE6DA);
+  static const textoSecundarioOscuro = Color(0xFFA99B90);
+
+  // Tema claro: beige lino (sin blancos)
+  static const fondoClaro = Color(0xFFEFE7DA);
+  static const superficieClaro = Color(0xFFF7F1E6);
+  static const divisorClaro = Color(0xFFDCD0BE);
+  static const textoClaro = Color(0xFF2A1F1C);
+  static const textoSecundarioClaro = Color(0xFF6E5F57);
 }
 
 /// Colores con significado ("tokens semánticos"), uno por tema.
@@ -41,6 +55,7 @@ class ValtiqColores extends ThemeExtension<ValtiqColores> {
     required this.textoSecundario,
     required this.divisor,
     required this.acento,
+    required this.acentoRelleno,
     required this.sobreAcento,
     required this.secundario,
     required this.positivo,
@@ -57,10 +72,13 @@ class ValtiqColores extends ThemeExtension<ValtiqColores> {
   final Color textoSecundario;
   final Color divisor;
 
-  /// Color de marca: botones principales, elementos seleccionados.
+  /// Color de marca para TEXTO e ÍCONOS: lo seleccionado, enlaces, chips.
   final Color acento;
 
-  /// Texto/íconos que van ENCIMA del acento.
+  /// Color de marca para RELLENAR: botones, botones flotantes, avisos.
+  final Color acentoRelleno;
+
+  /// Texto/íconos que van ENCIMA de [acentoRelleno].
   final Color sobreAcento;
 
   /// Color de apoyo de la marca (cuando el acento no alcanza).
@@ -78,11 +96,12 @@ class ValtiqColores extends ThemeExtension<ValtiqColores> {
     texto: AppColors.textoClaro,
     textoSecundario: AppColors.textoSecundarioClaro,
     divisor: AppColors.divisorClaro,
-    acento: AppColors.acento,
-    sobreAcento: Colors.white,
-    secundario: AppColors.primario,
-    positivo: AppColors.positivo,
-    alerta: AppColors.alerta,
+    acento: AppColors.vinoClaro,
+    acentoRelleno: AppColors.vinoClaro,
+    sobreAcento: AppColors.sobreVino,
+    secundario: AppColors.moradoClaro,
+    positivo: AppColors.verdeClaro,
+    alerta: AppColors.alertaClaro,
   );
 
   static const oscuro = ValtiqColores(
@@ -91,11 +110,12 @@ class ValtiqColores extends ThemeExtension<ValtiqColores> {
     texto: AppColors.textoOscuro,
     textoSecundario: AppColors.textoSecundarioOscuro,
     divisor: AppColors.divisorOscuro,
-    acento: AppColors.acento,
-    sobreAcento: Colors.white,
-    secundario: AppColors.primario,
-    positivo: AppColors.positivo,
-    alerta: AppColors.alerta,
+    acento: AppColors.vinoTextoOscuro,
+    acentoRelleno: AppColors.vinoRellenoOscuro,
+    sobreAcento: AppColors.sobreVino,
+    secundario: AppColors.moradoOscuro,
+    positivo: AppColors.verdeOscuro,
+    alerta: AppColors.alertaOscuro,
   );
 
   @override
@@ -106,6 +126,7 @@ class ValtiqColores extends ThemeExtension<ValtiqColores> {
     Color? textoSecundario,
     Color? divisor,
     Color? acento,
+    Color? acentoRelleno,
     Color? sobreAcento,
     Color? secundario,
     Color? positivo,
@@ -118,6 +139,7 @@ class ValtiqColores extends ThemeExtension<ValtiqColores> {
       textoSecundario: textoSecundario ?? this.textoSecundario,
       divisor: divisor ?? this.divisor,
       acento: acento ?? this.acento,
+      acentoRelleno: acentoRelleno ?? this.acentoRelleno,
       sobreAcento: sobreAcento ?? this.sobreAcento,
       secundario: secundario ?? this.secundario,
       positivo: positivo ?? this.positivo,
@@ -135,6 +157,7 @@ class ValtiqColores extends ThemeExtension<ValtiqColores> {
       textoSecundario: Color.lerp(textoSecundario, other.textoSecundario, t)!,
       divisor: Color.lerp(divisor, other.divisor, t)!,
       acento: Color.lerp(acento, other.acento, t)!,
+      acentoRelleno: Color.lerp(acentoRelleno, other.acentoRelleno, t)!,
       sobreAcento: Color.lerp(sobreAcento, other.sobreAcento, t)!,
       secundario: Color.lerp(secundario, other.secundario, t)!,
       positivo: Color.lerp(positivo, other.positivo, t)!,

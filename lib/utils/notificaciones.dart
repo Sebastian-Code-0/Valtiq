@@ -9,15 +9,23 @@ void _mostrar(
   Color color, {
   Duration? duracion,
 }) {
+  // El verde y el rojo del tema oscuro son claros: con texto blanco encima
+  // no se leen. Se elige texto claro u oscuro según el fondo del aviso.
+  final textoAviso =
+      ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+      ? AppColors.sobreVino
+      : AppColors.textoClaro;
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       backgroundColor: color,
       duration: duracion ?? const Duration(seconds: 4),
       content: Row(
         children: [
-          Icon(icono, color: Colors.white, size: 20),
+          Icon(icono, color: textoAviso, size: 20),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text(mensaje)),
+          Expanded(
+            child: Text(mensaje, style: TextStyle(color: textoAviso)),
+          ),
         ],
       ),
     ),
@@ -49,7 +57,7 @@ void mostrarInfo(BuildContext context, String mensaje, {Duration? duracion}) {
     context,
     mensaje,
     Icons.info_outline,
-    Theme.of(context).colorScheme.primary,
+    context.colores.acentoRelleno,
     duracion: duracion,
   );
 }

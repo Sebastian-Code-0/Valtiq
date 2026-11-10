@@ -152,8 +152,8 @@ class FormSaveButton extends StatelessWidget {
       child: FilledButton.icon(
         onPressed: loading ? null : onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          backgroundColor: context.colores.acentoRelleno,
+          foregroundColor: context.colores.sobreAcento,
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -161,12 +161,12 @@ class FormSaveButton extends StatelessWidget {
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         icon: loading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                  valueColor: AlwaysStoppedAnimation(context.colores.sobreAcento),
                 ),
               )
             : Icon(icon, size: 20),

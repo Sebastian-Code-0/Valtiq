@@ -64,8 +64,8 @@ abstract class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: c.secundario,
-          foregroundColor: Colors.white,
+          backgroundColor: c.acentoRelleno,
+          foregroundColor: c.sobreAcento,
           padding: const EdgeInsets.symmetric(
             vertical: 14,
             horizontal: AppSpacing.lg,
@@ -74,6 +74,16 @@ abstract class AppTheme {
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           ),
         ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: c.acentoRelleno,
+          foregroundColor: c.sobreAcento,
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: c.acentoRelleno,
+        foregroundColor: c.sobreAcento,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

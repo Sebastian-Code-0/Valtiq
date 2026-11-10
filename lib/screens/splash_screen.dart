@@ -59,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen> {
               'Tu dinero, tu control',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.white54,
+                color: AppColors.textoSecundarioOscuro,
                 fontSize: 15,
               ),
             ),
