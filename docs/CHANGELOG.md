@@ -1,5 +1,13 @@
 # Changelog
 
+## Datos fuera de las copias automáticas de Android 12+ (2026-10-24)
+
+`allowBackup="false"` no garantiza bloquear la transferencia directa entre
+celulares en Android 12+. Se agregó `res/xml/data_extraction_rules.xml`
+(excluye root/device_root/external de cloud-backup y device-transfer),
+referenciado desde `AndroidManifest.xml`, y la sección "Copias automáticas de
+Android" en `docs/PRIVACY.md`.
+
 ## Fuentes incluidas en la app, sin descargas de internet (2026-11-09)
 
 **Problema:** `google_fonts` descargaba Inter y JetBrains Mono desde los

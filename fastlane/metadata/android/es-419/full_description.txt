@@ -8,11 +8,11 @@ Presupuestos por categoría, con aviso cuando te estás acercando o pasando del 
 
 Ingresos y gastos, fijos y variables, con comparativos mensuales.
 
-Recordatorios con notificación local y, si configurás tu propio correo SMTP, aviso también por email.
+Recordatorios con notificación local y, si configuras tu propio correo SMTP, aviso también por email.
 
 Bloqueo de la app con PIN o biometría (huella/rostro), opcional.
 
-Todo 100% local. Sin cuenta, sin nube, sin analítica ni SDKs de terceros. Tus datos viven solo en tu dispositivo — hay una función de respaldo para exportarlos e importarlos vos mismo cuando cambies de celular.
+Todo 100% local. Sin cuenta, sin nube, sin analítica ni SDKs de terceros. Tus datos viven solo en tu dispositivo — hay una función de respaldo para exportarlos e importarlos tú mismo cuando cambies de celular.
 
 Código abierto bajo licencia GPLv3.
 

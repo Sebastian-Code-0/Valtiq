@@ -112,9 +112,11 @@ En Android 13+ (API 33), el sistema muestra un diálogo pidiendo permiso de noti
 android/
   app/
     src/main/
-      AndroidManifest.xml   # Permisos e intents
+      AndroidManifest.xml   # Permisos, intents y dataExtractionRules
       res/
         mipmap-*/           # Íconos de la app
+        xml/
+          data_extraction_rules.xml  # Excluye datos del respaldo en la nube y D2D
     build.gradle.kts        # Configuración de compilación
   build.gradle.kts          # Configuración raíz Gradle
   settings.gradle.kts       # Plugins Gradle

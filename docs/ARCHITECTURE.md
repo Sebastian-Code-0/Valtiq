@@ -320,7 +320,11 @@ Android previas a este cambio migran automáticamente: `CryptoService`
 detecta el `valtiq_key.bin` antiguo, lo mueve al almacén seguro y
 borra el archivo. En Android, `allowBackup="false"` en
 AndroidManifest.xml impide además que Auto Backup/`adb backup`
-extraiga `valtiq.db` fuera del dispositivo.
+extraiga `valtiq.db` fuera del dispositivo. En Android 12+ eso no basta
+(la transferencia directa entre celulares puede seguir activa según el
+fabricante), por eso `android:dataExtractionRules` apunta a
+`res/xml/data_extraction_rules.xml`, que excluye todo del respaldo en la
+nube y de la transferencia entre dispositivos.
 
 ## Pantallas
 
