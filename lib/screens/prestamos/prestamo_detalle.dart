@@ -177,9 +177,9 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Eliminar',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         ],
@@ -336,7 +336,7 @@ class _ResumenCard extends StatelessWidget {
     );
 
     final saldo = resumen['saldoPendiente']!;
-    final colorSaldo = saldo > 0 ? AppColors.alerta : AppColors.positivo;
+    final colorSaldo = saldo > 0 ? context.colores.alerta : context.colores.positivo;
     final sinInteres = prestamo.montoPrestado - totalAbonado;
 
     return Card(
@@ -368,7 +368,7 @@ class _ResumenCard extends StatelessWidget {
             _filaResumen(
               label: 'Total abonado:',
               valor: resumen['totalAbonado']!,
-              colorValor: AppColors.positivo,
+              colorValor: context.colores.positivo,
               colorSec: colorSec,
             ),
             const SizedBox(height: AppSpacing.md),
@@ -509,8 +509,8 @@ class _InfoCard extends StatelessWidget {
               InfoRow(
                 label: 'Interés sobre:',
                 valor: prestamo.tipoAmortizacion == 'saldo_insoluto'
-                    ? 'Saldo insoluto'
-                    : 'Saldo original',
+                    ? 'Lo que falta por pagar'
+                    : 'Lo prestado al inicio',
                 colorSec: colorSec,
                 theme: theme,
               ),
@@ -620,7 +620,7 @@ class _PagosSection extends StatelessWidget {
                           Icon(
                             Icons.payments,
                             size: 18,
-                            color: AppColors.positivo,
+                            color: context.colores.positivo,
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
@@ -647,7 +647,7 @@ class _PagosSection extends StatelessWidget {
                               style: monoStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.positivo,
+                                color: context.colores.positivo,
                               ),
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.end,

@@ -14,9 +14,8 @@ enum CategoriaGasto {
 
   final String nombre;
   final IconData icono;
-  // Paleta fija, independiente de AppColors.acento (el usuario puede cambiar
-  // el acento entre 6 presets) y de AppColors.alerta — ninguna categoría debe
-  // poder confundirse visualmente con una alerta o con el acento activo.
+  // Paleta fija, independiente del acento y de la alerta: ninguna categoría
+  // debe poder confundirse visualmente con una alerta o con el acento.
   final Color color;
 
   static List<String> get nombres =>

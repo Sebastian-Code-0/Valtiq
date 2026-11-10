@@ -168,9 +168,9 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Eliminar',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         ],
@@ -407,14 +407,14 @@ class _PrestamoCard extends StatelessWidget {
                     },
                     itemBuilder: (_) => [
                       if (onMarcarPagado != null)
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'pagado',
                           child: Row(
                             children: [
                               Icon(
                                 Icons.check_circle_outline,
                                 size: 18,
-                                color: AppColors.positivo,
+                                color: context.colores.positivo,
                               ),
                               SizedBox(width: AppSpacing.sm),
                               Text('Marcar como pagado'),
@@ -436,19 +436,19 @@ class _PrestamoCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'eliminar',
                         child: Row(
                           children: [
                             Icon(
                               Icons.delete_outline,
                               size: 18,
-                              color: AppColors.alerta,
+                              color: context.colores.alerta,
                             ),
                             SizedBox(width: AppSpacing.sm),
                             Text(
                               'Eliminar',
-                              style: TextStyle(color: AppColors.alerta),
+                              style: TextStyle(color: context.colores.alerta),
                             ),
                           ],
                         ),
@@ -505,7 +505,7 @@ class _PrestamoCard extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.alerta.withValues(alpha: 0.15),
+                        color: context.colores.alerta.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(
                           AppSpacing.radiusSm,
                         ),
@@ -513,7 +513,7 @@ class _PrestamoCard extends StatelessWidget {
                       child: Text(
                         'Vencido',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.alerta,
+                          color: context.colores.alerta,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -535,8 +535,8 @@ class _PrestamoCard extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: saldo > 0
-                            ? AppColors.alerta
-                            : AppColors.positivo,
+                            ? context.colores.alerta
+                            : context.colores.positivo,
                       ),
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
@@ -550,7 +550,7 @@ class _PrestamoCard extends StatelessWidget {
                   Expanded(
                     child: BarraProgreso(
                       fraccion: fraccionCobrada,
-                      color: AppColors.positivo,
+                      color: context.colores.positivo,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),

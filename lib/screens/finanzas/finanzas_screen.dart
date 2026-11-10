@@ -136,9 +136,9 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Eliminar',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         ],
@@ -162,9 +162,9 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Eliminar',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         ],
@@ -188,9 +188,9 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Eliminar',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         ],
@@ -262,7 +262,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                   segments: const [
                     ButtonSegment(value: 'ingresos', label: Text('Ingresos')),
                     ButtonSegment(value: 'gastos', label: Text('Gastos Fijos')),
-                    ButtonSegment(value: 'variables', label: Text('Variables')),
+                    ButtonSegment(value: 'variables', label: Text('Día a día')),
                   ],
                   selected: {_modo},
                   onSelectionChanged: (s) => setState(() => _modo = s.first),
@@ -329,7 +329,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                     _totalRow(
                       theme: theme,
                       total: total,
-                      color: AppColors.alerta,
+                      color: context.colores.alerta,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     StreamBuilder<Map<String, double>>(
@@ -373,7 +373,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                                   ),
                                   const SizedBox(height: AppSpacing.sm),
                                   Text(
-                                    'No hay gastos variables este mes',
+                                    'No hay gastos del día a día este mes',
                                     style: theme.textTheme.bodyLarge?.copyWith(
                                       color: colorSec,
                                     ),
@@ -467,7 +467,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                 return _totalRow(
                   theme: theme,
                   total: totalSnap.data ?? 0,
-                  color: AppColors.positivo,
+                  color: context.colores.positivo,
                 );
               },
             ),
@@ -534,7 +534,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _totalRow(theme: theme, total: total, color: AppColors.alerta),
+            _totalRow(theme: theme, total: total, color: context.colores.alerta),
             const SizedBox(height: AppSpacing.md),
             Expanded(
               child: gastos.isEmpty
@@ -630,7 +630,7 @@ class _GastoVariableCard extends StatelessWidget {
                       style: monoStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.alerta,
+                        color: context.colores.alerta,
                       ),
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
@@ -655,19 +655,19 @@ class _GastoVariableCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'eliminar',
                         child: Row(
                           children: [
                             Icon(
                               Icons.delete_outline,
                               size: 18,
-                              color: AppColors.alerta,
+                              color: context.colores.alerta,
                             ),
                             SizedBox(width: AppSpacing.sm),
                             Text(
                               'Eliminar',
-                              style: TextStyle(color: AppColors.alerta),
+                              style: TextStyle(color: context.colores.alerta),
                             ),
                           ],
                         ),
@@ -755,7 +755,7 @@ class _IngresoCard extends StatelessWidget {
                       style: monoStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.positivo,
+                        color: context.colores.positivo,
                       ),
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
@@ -798,26 +798,26 @@ class _IngresoCard extends StatelessWidget {
                                   ? Icons.pause_circle_outline
                                   : Icons.play_circle_outline,
                               size: 18,
-                              color: ingreso.activo ? null : AppColors.positivo,
+                              color: ingreso.activo ? null : context.colores.positivo,
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             Text(ingreso.activo ? 'Desactivar' : 'Activar'),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'eliminar',
                         child: Row(
                           children: [
                             Icon(
                               Icons.delete_outline,
                               size: 18,
-                              color: AppColors.alerta,
+                              color: context.colores.alerta,
                             ),
                             SizedBox(width: AppSpacing.sm),
                             Text(
                               'Eliminar',
-                              style: TextStyle(color: AppColors.alerta),
+                              style: TextStyle(color: context.colores.alerta),
                             ),
                           ],
                         ),
@@ -852,7 +852,7 @@ class _IngresoCard extends StatelessWidget {
                 Text(
                   'No cuenta en el total de este mes',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.alerta,
+                    color: context.colores.alerta,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -922,7 +922,7 @@ class _GastoFijoCard extends StatelessWidget {
                       style: monoStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.alerta,
+                        color: context.colores.alerta,
                       ),
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
@@ -965,26 +965,26 @@ class _GastoFijoCard extends StatelessWidget {
                                   ? Icons.pause_circle_outline
                                   : Icons.play_circle_outline,
                               size: 18,
-                              color: gasto.activo ? null : AppColors.positivo,
+                              color: gasto.activo ? null : context.colores.positivo,
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             Text(gasto.activo ? 'Desactivar' : 'Activar'),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'eliminar',
                         child: Row(
                           children: [
                             Icon(
                               Icons.delete_outline,
                               size: 18,
-                              color: AppColors.alerta,
+                              color: context.colores.alerta,
                             ),
                             SizedBox(width: AppSpacing.sm),
                             Text(
                               'Eliminar',
-                              style: TextStyle(color: AppColors.alerta),
+                              style: TextStyle(color: context.colores.alerta),
                             ),
                           ],
                         ),

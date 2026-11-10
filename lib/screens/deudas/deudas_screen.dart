@@ -98,9 +98,9 @@ class _DeudasScreenState extends State<DeudasScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Eliminar',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         ],
@@ -381,7 +381,7 @@ class _DeudaCard extends StatelessWidget {
                       style: monoStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.alerta,
+                        color: context.colores.alerta,
                       ),
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
@@ -406,14 +406,14 @@ class _DeudaCard extends StatelessWidget {
                     },
                     itemBuilder: (_) => [
                       if (onMarcarPagada != null)
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'pagada',
                           child: Row(
                             children: [
                               Icon(
                                 Icons.check_circle_outline,
                                 size: 18,
-                                color: AppColors.positivo,
+                                color: context.colores.positivo,
                               ),
                               SizedBox(width: AppSpacing.sm),
                               Text('Marcar como pagada'),
@@ -435,19 +435,19 @@ class _DeudaCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'eliminar',
                         child: Row(
                           children: [
                             Icon(
                               Icons.delete_outline,
                               size: 18,
-                              color: AppColors.alerta,
+                              color: context.colores.alerta,
                             ),
                             SizedBox(width: AppSpacing.sm),
                             Text(
                               'Eliminar',
-                              style: TextStyle(color: AppColors.alerta),
+                              style: TextStyle(color: context.colores.alerta),
                             ),
                           ],
                         ),
@@ -504,7 +504,7 @@ class _DeudaCard extends StatelessWidget {
                     '${vencida ? 'Venció' : 'Vence'}: '
                     '${formatFecha(fechaCivilGuardada(deuda.fechaLimite!))}',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: vencida ? AppColors.alerta : colorSec,
+                      color: vencida ? context.colores.alerta : colorSec,
                       fontWeight: vencida ? FontWeight.bold : null,
                     ),
                   ),
@@ -525,8 +525,8 @@ class _DeudaCard extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: saldo > 0
-                            ? AppColors.alerta
-                            : AppColors.positivo,
+                            ? context.colores.alerta
+                            : context.colores.positivo,
                       ),
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.end,
@@ -540,7 +540,7 @@ class _DeudaCard extends StatelessWidget {
                   Expanded(
                     child: BarraProgreso(
                       fraccion: fraccionPagada,
-                      color: AppColors.positivo,
+                      color: context.colores.positivo,
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),

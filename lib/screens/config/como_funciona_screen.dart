@@ -89,10 +89,12 @@ class ComoFuncionaScreen extends StatelessWidget {
           ),
           _TemaAyuda(
             icono: Icons.account_balance_outlined,
-            titulo: '¿Qué significa "saldo original" y "saldo insoluto"?',
+            titulo:
+                '¿Qué significa "lo prestado al inicio" y "lo que falta por pagar"?',
             cuerpo: [
               _Parrafo(
-                'Saldo original: el interés se calcula siempre sobre el '
+                'Lo prestado al inicio (en los bancos: "saldo original"): el '
+                'interés se calcula siempre sobre el '
                 'monto que prestaste al inicio, sin importar cuánto se haya '
                 'abonado. Es la forma más simple, pensada para deuda '
                 'informal entre conocidos.',
@@ -100,7 +102,8 @@ class ComoFuncionaScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               _Parrafo(
-                'Saldo insoluto: cada vez que se registra un abono, el '
+                'Lo que falta por pagar (en los bancos: "saldo insoluto"): '
+                'cada vez que se registra un abono, el '
                 'interés de ahí en adelante se calcula sobre lo que aún se '
                 'debe, no sobre el monto original. Así funciona un crédito '
                 'bancario real — por eso pagar antes siempre te ahorra más '

@@ -29,7 +29,7 @@ void mostrarExito(BuildContext context, String mensaje, {Duration? duracion}) {
     context,
     mensaje,
     Icons.check_circle_outline,
-    AppColors.positivo,
+    context.colores.positivo,
     duracion: duracion,
   );
 }
@@ -39,7 +39,7 @@ void mostrarAlerta(BuildContext context, String mensaje, {Duration? duracion}) {
     context,
     mensaje,
     Icons.error_outline,
-    AppColors.alerta,
+    context.colores.alerta,
     duracion: duracion,
   );
 }

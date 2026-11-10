@@ -73,9 +73,9 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Importar',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         ],
@@ -148,10 +148,11 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    'Por seguridad, la configuración de correo SMTP no se '
-                    'incluye en este respaldo. Si restauras estos datos en '
-                    'otro dispositivo, deberás volver a configurar tu '
-                    'servidor SMTP en Ajustes → Configuración SMTP.',
+                    'Por seguridad, la configuración de recordatorios por '
+                    'correo no se incluye en este respaldo. Si restauras '
+                    'estos datos en otro dispositivo, deberás configurarla '
+                    'de nuevo en Ajustes → Avanzado → Recordatorios por '
+                    'correo.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurface,
                     ),

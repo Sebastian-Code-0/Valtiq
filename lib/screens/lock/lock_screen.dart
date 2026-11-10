@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../main.dart';
 import '../../services/app_lock_service.dart';
 import '../../theme/theme.dart';
 
@@ -133,7 +132,9 @@ class _LockScreenState extends State<LockScreen> {
                           borderSide: BorderSide(color: Colors.white38),
                         ),
                         focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: acentoNotifier.value),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
                       ),
                       onSubmitted: (_) => _verificarPin(),

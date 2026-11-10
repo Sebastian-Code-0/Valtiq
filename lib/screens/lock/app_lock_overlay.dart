@@ -20,7 +20,7 @@ import 'lock_screen.dart';
 /// `Navigator` interno (que queda más abajo, dentro de `widget.child`).
 ///
 /// `initiallyLocked` se calcula en `main()` ANTES de `runApp` (misma
-/// convención que `themeModeNotifier`/`acentoNotifier`) para que el primer
+/// convención que `themeModeNotifier`) para que el primer
 /// frame ya sepa si debe arrancar bloqueado — evita un parpadeo de
 /// contenido real sin proteger mientras se resuelve un `Future` async.
 class AppLockOverlay extends StatefulWidget {

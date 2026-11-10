@@ -16,8 +16,6 @@ final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(
   ThemeMode.system,
 );
 
-final ValueNotifier<Color> acentoNotifier = ValueNotifier(AppColors.acento);
-
 /// Falso mientras la app está bloqueada esperando PIN/biometría. `main()`
 /// lo pone en `false` antes de `runApp` si arranca bloqueada;
 /// `AppLockOverlay` lo pone en `true` al desbloquear. `ShellScreen` lo usa
@@ -43,18 +41,17 @@ void main() async {
     themeModeNotifier.value = ThemeMode.dark;
   }
 
-  final savedAcento = prefs.getString('valtiq_acento');
-  if (savedAcento != null) {
-    final value = int.tryParse(savedAcento, radix: 16);
-    if (value != null) acentoNotifier.value = Color(value);
-  }
+  // El color de acento ya no es personalizable (identidad visual fija).
+  // Se borra la preferencia vieja para no dejar basura en instalaciones
+  // que la tenían guardada.
+  await prefs.remove('valtiq_acento');
 
   await CryptoService.init();
   await NotificationService.init();
   unawaited(NotificationService.revisarRecordatorios(db));
   unawaited(NotificationService.revisarIngresosUnicosVencidos(db));
 
-  // Cargado ANTES de runApp (misma convención que theme/acento arriba) para
+  // Cargado ANTES de runApp (misma convención que el tema arriba) para
   // que el primer frame ya sepa si debe arrancar bloqueada — evita mostrar
   // contenido real sin proteger mientras se resuelve un Future async. Barato
   // acá: SharedPreferences.getInstance() ya está en caché por el `prefs` de
@@ -83,29 +80,24 @@ class ValtiqApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeModeNotifier,
       builder: (context, mode, _) {
-        return ValueListenableBuilder<Color>(
-          valueListenable: acentoNotifier,
-          builder: (context, acento, _) {
-            return MaterialApp(
-              title: 'Valtiq',
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.light(acento),
-              darkTheme: AppTheme.dark(acento),
-              themeMode: mode,
-              locale: const Locale('es', 'CO'),
-              localizationsDelegates: const [
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: const [Locale('es', 'CO')],
-              home: SplashScreen(db: db),
-              builder: (context, child) => AppLockOverlay(
-                initiallyLocked: bloqueoInicial,
-                child: child ?? const SizedBox.shrink(),
-              ),
-            );
-          },
+        return MaterialApp(
+          title: 'Valtiq',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: mode,
+          locale: const Locale('es', 'CO'),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('es', 'CO')],
+          home: SplashScreen(db: db),
+          builder: (context, child) => AppLockOverlay(
+            initiallyLocked: bloqueoInicial,
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
       },
     );

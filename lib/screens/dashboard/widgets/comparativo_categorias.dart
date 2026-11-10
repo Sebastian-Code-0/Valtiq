@@ -238,7 +238,7 @@ class _FraseResumen extends StatelessWidget {
     final theme = Theme.of(context);
     final diferencia = totalMesB - totalMesA;
     final esMas = diferencia > 0;
-    final color = esMas ? AppColors.alerta : AppColors.positivo;
+    final color = esMas ? context.colores.alerta : context.colores.positivo;
     final verbo = esMas ? 'más' : 'menos';
 
     if (diferencia.abs() < 1) {

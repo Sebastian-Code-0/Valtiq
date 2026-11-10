@@ -139,7 +139,7 @@ class _GastoVariableFormState extends State<GastoVariableForm>
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          esEdicion ? 'Editar gasto variable' : 'Nuevo gasto variable',
+          esEdicion ? 'Editar gasto del día a día' : 'Nuevo gasto del día a día',
         ),
       ),
       body: Form(

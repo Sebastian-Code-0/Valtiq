@@ -148,7 +148,7 @@ class _ShellScreenState extends State<ShellScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            label: 'Inicio',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.credit_card),

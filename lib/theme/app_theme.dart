@@ -5,56 +5,54 @@ import 'app_spacing.dart';
 import 'app_typography.dart';
 
 abstract class AppTheme {
-  static ElevatedButtonThemeData _elevatedButtonTheme() {
-    return ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primario,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(
-          vertical: 14,
-          horizontal: AppSpacing.lg,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        ),
-      ),
-    );
-  }
+  static ThemeData light() => _construir(Brightness.light, ValtiqColores.claro);
 
-  static ThemeData light([Color acento = AppColors.acento]) {
+  static ThemeData dark() => _construir(Brightness.dark, ValtiqColores.oscuro);
+
+  /// Un solo constructor para ambos temas: los dos se arman igual y solo
+  /// cambian los colores de [c]. Así no se desincronizan.
+  static ThemeData _construir(Brightness brillo, ValtiqColores c) {
+    final esOscuro = brillo == Brightness.dark;
+    final esquema = esOscuro
+        ? ColorScheme.dark(
+            primary: c.acento,
+            secondary: c.secundario,
+            error: c.alerta,
+            surface: c.superficie,
+            onSurface: c.texto,
+            onPrimary: c.sobreAcento,
+          )
+        : ColorScheme.light(
+            primary: c.acento,
+            secondary: c.secundario,
+            error: c.alerta,
+            surface: c.superficie,
+            onSurface: c.texto,
+            onPrimary: c.sobreAcento,
+          );
+
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
+      brightness: brillo,
+      extensions: [c],
       splashFactory: InkRipple.splashFactory,
-      splashColor: acento.withValues(alpha: 0.15),
+      splashColor: c.acento.withValues(alpha: 0.15),
       highlightColor: Colors.transparent,
-      colorScheme: ColorScheme.light(
-        primary: acento,
-        secondary: AppColors.primario,
-        error: AppColors.alerta,
-        surface: AppColors.superficieClaro,
-        onSurface: AppColors.textoClaro,
-        onPrimary: Colors.white,
-      ),
-      scaffoldBackgroundColor: AppColors.fondoClaro,
-      textTheme: textTheme().apply(
-        bodyColor: AppColors.textoClaro,
-        displayColor: AppColors.textoClaro,
-      ),
-      appBarTheme: const AppBarTheme(
+      colorScheme: esquema,
+      scaffoldBackgroundColor: c.fondo,
+      textTheme: textTheme().apply(bodyColor: c.texto, displayColor: c.texto),
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: AppColors.textoClaro,
+        foregroundColor: c.texto,
         centerTitle: false,
       ),
       cardTheme: CardThemeData(
-        color: AppColors.superficieClaro,
+        color: c.superficie,
         elevation: 1,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          side: BorderSide(
-            color: AppColors.textoSecundarioClaro.withValues(alpha: 0.12),
-          ),
+          side: BorderSide(color: c.textoSecundario.withValues(alpha: 0.12)),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
@@ -64,85 +62,31 @@ abstract class AppTheme {
         ),
         contentTextStyle: const TextStyle(color: Colors.white),
       ),
-      elevatedButtonTheme: _elevatedButtonTheme(),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: AppColors.superficieClaro,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        ),
-      ),
-      dividerTheme: const DividerThemeData(
-        color: Color(0xFFE4DECF),
-        thickness: 0.5,
-      ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: AppColors.superficieClaro,
-        selectedItemColor: acento,
-        unselectedItemColor: AppColors.textoSecundarioClaro,
-      ),
-    );
-  }
-
-  static ThemeData dark([Color acento = AppColors.acento]) {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      splashFactory: InkRipple.splashFactory,
-      splashColor: acento.withValues(alpha: 0.15),
-      highlightColor: Colors.transparent,
-      colorScheme: ColorScheme.dark(
-        primary: acento,
-        secondary: AppColors.primario,
-        error: AppColors.alerta,
-        surface: AppColors.superficieOscuro,
-        onSurface: AppColors.textoOscuro,
-        onPrimary: Colors.white,
-      ),
-      scaffoldBackgroundColor: AppColors.fondoOscuro,
-      textTheme: textTheme().apply(
-        bodyColor: AppColors.textoOscuro,
-        displayColor: AppColors.textoOscuro,
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: AppColors.textoOscuro,
-        centerTitle: false,
-      ),
-      cardTheme: CardThemeData(
-        color: AppColors.superficieOscuro,
-        elevation: 1,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          side: BorderSide(
-            color: AppColors.textoSecundarioOscuro.withValues(alpha: 0.12),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: c.secundario,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(
+            vertical: 14,
+            horizontal: AppSpacing.lg,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           ),
         ),
       ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        ),
-        contentTextStyle: const TextStyle(color: Colors.white),
-      ),
-      elevatedButtonTheme: _elevatedButtonTheme(),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.superficieOscuro,
+        fillColor: c.superficie,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         ),
       ),
-      dividerTheme: const DividerThemeData(
-        color: Color(0xFF2A2A2A),
-        thickness: 0.5,
-      ),
+      dividerTheme: DividerThemeData(color: c.divisor, thickness: 0.5),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: AppColors.superficieOscuro,
-        selectedItemColor: acento,
-        unselectedItemColor: AppColors.textoSecundarioOscuro,
+        backgroundColor: c.superficie,
+        selectedItemColor: c.acento,
+        unselectedItemColor: c.textoSecundario,
       ),
     );
   }

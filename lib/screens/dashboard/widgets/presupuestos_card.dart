@@ -88,7 +88,7 @@ class _FilaPresupuesto extends StatelessWidget {
             categoria: categoria,
             monto: gastado,
             montoMaximo: limite,
-            colorOverride: sobrepasado ? AppColors.alerta : null,
+            colorOverride: sobrepasado ? context.colores.alerta : null,
           ),
           Padding(
             padding: const EdgeInsets.only(left: AppSpacing.lg),
@@ -102,16 +102,16 @@ class _FilaPresupuesto extends StatelessWidget {
                 ),
                 if (sobrepasado) ...[
                   const SizedBox(width: AppSpacing.xs),
-                  const Icon(
+                  Icon(
                     Icons.warning_amber_rounded,
                     size: 12,
-                    color: AppColors.alerta,
+                    color: context.colores.alerta,
                   ),
                   const SizedBox(width: 2),
                   Text(
                     'Superado',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.alerta,
+                      color: context.colores.alerta,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

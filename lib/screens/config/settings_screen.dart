@@ -60,21 +60,6 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               Card(
                 child: ListTile(
-                  leading: const Icon(Icons.email_outlined),
-                  title: const Text('Configuración SMTP'),
-                  subtitle: const Text(
-                    'Servidor, credenciales y notificaciones',
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => ConfigSmtpScreen(db: db)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Card(
-                child: ListTile(
                   leading: const Icon(Icons.backup_outlined),
                   title: const Text('Copia de seguridad'),
                   subtitle: const Text('Exportar o importar tus datos'),
@@ -125,6 +110,34 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const AcercaDeScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: AppSpacing.sm,
+                  bottom: AppSpacing.sm,
+                ),
+                child: Text(
+                  'Avanzado',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: context.colores.textoSecundario,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.email_outlined),
+                  title: const Text('Recordatorios por correo'),
+                  subtitle: const Text(
+                    'Recibe tus recordatorios también en tu email',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => ConfigSmtpScreen(db: db)),
                   ),
                 ),
               ),

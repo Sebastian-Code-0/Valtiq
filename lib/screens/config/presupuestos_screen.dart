@@ -161,9 +161,9 @@ class _EditarPresupuestoDialogState extends State<_EditarPresupuestoDialog> {
         if (widget.actual != null)
           TextButton(
             onPressed: () => Navigator.pop(context, 'quitar'),
-            child: const Text(
+            child: Text(
               'Quitar límite',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         TextButton(

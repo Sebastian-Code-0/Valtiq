@@ -78,10 +78,7 @@ class DatePickerField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = context.colores.textoSecundario;
     final tieneFecha = value != null;
 
     return InkWell(
@@ -710,7 +707,7 @@ class _InsigniaVariacion extends StatelessWidget {
       return Text(
         '↑ ×$multiplicador',
         style: theme.textTheme.bodySmall?.copyWith(
-          color: AppColors.alerta,
+          color: context.colores.alerta,
           fontWeight: FontWeight.w600,
         ),
       );
@@ -727,7 +724,7 @@ class _InsigniaVariacion extends StatelessWidget {
     return Text(
       '${esMas ? '↑' : '↓'} $pctMostrado%',
       style: theme.textTheme.bodySmall?.copyWith(
-        color: esMas ? AppColors.alerta : AppColors.positivo,
+        color: esMas ? context.colores.alerta : context.colores.positivo,
         fontWeight: FontWeight.w600,
       ),
     );
@@ -753,10 +750,7 @@ class SwitchTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorSec = isDark
-        ? AppColors.textoSecundarioOscuro
-        : AppColors.textoSecundarioClaro;
+    final colorSec = context.colores.textoSecundario;
     return InkWell(
       onTap: () => onChanged(!value),
       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),

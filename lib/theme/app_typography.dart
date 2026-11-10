@@ -5,9 +5,8 @@ import 'package:flutter/material.dart';
 const String fuenteTexto = 'Manrope';
 const String fuenteMono = 'JetBrains Mono';
 
-TextTheme textTheme() => ThemeData.light().textTheme.apply(
-      fontFamily: fuenteTexto,
-    );
+TextTheme textTheme() =>
+    ThemeData.light().textTheme.apply(fontFamily: fuenteTexto);
 
 TextStyle monoStyle({double? fontSize, FontWeight? fontWeight, Color? color}) {
   return TextStyle(

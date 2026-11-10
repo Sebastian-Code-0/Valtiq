@@ -51,9 +51,9 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Eliminar',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         ],
@@ -95,9 +95,9 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Eliminar todos',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         ],
@@ -159,7 +159,7 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
                       onPressed: _vaciarInactivos,
                       icon: const Icon(Icons.delete_sweep_outlined),
                       tooltip: 'Vaciar recordatorios inactivos',
-                      color: AppColors.alerta,
+                      color: context.colores.alerta,
                     )
                   else
                     FloatingActionButton.small(
@@ -309,9 +309,9 @@ class _RecordatorioCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         child: Container(
           decoration: vencido
-              ? const BoxDecoration(
+              ? BoxDecoration(
                   border: Border(
-                    left: BorderSide(color: AppColors.alerta, width: 3),
+                    left: BorderSide(color: context.colores.alerta, width: 3),
                   ),
                 )
               : null,
@@ -381,33 +381,33 @@ class _RecordatorioCard extends StatelessWidget {
                           ),
                         ),
                       if (onActivar != null)
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'activar',
                           child: Row(
                             children: [
                               Icon(
                                 Icons.play_circle_outline,
                                 size: 18,
-                                color: AppColors.positivo,
+                                color: context.colores.positivo,
                               ),
                               SizedBox(width: AppSpacing.sm),
                               Text('Activar'),
                             ],
                           ),
                         ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'eliminar',
                         child: Row(
                           children: [
                             Icon(
                               Icons.delete_outline,
                               size: 18,
-                              color: AppColors.alerta,
+                              color: context.colores.alerta,
                             ),
                             SizedBox(width: AppSpacing.sm),
                             Text(
                               'Eliminar',
-                              style: TextStyle(color: AppColors.alerta),
+                              style: TextStyle(color: context.colores.alerta),
                             ),
                           ],
                         ),
@@ -425,7 +425,7 @@ class _RecordatorioCard extends StatelessWidget {
                     child: Text(
                       '${formatFecha(diaAlertaUtc)} — ${fechaRelativa(diaAlertaUtc)}',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: vencido ? AppColors.alerta : colorSec,
+                        color: vencido ? context.colores.alerta : colorSec,
                         fontWeight: vencido ? FontWeight.bold : null,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -435,10 +435,10 @@ class _RecordatorioCard extends StatelessWidget {
               ),
               if (vencido) ...[
                 const SizedBox(height: AppSpacing.xs),
-                const Text(
+                Text(
                   'Vencido',
                   style: TextStyle(
-                    color: AppColors.alerta,
+                    color: context.colores.alerta,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

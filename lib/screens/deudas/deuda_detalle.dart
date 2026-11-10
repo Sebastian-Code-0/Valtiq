@@ -167,9 +167,9 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
+            child: Text(
               'Eliminar',
-              style: TextStyle(color: AppColors.alerta),
+              style: TextStyle(color: context.colores.alerta),
             ),
           ),
         ],
@@ -328,7 +328,7 @@ class _ResumenCard extends StatelessWidget {
     final interes = resumen['interesAcumulado']!;
     final totalConInteres = resumen['totalConInteres']!;
     final saldoReal = resumen['saldoPendiente']!;
-    final colorSaldo = saldoReal > 0 ? AppColors.alerta : AppColors.positivo;
+    final colorSaldo = saldoReal > 0 ? context.colores.alerta : context.colores.positivo;
 
     return Card(
       child: Padding(
@@ -343,7 +343,7 @@ class _ResumenCard extends StatelessWidget {
               interes,
               colorSec,
               theme,
-              colorValor: AppColors.alerta,
+              colorValor: context.colores.alerta,
             ),
             const SizedBox(height: AppSpacing.sm),
             _fila(
@@ -359,7 +359,7 @@ class _ResumenCard extends StatelessWidget {
               totalAbonado,
               colorSec,
               theme,
-              colorValor: AppColors.positivo,
+              colorValor: context.colores.positivo,
             ),
             const SizedBox(height: AppSpacing.md),
             Row(
@@ -474,8 +474,8 @@ class _InfoCard extends StatelessWidget {
               InfoRow(
                 label: 'Interés sobre:',
                 valor: deuda.tipoAmortizacion == 'saldo_insoluto'
-                    ? 'Saldo insoluto'
-                    : 'Saldo original',
+                    ? 'Lo que falta por pagar'
+                    : 'Lo prestado al inicio',
                 colorSec: colorSec,
                 theme: theme,
               ),
@@ -582,10 +582,10 @@ class _AbonosSection extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.payments,
                             size: 18,
-                            color: AppColors.positivo,
+                            color: context.colores.positivo,
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
@@ -612,7 +612,7 @@ class _AbonosSection extends StatelessWidget {
                               style: monoStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.positivo,
+                                color: context.colores.positivo,
                               ),
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.end,

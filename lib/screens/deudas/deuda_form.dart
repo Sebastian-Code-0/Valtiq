@@ -337,11 +337,11 @@ class _DeudaFormState extends State<DeudaForm>
                   items: const [
                     DropdownMenuItem(
                       value: 'saldo_original',
-                      child: Text('Saldo original (hasta pagar todo)'),
+                      child: Text('Lo prestado al inicio (no baja)'),
                     ),
                     DropdownMenuItem(
                       value: 'saldo_insoluto',
-                      child: Text('Saldo insoluto (baja con cada abono)'),
+                      child: Text('Lo que falta por pagar (baja con cada abono)'),
                     ),
                   ],
                   onChanged: tieneInteres

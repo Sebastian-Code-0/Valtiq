@@ -83,7 +83,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _ResumenCard(
                     titulo: 'Deudas activas',
                     icono: Icons.credit_card,
-                    colorIcono: AppColors.alerta,
+                    colorIcono: context.colores.alerta,
                     stream: _streamDeudas,
                   ),
                   _ResumenCard(
@@ -95,13 +95,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _ResumenCard(
                     titulo: 'Ingresos mensuales',
                     icono: Icons.trending_up,
-                    colorIcono: AppColors.positivo,
+                    colorIcono: context.colores.positivo,
                     stream: _streamIngresos,
                   ),
                   _ResumenCard(
                     titulo: 'Gastos fijos mensuales',
                     icono: Icons.trending_down,
-                    colorIcono: AppColors.alerta,
+                    colorIcono: context.colores.alerta,
                     stream: _streamGastos,
                   ),
                 ],
@@ -117,9 +117,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     width: double.infinity,
                     height: altoFila,
                     child: _ResumenCard(
-                      titulo: 'Gastos variables (mes)',
+                      titulo: 'Gastos del día a día (mes)',
                       icono: Icons.shopping_bag_outlined,
-                      colorIcono: AppColors.alerta,
+                      colorIcono: context.colores.alerta,
                       stream: _streamGastosVariables,
                     ),
                   );
@@ -262,8 +262,8 @@ class _BalanceMensualCard extends StatelessWidget {
                 final gastosVariables = snap.data?.variables ?? 0.0;
                 final disponible = ingresos - gastos - gastosVariables;
                 final disponibleColor = disponible >= 0
-                    ? AppColors.positivo
-                    : AppColors.alerta;
+                    ? context.colores.positivo
+                    : context.colores.alerta;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -294,19 +294,19 @@ class _BalanceMensualCard extends StatelessWidget {
                             _FilaMonto(
                               label: 'Ingresos',
                               valor: formatCOP(ingresos),
-                              color: AppColors.positivo,
+                              color: context.colores.positivo,
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             _FilaMonto(
                               label: 'Gastos fijos',
                               valor: '-${formatCOP(gastos)}',
-                              color: AppColors.alerta,
+                              color: context.colores.alerta,
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             _FilaMonto(
-                              label: 'Gastos variables',
+                              label: 'Gastos del día a día',
                               valor: '-${formatCOP(gastosVariables)}',
-                              color: AppColors.alerta,
+                              color: context.colores.alerta,
                             ),
                           ],
                         );
@@ -427,8 +427,8 @@ class _PosicionPrestamosCard extends StatelessWidget {
                     : deudas / totalPosicion;
                 final neto = prestado - deudas;
                 final netoColor = neto >= 0
-                    ? AppColors.positivo
-                    : AppColors.alerta;
+                    ? context.colores.positivo
+                    : context.colores.alerta;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -442,23 +442,23 @@ class _PosicionPrestamosCard extends StatelessWidget {
                     _FilaMonto(
                       label: 'Total prestado',
                       valor: formatCOP(prestado),
-                      color: AppColors.positivo,
+                      color: context.colores.positivo,
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     BarraProgreso(
                       fraccion: fraccionPrestado,
-                      color: AppColors.positivo,
+                      color: context.colores.positivo,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _FilaMonto(
                       label: 'Total deudas',
                       valor: formatCOP(deudas),
-                      color: AppColors.alerta,
+                      color: context.colores.alerta,
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     BarraProgreso(
                       fraccion: fraccionDeudas,
-                      color: AppColors.alerta,
+                      color: context.colores.alerta,
                     ),
                     const Divider(height: AppSpacing.lg),
                     Row(

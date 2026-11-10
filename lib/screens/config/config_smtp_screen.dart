@@ -206,7 +206,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final colorIcono = isDark
         ? theme.colorScheme.onSurface
-        : AppColors.primario;
+        : context.colores.secundario;
     final colorBorde = theme.colorScheme.outline;
     final colorFondo = theme.colorScheme.surfaceContainerHighest;
 
@@ -265,7 +265,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     final esGmail = _servidorCtrl.text.trim() == 'smtp.gmail.com';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Configuración SMTP')),
+      appBar: AppBar(title: const Text('Recordatorios por correo')),
       body: Form(
         key: _formKey,
         child: ListView(
