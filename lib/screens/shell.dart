@@ -7,7 +7,10 @@ import '../main.dart';
 import '../services/crypto_service.dart';
 import '../services/notification_service.dart';
 import '../utils/notificaciones.dart';
+import '../utils/fecha_civil.dart';
+import 'barra_lateral.dart';
 import 'config/config_smtp_screen.dart';
+import 'config/settings_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'deudas/deudas_screen.dart';
 import 'finanzas/finanzas_screen.dart';
@@ -27,10 +30,18 @@ class ShellScreen extends StatefulWidget {
   State<ShellScreen> createState() => _ShellScreenState();
 }
 
-class _ShellScreenState extends State<ShellScreen>
-    with WidgetsBindingObserver {
+class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   int _index = 0;
-  final List<bool> _visitada = [true, false, false, false, false];
+  final List<bool> _visitada = [true, false, false, false, false, false];
+
+  /// Posición de Ajustes en la lista de pantallas (después de las 5 pestañas).
+  static const _indiceAjustes = 5;
+  int _vecesPerfil = 0;
+
+  late final Stream<List<Recordatorio>> _streamRecordatoriosActivos =
+      (widget.db.select(
+        widget.db.recordatorios,
+      )..where((r) => r.activo.equals(true))).watch();
 
   /// Mes (año*12+mes) con el que se montaron las pestañas. Los totales "de
   /// este mes" fijan el mes al crearse; si la app sigue abierta cuando
@@ -72,7 +83,9 @@ class _ShellScreenState extends State<ShellScreen>
     // pero eso solo pasa cuando se intenta usar — sin este aviso, el usuario
     // no se entera hasta que un correo falla en silencio.
     if (CryptoService.claveFueRegenerada) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _avisarClavePerdida());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _avisarClavePerdida(),
+      );
     }
     if (NotificationService.ingresosUnicosDesactivados.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback(
@@ -91,9 +104,7 @@ class _ShellScreenState extends State<ShellScreen>
   /// días, y en ese tiempo no salía ningún aviso aunque se abriera a diario.
   Future<void> _alVolver() async {
     unawaited(
-      NotificationService.sincronizar(widget.db).catchError((
-        Object e,
-      ) {
+      NotificationService.sincronizar(widget.db).catchError((Object e) {
         debugPrint('ShellScreen: fallo al revisar recordatorios al volver: $e');
       }),
     );
@@ -103,9 +114,8 @@ class _ShellScreenState extends State<ShellScreen>
     // Cambió el mes con la app abierta: mismo trabajo que hace main() al
     // arrancar en un mes nuevo, y se remontan las pestañas para que sus
     // totales apunten al mes correcto.
-    final desactivados = await NotificationService.revisarIngresosUnicosVencidos(
-      widget.db,
-    );
+    final desactivados =
+        await NotificationService.revisarIngresosUnicosVencidos(widget.db);
     if (!mounted) return;
     setState(() => _mesMontado = mesActual);
     if (desactivados > 0 && appDesbloqueadaNotifier.value) {
@@ -157,9 +167,7 @@ class _ShellScreenState extends State<ShellScreen>
     if (abrirConfig == true && mounted) {
       await Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => ConfigSmtpScreen(db: widget.db),
-        ),
+        MaterialPageRoute(builder: (_) => ConfigSmtpScreen(db: widget.db)),
       );
     }
   }
@@ -171,6 +179,27 @@ class _ShellScreenState extends State<ShellScreen>
     });
   }
 
+  /// Desde el perfil del menú lateral: abre Ajustes directo en "Perfil".
+  void _abrirPerfil() {
+    setState(() {
+      _index = _indiceAjustes;
+      _visitada[_indiceAjustes] = true;
+      // Clave nueva = Ajustes se vuelve a montar ya parado en Perfil,
+      // aunque estuviera abierto en otra sección.
+      _vecesPerfil++;
+    });
+  }
+
+  /// Cuántos recordatorios activos ya están en su ventana de aviso o
+  /// vencidos: el número de la insignia junto a "Recordatorios".
+  int _recordatoriosPendientes(List<Recordatorio> lista) {
+    final hoy = normalizarFechaCivil(widget.ahora());
+    return lista.where((r) {
+      final dias = fechaCivilGuardada(r.fechaAlerta).difference(hoy).inDays;
+      return dias <= r.diasAnticipacion;
+    }).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final pantallas = [
@@ -179,48 +208,93 @@ class _ShellScreenState extends State<ShellScreen>
       PrestamosScreen(db: widget.db),
       FinanzasScreen(db: widget.db),
       RecordatoriosScreen(db: widget.db),
+      // Solo se llega aquí desde el menú lateral (PC). En celular, Ajustes
+      // se abre como página aparte desde el ícono de Inicio.
+      SettingsScreen(
+        key: ValueKey('ajustes-$_vecesPerfil'),
+        db: widget.db,
+        embebido: true,
+      ),
     ];
 
+    final escritorio =
+        MediaQuery.sizeOf(context).width >= anchoMinimoBarraLateral;
+    // Si la ventana se achica estando en Ajustes, en la barra inferior no
+    // existe esa pestaña: se muestra Inicio.
+    final indice = !escritorio && _index == _indiceAjustes ? 0 : _index;
+
+    final contenido = IndexedStack(
+      index: indice,
+      children: [
+        for (var i = 0; i < pantallas.length; i++)
+          _visitada[i]
+              ? KeyedSubtree(
+                  key: ValueKey('pestana-$i-$_mesMontado'),
+                  child: pantallas[i],
+                )
+              : const SizedBox.shrink(),
+      ],
+    );
+
     return Scaffold(
-      body: IndexedStack(
-        index: _index,
+      // Siempre un Row, con o sin menú: el contenido lleva clave para que
+      // las pestañas conserven su estado si la ventana cruza el ancho que
+      // separa el diseño de PC del de celular.
+      body: Row(
         children: [
-          for (var i = 0; i < pantallas.length; i++)
-            _visitada[i]
-                ? KeyedSubtree(
-                    key: ValueKey('pestana-$i-$_mesMontado'),
-                    child: pantallas[i],
-                  )
-                : const SizedBox.shrink(),
+          if (escritorio)
+            StreamBuilder<List<Recordatorio>>(
+              key: const ValueKey('barra-lateral'),
+              stream: _streamRecordatoriosActivos,
+              builder: (context, snap) => BarraLateral(
+                items: [
+                  const ItemBarraLateral('Inicio'),
+                  const ItemBarraLateral('Deudas'),
+                  const ItemBarraLateral('Préstamos'),
+                  const ItemBarraLateral('Finanzas'),
+                  ItemBarraLateral(
+                    'Recordatorios',
+                    contador: _recordatoriosPendientes(snap.data ?? const []),
+                  ),
+                ],
+                indice: indice,
+                indiceAjustes: _indiceAjustes,
+                onElegir: _cambiarIndice,
+                onPerfil: _abrirPerfil,
+              ),
+            ),
+          Expanded(key: const ValueKey('contenido'), child: contenido),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        onTap: _cambiarIndice,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Inicio',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.credit_card),
-            label: 'Deudas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.handshake_outlined),
-            label: 'Préstamos',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance),
-            label: 'Finanzas',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Recordatorios',
-          ),
-        ],
-      ),
+      bottomNavigationBar: escritorio
+          ? null
+          : BottomNavigationBar(
+              currentIndex: indice,
+              onTap: _cambiarIndice,
+              type: BottomNavigationBarType.fixed,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.dashboard),
+                  label: 'Inicio',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.credit_card),
+                  label: 'Deudas',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.handshake_outlined),
+                  label: 'Préstamos',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.account_balance),
+                  label: 'Finanzas',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.notifications),
+                  label: 'Recordatorios',
+                ),
+              ],
+            ),
     );
   }
 }

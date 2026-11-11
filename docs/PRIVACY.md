@@ -58,6 +58,12 @@ tu propia cuenta de Gmail o cualquier proveedor de correo).
   servidor SMTP. Valtiq no tiene servidores propios y no intercepta,
   almacena ni tiene acceso a estos correos ni a tus credenciales.
 
+## Perfil (nombre y foto)
+
+Si escribes tu nombre o eliges una foto de perfil, se guardan únicamente en
+tu dispositivo, dentro de la carpeta privada de Valtiq. No se envían a ningún
+lado ni se incluyen en la copia de seguridad.
+
 ## Permisos que solicita la app (Android)
 
 - **Notificaciones (POST_NOTIFICATIONS)**: para mostrar recordatorios de

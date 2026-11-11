@@ -10,7 +10,9 @@ import 'screens/splash_screen.dart';
 import 'services/app_lock_service.dart';
 import 'services/crypto_service.dart';
 import 'services/notification_service.dart';
+import 'services/perfil_service.dart';
 import 'theme/theme.dart';
+import 'utils/format.dart';
 
 final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(
   ThemeMode.system,
@@ -45,6 +47,9 @@ void main() async {
   // Se borra la preferencia vieja para no dejar basura en instalaciones
   // que la tenían guardada.
   await prefs.remove('valtiq_acento');
+
+  await PerfilService.cargar();
+  await cargarMontosOcultos();
 
   await CryptoService.init();
   await NotificationService.init();

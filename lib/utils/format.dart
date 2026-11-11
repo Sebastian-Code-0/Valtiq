@@ -1,4 +1,35 @@
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'numero_utils.dart';
+
+/// "Ocultar montos": cuando está activo, las pantallas que usan
+/// [formatMonto] muestran puntos en vez de cifras (para abrir la app delante
+/// de otras personas). Se guarda entre sesiones.
+final ValueNotifier<bool> montosOcultosNotifier = ValueNotifier(false);
+
+const _kMontosOcultos = 'valtiq_ocultar_montos';
+
+/// Texto que reemplaza a cualquier monto oculto.
+const montoOculto = r'$ ••••••';
+
+Future<void> cargarMontosOcultos() async {
+  final prefs = await SharedPreferences.getInstance();
+  montosOcultosNotifier.value = prefs.getBool(_kMontosOcultos) ?? false;
+}
+
+Future<void> setMontosOcultos(bool ocultos) async {
+  montosOcultosNotifier.value = ocultos;
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool(_kMontosOcultos, ocultos);
+}
+
+/// Igual que [formatCOP], pero respeta "Ocultar montos". Usar en lo que se
+/// MUESTRA en pantalla; [formatCOP] queda para lo que no debe ocultarse
+/// nunca (correos, notificaciones, mensajes de validación).
+String formatMonto(num monto) =>
+    montosOcultosNotifier.value ? montoOculto : formatCOP(monto);
+
 
 String formatCOP(num monto) {
   final esNegativo = monto < 0;

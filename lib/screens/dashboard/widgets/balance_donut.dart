@@ -61,7 +61,7 @@ class BalanceDonut extends StatelessWidget {
       fraccionDisponible = disponible / ingresos;
     }
 
-    final texto = formatCOP(disponible);
+    final texto = formatMonto(disponible);
     final painter = TextPainter(
       text: TextSpan(
         text: texto,

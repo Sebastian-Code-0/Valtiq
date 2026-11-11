@@ -62,3 +62,19 @@ String fechaRelativa(DateTime fecha) {
   }
   return 'En $diff ${diff == 1 ? 'día' : 'días'}';
 }
+
+const _diasLargos = [
+  'lunes',
+  'martes',
+  'miércoles',
+  'jueves',
+  'viernes',
+  'sábado',
+  'domingo',
+];
+
+/// "MARTES 10 NOVIEMBRE" — la fecha de hoy en el encabezado de Inicio.
+String formatFechaEncabezado(DateTime fecha) =>
+    '${_diasLargos[fecha.weekday - 1]} ${fecha.day} '
+            '${_mesesLargos[fecha.month - 1]}'
+        .toUpperCase();

@@ -89,13 +89,14 @@ class _FilaPresupuesto extends StatelessWidget {
             monto: gastado,
             montoMaximo: limite,
             colorOverride: sobrepasado ? context.colores.alerta : null,
+            respetarOcultar: true,
           ),
           Padding(
             padding: const EdgeInsets.only(left: AppSpacing.lg),
             child: Row(
               children: [
                 Text(
-                  'de ${formatCOP(limite)}',
+                  'de ${formatMonto(limite)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorSecundario,
                   ),

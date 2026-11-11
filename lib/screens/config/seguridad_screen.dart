@@ -4,6 +4,7 @@ import '../../services/app_lock_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/notificaciones.dart';
 import '../lock/configurar_pin_screen.dart';
+import 'settings_screen.dart';
 
 class SeguridadScreen extends StatefulWidget {
   const SeguridadScreen({super.key});
@@ -125,7 +126,7 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Seguridad')),
+      appBar: barraAjustes(context, 'Seguridad'),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
           : ListView(

@@ -447,7 +447,12 @@ class BarraCategoria extends StatelessWidget {
     required this.monto,
     required this.montoMaximo,
     this.colorOverride,
+    this.respetarOcultar = false,
   });
+
+  /// Si es true, el monto se oculta cuando "Ocultar montos" está activo
+  /// (lo usa Inicio; en Finanzas los montos siempre se ven).
+  final bool respetarOcultar;
 
   final String categoria;
   final double monto;
@@ -491,7 +496,7 @@ class BarraCategoria extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
                   child: Text(
-                    formatCOP(monto),
+                    respetarOcultar ? formatMonto(monto) : formatCOP(monto),
                     style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -666,7 +671,8 @@ class _MiniFilaMes extends StatelessWidget {
         SizedBox(
           width: 76,
           child: Text(
-            formatCOP(monto),
+            // Solo se usa en Inicio: respeta "Ocultar montos".
+            formatMonto(monto),
             style: monoStyle(fontSize: 12, fontWeight: FontWeight.w600),
             textAlign: TextAlign.end,
             overflow: TextOverflow.ellipsis,

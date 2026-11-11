@@ -1,5 +1,31 @@
 # Changelog
 
+## Rediseño de PC: menú lateral, Inicio nuevo, Ajustes con secciones y Perfil (2026-11-11)
+
+- **Menú lateral (ventanas ≥ 900 px):** `screens/barra_lateral.dart`. Logo y
+  nombre arriba, las cinco secciones una debajo de otra (texto, con un bloque
+  detrás de la actual), insignia con los recordatorios pendientes, y al fondo
+  Ajustes y el perfil. `ShellScreen` elige menú lateral o barra inferior según
+  el ancho y conserva el estado de las pestañas al cruzar ese límite.
+- **Inicio en PC:** fecha de hoy (`formatFechaEncabezado`, se actualiza a
+  medianoche), saludo con el nombre del perfil, botón "Ocultar montos", cuatro
+  tarjetas de resumen en una fila (sin la de "día a día") y el resto en dos
+  columnas. En celular se conserva el diseño anterior, con un ícono de ojo
+  para ocultar montos.
+- **Ocultar montos:** `formatMonto` / `montosOcultosNotifier` en
+  `utils/format.dart`; aplica a los montos de Inicio y se guarda en
+  `SharedPreferences` (`valtiq_ocultar_montos`).
+- **Ajustes:** una sola pantalla con selector de secciones (Perfil,
+  Apariencia, Notificaciones, Seguridad, Copia de seguridad, Presupuestos,
+  Cómo funciona, Correo, Acerca de) en vez de una página por opción. En PC va
+  dentro del área de contenido; en celular se abre desde Inicio. Las pantallas
+  de configuración usan `barraAjustes()` para no dibujar su barra de título
+  cuando van embebidas.
+- **Perfil:** `services/perfil_service.dart` + `screens/config/perfil_screen.dart`.
+  Foto redonda (elegida con `file_selector`, se copia a la carpeta privada de
+  la app), nombre y apellido. Se guarda en `SharedPreferences`; no viaja en la
+  copia de seguridad.
+
 ## Notificaciones programadas: llegan con la app cerrada (2026-11-10)
 
 - Android: los recordatorios se programan en el sistema (`zonedSchedule`) a

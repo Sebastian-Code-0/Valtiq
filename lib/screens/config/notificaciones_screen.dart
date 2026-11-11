@@ -6,6 +6,7 @@ import '../../theme/theme.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/notificaciones.dart';
 import '../../utils/selector_hora.dart';
+import 'settings_screen.dart';
 
 /// Configuración → Notificaciones: permiso, avisos a la hora exacta y
 /// recordatorio diario. En PC solo explica cómo funcionan los avisos ahí
@@ -123,7 +124,7 @@ class _NotificacionesScreenState extends State<NotificacionesScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Notificaciones')),
+      appBar: barraAjustes(context, 'Notificaciones'),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
           : ListView(

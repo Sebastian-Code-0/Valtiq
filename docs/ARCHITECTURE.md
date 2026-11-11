@@ -335,14 +335,43 @@ nube y de la transferencia entre dispositivos.
 | Préstamos     | prestamos_screen.dart     | Lista con saldo pendiente y % cobrado por préstamo |
 | Finanzas      | finanzas_screen.dart      | Ingresos, gastos fijos y variables    |
 | Recordatorios | recordatorios_screen.dart | Lista y gestión de recordatorios      |
-| Ajustes       | settings_screen.dart      | Navegación a sub-pantallas            |
-| Apariencia    | apariencia_screen.dart    | Tema claro/oscuro y color de acento   |
+| Ajustes       | settings_screen.dart      | Una sola pantalla con selector de secciones; cada sección es una de las pantallas de abajo |
+| Perfil        | perfil_screen.dart        | Foto, nombre y apellido (el nombre saluda en Inicio) |
+| Notificaciones | notificaciones_screen.dart | Permiso, hora exacta, recordatorio diario |
+| Apariencia    | apariencia_screen.dart    | Tema claro/oscuro/sistema con vista previa |
 | Config SMTP   | config_smtp_screen.dart   | Configuración de correo saliente      |
 | Copia de seguridad | respaldo_screen.dart | Exportar/importar todos los datos a JSON |
 | Presupuestos por categoría | presupuestos_screen.dart | Límite mensual de gasto por categoría |
 | Seguridad     | seguridad_screen.dart     | Activar/desactivar bloqueo, biometría, timeout, cambiar PIN |
 | Cómo funciona Valtiq | como_funciona_screen.dart | Guía de conceptos (interés, prorrateo, saldo insoluto, etc.) en lenguaje simple |
 | Acerca de     | acerca_de_screen.dart     | Versión, licencia y repositorio       |
+
+### Diseño de PC y de celular (2026-11-11)
+
+`ShellScreen` decide el armazón según el ancho de la ventana
+(`anchoMinimoBarraLateral` = 900 px, en `screens/barra_lateral.dart`):
+
+- **PC (≥ 900 px):** `BarraLateral` a la izquierda (logo, las cinco
+  secciones, Ajustes y el perfil al fondo) y el contenido a la derecha.
+  Ajustes es una pantalla más del `IndexedStack` (`SettingsScreen` con
+  `embebido: true`), no una ruta nueva. `DashboardScreen` usa el mismo límite
+  para cambiar a su diseño de PC (fecha, saludo, cuatro tarjetas en fila, dos
+  columnas).
+- **Celular (< 900 px):** `BottomNavigationBar` de siempre; Ajustes se abre
+  con `Navigator.push` desde Inicio.
+
+El contenido lleva clave (`ValueKey('contenido')`) para que las pestañas no
+pierdan su estado si la ventana cruza ese límite.
+
+Las pantallas de configuración dibujan su `AppBar` con
+`barraAjustes(context, título)`, que devuelve `null` cuando están dentro de
+`SettingsScreen` (marcado con el `InheritedWidget` `AjustesEmbebido`) y una
+barra normal cuando se abren sueltas.
+
+`PerfilService` (nombre, apellido, foto) y `montosOcultosNotifier` /
+`formatMonto` ("Ocultar montos", hoy solo en Inicio) viven en
+`SharedPreferences`, se cargan en `main()` antes de `runApp` y se publican
+con `ValueNotifier`.
 
 ## Bloqueo de la app (PIN/biometría)
 
@@ -681,7 +710,8 @@ main() abre `AppDatabase` → carga SharedPreferences (tema, acento) →
 sin `await`, fire-and-forget) → carga `bloqueoInicial`
 (`AppLockService.bloqueoActivo()`) → `runApp` con `MaterialApp.builder`
 envolviendo todo en `AppLockOverlay` → `home: SplashScreen` → tras
-500ms, `ShellScreen` con `BottomNavigationBar` (que ahí sí avisa con
+500ms, `ShellScreen` (menú lateral en PC, `BottomNavigationBar` en
+celular; ahí sí avisa con
 SnackBar/diálogo si `claveFueRegenerada` o `ingresosUnicosDesactivados`
 tienen algo pendiente) → pantallas acceden a `AppDatabase` vía
 constructor. **DESPUÉS de `runApp`** (2026-09-04): se llama sin

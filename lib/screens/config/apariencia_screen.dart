@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../main.dart';
 import '../../theme/theme.dart';
+import 'settings_screen.dart';
 
 /// A partir de este ancho la pantalla se considera "de PC": las vistas
 /// previas muestran la app como ventana (con menú lateral) en vez de como
@@ -39,7 +40,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Apariencia')),
+      appBar: barraAjustes(context, 'Apariencia'),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final escritorio = constraints.maxWidth >= _anchoEscritorio;

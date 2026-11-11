@@ -3,6 +3,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../theme/theme.dart';
+import 'settings_screen.dart';
 
 class AcercaDeScreen extends StatelessWidget {
   const AcercaDeScreen({super.key});
@@ -17,7 +18,7 @@ class AcercaDeScreen extends StatelessWidget {
     final colorSec = theme.colorSecundario;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Acerca de')),
+      appBar: barraAjustes(context, 'Acerca de'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

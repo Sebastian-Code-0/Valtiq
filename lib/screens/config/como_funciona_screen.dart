@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
+import 'settings_screen.dart';
 
 /// Guía rápida de "cómo funciona Valtiq por dentro" — pensada para alguien
 /// que nunca va a leer el código ni el repositorio de GitHub. Responde en
@@ -17,7 +18,7 @@ class ComoFuncionaScreen extends StatelessWidget {
     final colorSec = theme.colorSecundario;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cómo funciona Valtiq')),
+      appBar: barraAjustes(context, 'Cómo funciona Valtiq'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

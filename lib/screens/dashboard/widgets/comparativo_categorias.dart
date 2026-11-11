@@ -83,30 +83,36 @@ class _ComparativoCategoriasState extends State<ComparativoCategorias> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        SelectorMes(
-                          compacto: true,
-                          anio: _mesA.year,
-                          mes: _mesA.month,
-                          onCambiar: (d) => setState(() => _mesA = d),
-                          mesExcluido: _mesB,
-                        ),
-                        Text(
-                          'vs',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorSecundario,
+                    // FittedBox: en PC esta tarjeta ocupa media pantalla y los
+                    // dos selectores de mes no siempre caben; se encogen en
+                    // vez de salirse.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SelectorMes(
+                            compacto: true,
+                            anio: _mesA.year,
+                            mes: _mesA.month,
+                            onCambiar: (d) => setState(() => _mesA = d),
+                            mesExcluido: _mesB,
                           ),
-                        ),
-                        SelectorMes(
-                          compacto: true,
-                          anio: _mesB.year,
-                          mes: _mesB.month,
-                          onCambiar: (d) => setState(() => _mesB = d),
-                          mesExcluido: _mesA,
-                        ),
-                      ],
+                          Text(
+                            'vs',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorSecundario,
+                            ),
+                          ),
+                          SelectorMes(
+                            compacto: true,
+                            anio: _mesB.year,
+                            mes: _mesB.month,
+                            onCambiar: (d) => setState(() => _mesB = d),
+                            mesExcluido: _mesA,
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
 
@@ -254,7 +260,7 @@ class _FraseResumen extends StatelessWidget {
         children: [
           const TextSpan(text: 'Gastaste '),
           TextSpan(
-            text: formatCOP(diferencia.abs()),
+            text: formatMonto(diferencia.abs()),
             style: TextStyle(fontWeight: FontWeight.bold, color: color),
           ),
           TextSpan(text: ' $verbo en $nombreMesB que en $nombreMesA.'),

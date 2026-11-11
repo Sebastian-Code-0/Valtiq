@@ -7,6 +7,7 @@ import '../../db/database.dart';
 import '../../services/backup_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/notificaciones.dart';
+import 'settings_screen.dart';
 
 class RespaldoScreen extends StatefulWidget {
   const RespaldoScreen({super.key, required this.db});
@@ -126,7 +127,7 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
     final colorBorde = theme.colorScheme.outline;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Copia de seguridad')),
+      appBar: barraAjustes(context, 'Copia de seguridad'),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [

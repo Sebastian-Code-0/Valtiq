@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
 import '../../services/dashboard_service.dart';
+import '../../services/perfil_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/date_format.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../barra_lateral.dart';
 import '../config/settings_screen.dart';
 import 'widgets/balance_donut.dart';
 import 'widgets/comparativo_categorias.dart';
@@ -20,6 +25,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  Timer? _timerDia;
   late final Stream<double> _streamDeudas;
   late final Stream<double> _streamPrestamos;
   late final Stream<double> _streamIngresos;
@@ -39,107 +45,262 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _streamGastos = DashboardService.watchGastosFijosMensuales(db);
     _streamGastosVariables = DashboardService.watchGastosVariablesMes(db);
     _streamBalance = DashboardService.watchBalanceMensual(db);
+    _programarCambioDeDia();
+  }
+
+  /// Reconstruye la pantalla justo al cambiar el día, para que la fecha del
+  /// encabezado sea siempre la de hoy aunque la app quede abierta.
+  void _programarCambioDeDia() {
+    final ahora = DateTime.now();
+    final manana = DateTime(ahora.year, ahora.month, ahora.day + 1);
+    _timerDia = Timer(
+      manana.difference(ahora) + const Duration(seconds: 1),
+      () {
+        if (!mounted) return;
+        setState(() {});
+        _programarCambioDeDia();
+      },
+    );
   }
 
   @override
+  void dispose() {
+    _timerDia?.cancel();
+    super.dispose();
+  }
+
+  void _abrirAjustes() => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => SettingsScreen(db: widget.db)),
+  );
+
+  List<Widget> _tarjetasResumen(
+    BuildContext context, {
+    required bool compacta,
+  }) => [
+    _ResumenCard(
+      titulo: 'Deudas activas',
+      icono: Icons.credit_card,
+      colorIcono: context.colores.alerta,
+      stream: _streamDeudas,
+      compacta: compacta,
+    ),
+    _ResumenCard(
+      titulo: 'Prestado activo',
+      icono: Icons.handshake_outlined,
+      colorIcono: Theme.of(context).colorScheme.primary,
+      stream: _streamPrestamos,
+      compacta: compacta,
+    ),
+    _ResumenCard(
+      titulo: 'Ingresos mensuales',
+      icono: Icons.trending_up,
+      colorIcono: context.colores.positivo,
+      stream: _streamIngresos,
+      compacta: compacta,
+    ),
+    _ResumenCard(
+      titulo: 'Gastos fijos mensuales',
+      icono: Icons.trending_down,
+      colorIcono: context.colores.alerta,
+      stream: _streamGastos,
+      compacta: compacta,
+    ),
+  ];
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    // En PC (ventana ancha) Inicio va junto al menú lateral y cambia de
+    // forma: encabezado con fecha + saludo, cuatro tarjetas pequeñas en una
+    // fila y el resto en dos columnas. En celular se conserva el diseño de
+    // siempre.
+    final escritorio =
+        MediaQuery.sizeOf(context).width >= anchoMinimoBarraLateral;
+    return ValueListenableBuilder<bool>(
+      valueListenable: montosOcultosNotifier,
+      builder: (context, ocultos, _) => Scaffold(
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(escritorio ? AppSpacing.lg : AppSpacing.md),
+            child: escritorio
+                ? _contenidoEscritorio(context, ocultos)
+                : _contenidoCelular(context, ocultos),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _botonOcultar(bool ocultos, {required bool conTexto}) {
+    final icono = Icon(
+      ocultos ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+    );
+    final texto = ocultos ? 'Mostrar montos' : 'Ocultar montos';
+    return conTexto
+        ? OutlinedButton.icon(
+            onPressed: () => setMontosOcultos(!ocultos),
+            icon: icono,
+            label: Text(texto),
+          )
+        : IconButton(
+            onPressed: () => setMontosOcultos(!ocultos),
+            icon: icono,
+            tooltip: texto,
+          );
+  }
+
+  Widget _contenidoEscritorio(BuildContext context, bool ocultos) {
+    final theme = Theme.of(context);
+    final c = context.colores;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Image.asset(
-                    'assets/logo_icono.png',
-                    height: 32,
-                    color: Theme.of(context).colorScheme.primary,
-                    colorBlendMode: BlendMode.srcIn,
+                  Text(
+                    formatFechaEncabezado(DateTime.now()),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: c.textoSecundario,
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.settings_outlined),
-                    tooltip: 'Configuración',
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => SettingsScreen(db: widget.db),
+                  const SizedBox(height: AppSpacing.xs),
+                  ValueListenableBuilder<Perfil>(
+                    valueListenable: PerfilService.perfil,
+                    builder: (context, perfil, _) => Text(
+                      perfil.nombre.isEmpty ? 'Hola' : 'Hola, ${perfil.nombre}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
-              GridView.count(
-                crossAxisCount: 2,
-                childAspectRatio: 1.25,
-                crossAxisSpacing: AppSpacing.md,
-                mainAxisSpacing: AppSpacing.md,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _ResumenCard(
-                    titulo: 'Deudas activas',
-                    icono: Icons.credit_card,
-                    colorIcono: context.colores.alerta,
-                    stream: _streamDeudas,
-                  ),
-                  _ResumenCard(
-                    titulo: 'Prestado activo',
-                    icono: Icons.handshake_outlined,
-                    colorIcono: Theme.of(context).colorScheme.primary,
-                    stream: _streamPrestamos,
-                  ),
-                  _ResumenCard(
-                    titulo: 'Ingresos mensuales',
-                    icono: Icons.trending_up,
-                    colorIcono: context.colores.positivo,
-                    stream: _streamIngresos,
-                  ),
-                  _ResumenCard(
-                    titulo: 'Gastos fijos mensuales',
-                    icono: Icons.trending_down,
-                    colorIcono: context.colores.alerta,
-                    stream: _streamGastos,
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Builder(
-                builder: (context) {
-                  final anchoDisponible =
-                      MediaQuery.sizeOf(context).width - AppSpacing.md * 2;
-                  final anchoCelda = (anchoDisponible - AppSpacing.md) / 2;
-                  final altoFila = anchoCelda / 1.25;
-                  return SizedBox(
-                    width: double.infinity,
-                    height: altoFila,
-                    child: _ResumenCard(
-                      titulo: 'Gastos del día a día (mes)',
-                      icono: Icons.shopping_bag_outlined,
-                      colorIcono: context.colores.alerta,
-                      stream: _streamGastosVariables,
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _PosicionPrestamosCard(
-                streamPrestamos: _streamPrestamos,
-                streamDeudas: _streamDeudas,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _BalanceMensualCard(streamBalance: _streamBalance),
-              const SizedBox(height: AppSpacing.md),
-              ComparativoCategorias(db: widget.db),
-              const SizedBox(height: AppSpacing.md),
-              PresupuestosCard(db: widget.db),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            _botonOcultar(ocultos, conTexto: true),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        // Cuatro tarjetas pequeñas, una al lado de la otra. (La de "gastos
+        // del día a día" se quitó aquí: con cinco se rompía la fila.)
+        SizedBox(
+          height: 104,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (i, tarjeta) in _tarjetasResumen(
+                context,
+                compacta: true,
+              ).indexed) ...[
+                if (i > 0) const SizedBox(width: AppSpacing.sm),
+                Expanded(child: tarjeta),
+              ],
             ],
           ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                children: [
+                  _PosicionPrestamosCard(
+                    streamPrestamos: _streamPrestamos,
+                    streamDeudas: _streamDeudas,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  PresupuestosCard(db: widget.db),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                children: [
+                  _BalanceMensualCard(streamBalance: _streamBalance),
+                  const SizedBox(height: AppSpacing.md),
+                  ComparativoCategorias(db: widget.db),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _contenidoCelular(BuildContext context, bool ocultos) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Image.asset(
+              'assets/logo_icono.png',
+              height: 32,
+              color: Theme.of(context).colorScheme.primary,
+              colorBlendMode: BlendMode.srcIn,
+            ),
+            const Spacer(),
+            _botonOcultar(ocultos, conTexto: false),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Configuración',
+              onPressed: _abrirAjustes,
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        GridView.count(
+          crossAxisCount: 2,
+          childAspectRatio: 1.25,
+          crossAxisSpacing: AppSpacing.md,
+          mainAxisSpacing: AppSpacing.md,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: _tarjetasResumen(context, compacta: false),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Builder(
+          builder: (context) {
+            final anchoDisponible =
+                MediaQuery.sizeOf(context).width - AppSpacing.md * 2;
+            final anchoCelda = (anchoDisponible - AppSpacing.md) / 2;
+            final altoFila = anchoCelda / 1.25;
+            return SizedBox(
+              width: double.infinity,
+              height: altoFila,
+              child: _ResumenCard(
+                titulo: 'Gastos del día a día (mes)',
+                icono: Icons.shopping_bag_outlined,
+                colorIcono: context.colores.alerta,
+                stream: _streamGastosVariables,
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _PosicionPrestamosCard(
+          streamPrestamos: _streamPrestamos,
+          streamDeudas: _streamDeudas,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _BalanceMensualCard(streamBalance: _streamBalance),
+        const SizedBox(height: AppSpacing.md),
+        ComparativoCategorias(db: widget.db),
+        const SizedBox(height: AppSpacing.md),
+        PresupuestosCard(db: widget.db),
+      ],
     );
   }
 }
@@ -150,7 +311,11 @@ class _ResumenCard extends StatelessWidget {
     required this.icono,
     required this.colorIcono,
     required this.stream,
+    this.compacta = false,
   });
+
+  /// Versión pequeña (fila de cuatro en PC): menos relleno.
+  final bool compacta;
 
   final String titulo;
   final IconData icono;
@@ -162,7 +327,10 @@ class _ResumenCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: compacta ? 12 : AppSpacing.md,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -207,7 +375,7 @@ class _ResumenCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    formatCOP(valor),
+                    formatMonto(valor),
                     style: monoStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     maxLines: 1,
                   ),
@@ -293,19 +461,19 @@ class _BalanceMensualCard extends StatelessWidget {
                           children: [
                             _FilaMonto(
                               label: 'Ingresos',
-                              valor: formatCOP(ingresos),
+                              valor: formatMonto(ingresos),
                               color: context.colores.positivo,
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             _FilaMonto(
                               label: 'Gastos fijos',
-                              valor: '-${formatCOP(gastos)}',
+                              valor: '-${formatMonto(gastos)}',
                               color: context.colores.alerta,
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             _FilaMonto(
                               label: 'Gastos del día a día',
-                              valor: '-${formatCOP(gastosVariables)}',
+                              valor: '-${formatMonto(gastosVariables)}',
                               color: context.colores.alerta,
                             ),
                           ],
@@ -346,7 +514,7 @@ class _BalanceMensualCard extends StatelessWidget {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              formatCOP(disponible),
+                              formatMonto(disponible),
                               style: monoStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -441,7 +609,7 @@ class _PosicionPrestamosCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.md),
                     _FilaMonto(
                       label: 'Total prestado',
-                      valor: formatCOP(prestado),
+                      valor: formatMonto(prestado),
                       color: context.colores.positivo,
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -452,7 +620,7 @@ class _PosicionPrestamosCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.sm),
                     _FilaMonto(
                       label: 'Total deudas',
-                      valor: formatCOP(deudas),
+                      valor: formatMonto(deudas),
                       color: context.colores.alerta,
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -474,7 +642,7 @@ class _PosicionPrestamosCard extends StatelessWidget {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              formatCOP(neto),
+                              formatMonto(neto),
                               style: monoStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -514,7 +682,14 @@ class _FilaMonto extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: theme.textTheme.bodyLarge),
+        Flexible(
+          child: Text(
+            label,
+            style: theme.textTheme.bodyLarge,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
         Flexible(
           child: Text(
             valor,

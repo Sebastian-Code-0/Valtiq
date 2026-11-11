@@ -8,6 +8,7 @@ import '../../theme/theme.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/notificaciones.dart';
+import 'settings_screen.dart';
 
 class ConfigSmtpScreen extends StatefulWidget {
   const ConfigSmtpScreen({super.key, required this.db});
@@ -265,7 +266,7 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     final esGmail = _servidorCtrl.text.trim() == 'smtp.gmail.com';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Recordatorios por correo')),
+      appBar: barraAjustes(context, 'Recordatorios por correo'),
       body: Form(
         key: _formKey,
         child: ListView(

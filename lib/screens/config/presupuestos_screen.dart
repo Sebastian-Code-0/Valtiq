@@ -8,6 +8,7 @@ import '../../utils/categoria_gasto.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/format.dart';
 import '../../utils/notificaciones.dart';
+import 'settings_screen.dart';
 
 class PresupuestosScreen extends StatefulWidget {
   const PresupuestosScreen({super.key, required this.db});
@@ -56,7 +57,7 @@ class _PresupuestosScreenState extends State<PresupuestosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Presupuestos por categoría')),
+      appBar: barraAjustes(context, 'Presupuestos por categoría'),
       body: StreamBuilder<List<PresupuestosCategoria>>(
         stream: widget.db.presupuestosCategoriasDao.watchPresupuestos(),
         builder: (context, snapshot) {
