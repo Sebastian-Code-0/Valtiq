@@ -11,7 +11,7 @@ const double _anchoEscritorio = 600;
 
 /// Ancho máximo de la tarjeta en PC: en un monitor grande, a todo lo ancho
 /// las miniaturas quedaban enormes. Va centrada.
-const double _anchoMaximo = 1000;
+const double _anchoMaximo = 1240;
 
 class AparienciaScreen extends StatefulWidget {
   const AparienciaScreen({super.key});
@@ -57,10 +57,12 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
               (anchoTarjeta - 2 * AppSpacing.md - 2 * separacion) / 3 - 10;
           final altoLibre = constraints.maxHeight - 4 * AppSpacing.md - 170;
           final proporcion = altoLibre <= 0
-              ? (escritorio ? 1.9 : 0.62)
+              ? (escritorio ? 2.1 : 0.62)
               : (anchoOpcion / altoLibre).clamp(
-                  escritorio ? 1.2 : 0.46,
-                  escritorio ? 1.9 : 0.62,
+                  // En PC, ventanas apaisadas (nunca casi cuadradas): la tarjeta
+                  // queda ancha y baja.
+                  escritorio ? 1.55 : 0.46,
+                  escritorio ? 2.1 : 0.62,
                 );
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -197,7 +199,10 @@ class _OpcionTema extends StatelessWidget {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.all(4),
+              // El borde elegido es más grueso; el relleno compensa la
+              // diferencia para que la miniatura no cambie de tamaño (antes
+              // daba un saltico al seleccionar).
+              padding: EdgeInsets.all(seleccionado ? 4 : 5.5),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
                 border: Border.all(

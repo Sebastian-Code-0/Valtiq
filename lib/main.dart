@@ -87,6 +87,11 @@ class ValtiqApp extends StatelessWidget {
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: mode,
+          // Cambio de tema: fundido un poco más largo y con arranque y
+          // frenado suaves. El valor por defecto (200 ms, lineal) se sentía
+          // como un parpadeo brusco entre negro y beige.
+          themeAnimationDuration: const Duration(milliseconds: 450),
+          themeAnimationCurve: Curves.easeInOutCubic,
           locale: const Locale('es', 'CO'),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
