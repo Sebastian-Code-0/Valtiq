@@ -11,7 +11,8 @@ abstract class AppColors {
   static const vinoRellenoOscuro = Color(0xFF6A1628);
   static const vinoTextoOscuro = Color(0xFFC25A70);
   static const vinoClaro = Color(0xFF5A1222);
-  static const sobreVino = Color(0xFFF7EEE3);
+  // Texto sobre vino: el mismo beige del fondo claro (nada de blancos).
+  static const sobreVino = Color(0xFFEFE7DA);
 
   // Morado (apoyo)
   static const moradoOscuro = Color(0xFF7E5FA6);
@@ -27,17 +28,24 @@ abstract class AppColors {
 
   // Tema oscuro: negro puro
   static const fondoOscuro = Color(0xFF000000);
-  static const superficieOscuro = Color(0xFF141112);
-  static const divisorOscuro = Color(0xFF262022);
-  static const textoOscuro = Color(0xFFEFE6DA);
+  // Tarjetas casi negras con un punto de vino (antes #141112, un gris que
+  // no pegaba con la paleta); el borde vino oscuro es lo que las separa
+  // del fondo.
+  static const superficieOscuro = Color(0xFF0D090A);
+  static const divisorOscuro = Color(0xFF3A2027);
+  // Texto: el beige del fondo claro, no blanco.
+  static const textoOscuro = Color(0xFFEFE7DA);
   static const textoSecundarioOscuro = Color(0xFFA99B90);
 
   // Tema claro: beige lino (sin blancos)
   static const fondoClaro = Color(0xFFEFE7DA);
-  static const superficieClaro = Color(0xFFF7F1E6);
-  static const divisorClaro = Color(0xFFDCD0BE);
-  static const textoClaro = Color(0xFF2A1F1C);
-  static const textoSecundarioClaro = Color(0xFF6E5F57);
+  // Tarjetas color arena, un paso MÁS oscuras que el fondo (antes #F7F1E6,
+  // casi blanco).
+  static const superficieClaro = Color(0xFFE6DBC8);
+  static const divisorClaro = Color(0xFFCDBEA6);
+  // Texto: el mismo negro puro del fondo oscuro.
+  static const textoClaro = Color(0xFF000000);
+  static const textoSecundarioClaro = Color(0xFF63554E);
 }
 
 /// Colores con significado ("tokens semánticos"), uno por tema.

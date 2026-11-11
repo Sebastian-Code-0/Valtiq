@@ -21,6 +21,9 @@ abstract class AppTheme {
             surface: c.superficie,
             onSurface: c.texto,
             onPrimary: c.sobreAcento,
+            onSecondary: c.sobreAcento,
+            onError: c.sobreAcento,
+            surfaceTint: Colors.transparent,
           )
         : ColorScheme.light(
             primary: c.acento,
@@ -29,6 +32,9 @@ abstract class AppTheme {
             surface: c.superficie,
             onSurface: c.texto,
             onPrimary: c.sobreAcento,
+            onSecondary: c.sobreAcento,
+            onError: c.sobreAcento,
+            surfaceTint: Colors.transparent,
           );
 
     return ThemeData(
@@ -49,10 +55,19 @@ abstract class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: c.superficie,
-        elevation: 1,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          side: BorderSide(color: c.textoSecundario.withValues(alpha: 0.12)),
+          side: BorderSide(color: c.divisor),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: c.superficie,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          side: BorderSide(color: c.divisor),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
@@ -60,7 +75,7 @@ abstract class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
-        contentTextStyle: const TextStyle(color: Colors.white),
+        contentTextStyle: TextStyle(color: c.sobreAcento),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

@@ -178,4 +178,33 @@ void main() {
       expect(actualizado.ultimaNotificacion, isNull);
     },
   );
+
+  test(
+    'recordatorio mensual de día 31 ya vencido: se reprograma al ÚLTIMO día '
+    'de un mes (31, 30 o 28/29), nunca se desborda al mes siguiente — antes '
+    '31 ene + 1 mes daba 3 mar y se quedaba en día 3 para siempre',
+    () async {
+      // El 31 de enero más reciente que ya esté fuera de la ventana de
+      // gracia de 7 días.
+      var original = DateTime.utc(hoy.year, 1, 31);
+      if (hoy.difference(original).inDays <= 7) {
+        original = DateTime.utc(hoy.year - 1, 1, 31);
+      }
+      final id = await db.recordatoriosDao.insertRecordatorio(
+        RecordatoriosCompanion.insert(
+          titulo: 'Arriendo',
+          fechaAlerta: original,
+          repetir: const Value(true),
+        ),
+      );
+
+      await NotificationService.revisarRecordatorios(db);
+
+      final nueva = fechaCivilGuardada((await recargar(db, id)).fechaAlerta);
+      final ultimoDiaDelMes = DateTime.utc(nueva.year, nueva.month + 1, 0).day;
+      expect(nueva.day, ultimoDiaDelMes);
+      expect(nueva.difference(hoy).inDays, greaterThanOrEqualTo(-7));
+      expect(nueva.difference(hoy).inDays, lessThan(31));
+    },
+  );
 }

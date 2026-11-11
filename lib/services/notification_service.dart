@@ -122,7 +122,22 @@ class NotificationService {
     );
   }
 
+  static bool _revisando = false;
+
+  /// Se llama al arrancar la app y cada vez que vuelve a primer plano (ver
+  /// `ShellScreen`). Si ya hay una revisión corriendo, la nueva se descarta:
+  /// dos a la vez podrían avisar dos veces el mismo recordatorio.
   static Future<int> revisarRecordatorios(AppDatabase db) async {
+    if (_revisando) return 0;
+    _revisando = true;
+    try {
+      return await _revisarRecordatorios(db);
+    } finally {
+      _revisando = false;
+    }
+  }
+
+  static Future<int> _revisarRecordatorios(AppDatabase db) async {
     await init();
     final lista = await db.recordatoriosDao.getRecordatoriosActivos();
     final ahora = DateTime.now();
@@ -177,13 +192,12 @@ class NotificationService {
       // Si pasó la ventana de gracia y tiene repetir, reprogramar al mes siguiente.
       if (diasFaltantes < -7 && r.repetir) {
         // Avanza mes a mes hasta que la fecha quede en ventana o futuro.
+        // Siempre se suma desde la fecha ORIGINAL (no desde el paso
+        // anterior) para que un día 31 que pasó por febrero vuelva a caer
+        // en 31 y no se quede en 28.
         DateTime nuevaFecha = diaAlerta;
-        while (true) {
-          nuevaFecha = DateTime.utc(
-            nuevaFecha.year,
-            nuevaFecha.month + 1,
-            nuevaFecha.day,
-          );
+        for (var meses = 1; ; meses++) {
+          nuevaFecha = sumarMesesCivil(diaAlerta, meses);
           final diff = nuevaFecha.difference(hoyCivil).inDays;
           if (diff >= -7) break;
         }

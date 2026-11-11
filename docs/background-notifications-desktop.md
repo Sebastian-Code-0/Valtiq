@@ -3,8 +3,9 @@
 ## Comportamiento actual
 
 Las notificaciones se evalúan en revisarRecordatorios(), que
-se ejecuta al abrir la app. Esto funciona correctamente con
-la app abierta o al volver a abrirla. No hay ningún mecanismo
+se ejecuta al abrir la app y cada vez que la ventana vuelve a
+primer plano. Esto funciona correctamente con la app abierta o
+al volver a abrirla. No hay ningún mecanismo
 de disparo automático con la app cerrada en ninguna plataforma
 desktop.
 

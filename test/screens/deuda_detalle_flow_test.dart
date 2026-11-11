@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/screens/deudas/deuda_detalle.dart';
+import 'package:valtiq/utils/fecha_civil.dart';
 
 AppDatabase _createInMemoryDb() => AppDatabase(NativeDatabase.memory());
 
@@ -61,6 +62,16 @@ void main() {
 
       final deuda = await db.deudasDao.getDeudaById(deudaId);
       expect(deuda!.estado, 'pagada');
+      // La fecha de pago se guarda como fecha civil (medianoche UTC de HOY),
+      // no como el instante crudo: con el instante, un abono hecho de noche
+      // en UTC-5 se leía como el día siguiente y la deuda pagada mostraba un
+      // día de interés de más.
+      expect(
+        deuda.fechaPagoReal!.isAtSameMomentAs(
+          normalizarFechaCivil(DateTime.now()),
+        ),
+        isTrue,
+      );
 
       await tester.pumpAndSettle();
       await _cerrar(tester);

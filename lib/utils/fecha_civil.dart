@@ -23,6 +23,16 @@ DateTime normalizarFechaCivil(DateTime seleccionada) =>
 /// eso esta función siempre pasa primero por `.toUtc()` antes de extraer los
 /// componentes — es la única forma correcta de leer uno de estos campos para
 /// comparar, agrupar o mostrar como fecha civil.
+/// Suma [meses] a una fecha civil conservando el día del mes; si ese día no
+/// existe en el mes destino (29, 30 o 31), usa el último día de ese mes
+/// (31 ene + 1 mes = 28/29 feb). `DateTime.utc(a, m + 1, 31)` a secas NO hace
+/// esto: desborda al mes siguiente (31 ene → 3 mar).
+DateTime sumarMesesCivil(DateTime fecha, int meses) {
+  final ultimoDia = DateTime.utc(fecha.year, fecha.month + meses + 1, 0).day;
+  final dia = fecha.day > ultimoDia ? ultimoDia : fecha.day;
+  return DateTime.utc(fecha.year, fecha.month + meses, dia);
+}
+
 DateTime fechaCivilGuardada(DateTime guardada) {
   final u = guardada.toUtc();
   return DateTime.utc(u.year, u.month, u.day);

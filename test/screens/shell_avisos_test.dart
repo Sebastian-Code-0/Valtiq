@@ -1,10 +1,15 @@
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/main.dart' as app;
+import 'package:valtiq/screens/dashboard/dashboard_screen.dart';
 import 'package:valtiq/screens/shell.dart';
 import 'package:valtiq/services/notification_service.dart';
+
+class _FakeNotificationsPlatform extends FlutterLocalNotificationsPlatform {}
 
 AppDatabase _createInMemoryDb() => AppDatabase(NativeDatabase.memory());
 
@@ -85,6 +90,42 @@ void main() {
 
       expect(find.textContaining('Bono trabajo'), findsOneWidget);
       await _cerrar(tester);
+    },
+  );
+
+  testWidgets(
+    'si la app queda abierta y cambia el mes, al volver a primer plano las '
+    'pestañas se vuelven a montar — antes los totales "de este mes" de '
+    'Inicio seguían mostrando el mes anterior hasta cerrar y abrir la app',
+    (tester) async {
+      // Volver a primer plano también revisa recordatorios; mismo arreglo
+      // de entorno que notification_service_test.dart para que el plugin
+      // de notificaciones no falle en `flutter test`.
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      FlutterLocalNotificationsPlatform.instance = _FakeNotificationsPlatform();
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      var ahora = DateTime(2026, 11, 30, 23);
+      await tester.pumpWidget(
+        MaterialApp(home: ShellScreen(db: db, ahora: () => ahora)),
+      );
+      await tester.pump();
+      final antes = tester.state(find.byType(DashboardScreen));
+
+      // Volver en el MISMO mes no remonta nada.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+      expect(tester.state(find.byType(DashboardScreen)), same(antes));
+
+      ahora = DateTime(2026, 12, 1, 8);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+      await tester.pump();
+      expect(tester.state(find.byType(DashboardScreen)), isNot(same(antes)));
+
+      await _cerrar(tester);
+      debugDefaultTargetPlatformOverride = null;
     },
   );
 }

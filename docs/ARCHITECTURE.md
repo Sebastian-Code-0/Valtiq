@@ -378,10 +378,12 @@ versión del bloqueo.
 `LockScreen` sin importar la profundidad de navegación — un
 `Navigator.push` normal no alcanzaría a taparse encima de diálogos o rutas
 ya abiertas. Usa `WidgetsBindingObserver` para detectar
-`AppLifecycleState.paused`/`resumed` y volver a bloquear si pasó más tiempo
-que `timeoutReloqueo` desde que la app quedó en segundo plano. El estado
+`AppLifecycleState.hidden`/`paused` → `resumed` y volver a bloquear si pasó
+más tiempo que `timeoutReloqueo` desde que la app quedó en segundo plano
+(`paused` solo existe en Android/iOS; en Linux/Windows minimizar la ventana
+llega como `hidden`. Perder el foco sin minimizar — `inactive` — no cuenta). El estado
 inicial (`bloqueoInicial`) se calcula en `main()` ANTES de `runApp` — misma
-convención que `themeModeNotifier`/`acentoNotifier` — para que el primer
+convención que `themeModeNotifier` — para que el primer
 frame ya sepa si debe arrancar bloqueada, sin parpadeo de contenido real
 mientras se resuelve el `Future` async.
 

@@ -77,8 +77,13 @@ class _AppLockOverlayState extends State<AppLockOverlay>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _pausadoEn = DateTime.now();
+    // `paused` solo existe en Android/iOS. En Linux/Windows, minimizar la
+    // ventana llega como `hidden` — sin contarlo, en escritorio la app nunca
+    // se volvía a bloquear. En el celular `hidden` llega justo antes de
+    // `paused`, así que se conserva la primera marca (`??=`).
+    if (state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused) {
+      _pausadoEn ??= DateTime.now();
       return;
     }
     if (state != AppLifecycleState.resumed) return;

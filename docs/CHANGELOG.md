@@ -1,5 +1,35 @@
 # Changelog
 
+## Fixes de fechas, recordatorios y bloqueo + ajuste de paleta y Apariencia (2026-11-10)
+
+**Bugs corregidos:**
+- Una deuda saldada automáticamente con un abono guardaba `fechaPagoReal`
+  como instante crudo (`DateTime.now()`); de noche en UTC-5 se leía como el
+  día siguiente y la deuda pagada mostraba un día de interés de más. Ahora se
+  normaliza a fecha civil, igual que préstamos y el botón manual.
+- Los recordatorios mensuales de día 29/30/31 se desbordaban al mes
+  siguiente al reprogramarse (31 ene → 3 mar) y quedaban corridos para
+  siempre. Nuevo `sumarMesesCivil` en `utils/fecha_civil.dart` (ajusta al
+  último día del mes).
+- `revisarRecordatorios()` solo corría al arrancar; ahora `ShellScreen`
+  también lo llama al volver a primer plano (con guarda contra corridas
+  simultáneas).
+- En Linux/Windows la app nunca se volvía a bloquear: `AppLockOverlay` solo
+  escuchaba `paused` (exclusivo de Android/iOS). Ahora también `hidden`.
+- Si la app quedaba abierta al cambiar de mes, los totales "de este mes"
+  seguían en el mes anterior; `ShellScreen` remonta las pestañas y desactiva
+  los ingresos únicos vencidos al volver.
+
+**Diseño:**
+- Tarjetas: casi negras con borde vino en oscuro (`#0D090A`), arena en claro
+  (`#E6DBC8`); sin sombra ni tinte. Texto del tema oscuro y texto sobre vino
+  en beige `#EFE7DA` (sin blancos); texto del tema claro en negro puro.
+- Apariencia: selector con vista previa de cada tema (Sistema/Claro/Oscuro),
+  en forma de celular o de ventana de PC según el ancho.
+
+Pendiente conocido: `Recordatorios.horaAviso`/`minutoAviso` se guardan pero
+todavía no se usan (llegan con las notificaciones programadas).
+
 ## Datos fuera de las copias automáticas de Android 12+ (2026-10-24)
 
 `allowBackup="false"` no garantiza bloquear la transferencia directa entre

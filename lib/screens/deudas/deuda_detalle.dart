@@ -138,7 +138,11 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
       if (saldoPendienteActual <= 0) {
         await widget.db.deudasDao.marcarComoPagada(
           widget.deudaId,
-          DateTime.now(),
+          // Normalizada a fecha civil (medianoche UTC), igual que el botón
+          // manual "marcar como pagada" y que los préstamos. Con el instante
+          // crudo, un abono registrado de noche (UTC-5) se leía como el día
+          // siguiente y la deuda pagada mostraba un día de interés de más.
+          normalizarFechaCivil(DateTime.now()),
         );
         if (mounted) {
           mostrarExito(

@@ -102,7 +102,7 @@ En Android 13+ (API 33), el sistema muestra un diálogo pidiendo permiso de noti
 
 ## Limitaciones conocidas
 
-- **Notificaciones programadas:** La app revisa recordatorios al inicio (`revisarRecordatorios()`). No hay notificaciones en segundo plano cuando la app está cerrada.
+- **Notificaciones programadas:** La app revisa recordatorios al inicio y cada vez que vuelve a primer plano (`revisarRecordatorios()`). No hay notificaciones en segundo plano cuando la app está cerrada.
 - **SMTP en Android:** Funciona sobre red móvil y WiFi. En redes corporativas con firewall puede haber bloqueos de puertos SMTP (465, 587).
 - **Fuentes:** Manrope y JetBrains Mono van incluidas en la app (`assets/fonts/`, licencia OFL). No se descarga nada de internet.
 

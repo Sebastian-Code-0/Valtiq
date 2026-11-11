@@ -119,4 +119,65 @@ void main() {
       expect(find.text('contenido real'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'en escritorio (Linux/Windows) minimizar la ventana llega como "hidden", '
+    'nunca como "paused" — hidden→resumed también debe re-bloquear. Antes '
+    'solo se miraba paused y en PC la app nunca se volvía a bloquear',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'valtiq_lock_enabled': true,
+        'valtiq_lock_timeout_seconds': 0,
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: const Scaffold(body: Text('contenido real')),
+          builder: (context, child) =>
+              AppLockOverlay(initiallyLocked: false, child: child!),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(
+        AppLifecycleState.resumed,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Valtiq está bloqueado'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'perder el foco sin minimizar (solo "inactive") NO re-bloquea: abrir un '
+    'selector de archivos o el diálogo de huella no debe bloquear la app',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'valtiq_lock_enabled': true,
+        'valtiq_lock_timeout_seconds': 0,
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: const Scaffold(body: Text('contenido real')),
+          builder: (context, child) =>
+              AppLockOverlay(initiallyLocked: false, child: child!),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(
+        AppLifecycleState.resumed,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Valtiq está bloqueado'), findsNothing);
+    },
+  );
 }

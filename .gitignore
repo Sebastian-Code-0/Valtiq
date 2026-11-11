@@ -54,3 +54,6 @@ secrets.json
 credentials.json
 *.p12
 valtiq_key.bin
+
+# Notas locales de trabajo (no se suben a GitHub)
+/NOTAS_CAMBIOS.md
