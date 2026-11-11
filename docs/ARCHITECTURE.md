@@ -1,6 +1,6 @@
 # Arquitectura de Valtiq
 
-## Base de datos (SQLite vía drift, schemaVersion 13)
+## Base de datos (SQLite vía drift, schemaVersion 14)
 
 ### Tablas
 
@@ -8,7 +8,10 @@
 | Columna        | Tipo     | Notas                           |
 |----------------|----------|---------------------------------|
 | id             | INTEGER  | PK autoincrement                |
-| acreedorNombre | TEXT     |                                 |
+| acreedorNombre | TEXT     | nombre principal ("Tarjeta Nu") |
+| descripcion    | TEXT     | default '' — segunda línea ("BBVA tarjeta de crédito"), desde schemaVersion 14 |
+| tipo           | TEXT     | 'persona' / 'tarjeta' / 'banco' / 'tienda' / 'otro', default 'otro' — decide la imagen (`utils/tipo_deuda.dart`), desde schemaVersion 14 |
+| diaPago        | INTEGER  | nullable, 1–31 — día del mes en que toca pagar, desde schemaVersion 14 |
 | montoOriginal  | INTEGER  | pesos enteros, sin centavos      |
 | tasaInteres    | REAL     | default 0 — porcentaje, no dinero |
 | tipoInteres      | TEXT     | 'ninguno' / 'mensual' / 'anual'          |
@@ -16,7 +19,7 @@
 | tipoAmortizacion | TEXT     | 'saldo_original' / 'saldo_insoluto', default 'saldo_original' |
 | fechaPrestamo  | DATETIME |                                 |
 | fechaLimite    | DATETIME | nullable                        |
-| cuotaMensual   | INTEGER  | nullable, pesos enteros          |
+| cuotaMensual   | INTEGER  | nullable, pesos enteros — en pantalla es el "pago mínimo al mes" |
 | notas          | TEXT     | default ''                      |
 | estado         | TEXT     | 'activa' / 'pagada'             |
 | fechaPagoReal  | DATETIME | nullable                        |
@@ -230,6 +233,16 @@ ni columna `fecha`: siempre es recurrente.
             viejo quedan con `fechaPagoReal = null` (no hay forma de
             reconstruir esa fecha retroactivamente) hasta que el
             usuario los reactive y los vuelva a marcar como pagados.
+- v13 → v14: agregar Deudas.descripcion (default ''), Deudas.tipo
+            (default 'otro') y Deudas.diaPago (nullable) para el
+            rediseño de la pantalla de Deudas. Las deudas existentes
+            se ven igual que antes hasta que el usuario las edite. Las
+            tres columnas están declaradas en el `newColumns` de los
+            `TableMigration` de `deudas` (`from < 10` y `from < 11`) y
+            el `addColumn` solo corre si `from >= 11` — ver la regla de
+            abajo. Test: `test/db/migration_v14_test.dart`. Un respaldo
+            anterior se sigue importando (`BackupService` rellena
+            `descripcion` y `tipo` con sus valores por defecto).
 
 **Regla importante para migraciones futuras (encontrada 2026-09-02 con un
 test de salto múltiple):** si una columna nueva se agrega con `addColumn`
@@ -331,7 +344,7 @@ nube y de la transferencia entre dispositivos.
 | Pantalla      | Archivo                   | Descripción                           |
 |---------------|---------------------------|---------------------------------------|
 | Dashboard     | dashboard_screen.dart     | Resumen financiero con saldos reales  |
-| Deudas        | deudas_screen.dart        | Lista con saldo pendiente y % pagado por deuda |
+| Deudas        | deudas_screen.dart        | Pestañas Activas (totales + cuadrícula de tarjetas), Plan de pago y Pagadas — ver "Pantalla de Deudas" |
 | Préstamos     | prestamos_screen.dart     | Lista con saldo pendiente y % cobrado por préstamo |
 | Finanzas      | finanzas_screen.dart      | Ingresos, gastos fijos y variables    |
 | Recordatorios | recordatorios_screen.dart | Lista y gestión de recordatorios      |
@@ -369,9 +382,67 @@ Las pantallas de configuración dibujan su `AppBar` con
 barra normal cuando se abren sueltas.
 
 `PerfilService` (nombre, apellido, foto) y `montosOcultosNotifier` /
-`formatMonto` ("Ocultar montos", hoy solo en Inicio) viven en
+`formatMonto` ("Ocultar montos": solo oculta Inicio, a propósito) viven en
 `SharedPreferences`, se cargan en `main()` antes de `runApp` y se publican
 con `ValueNotifier`.
+
+### Pantalla de Deudas (2026-11-11)
+
+`screens/deudas/`:
+
+- `deudas_screen.dart` — encabezado ("Deudas" + "N activas"), selector de
+  tres pestañas (`SelectorPildoras`, el mismo de Ajustes) y:
+  - **Activas:** tres totales (`TotalesDeudas`: total de las deudas, pagos
+    mínimos al mes, % pagado del total) y una cuadrícula de tarjetas de 1, 2
+    o 3 columnas según el ancho. Cada tarjeta: `ImagenDeuda` (por ahora un
+    ícono según `tipo`; ahí irá la galería de imágenes), nombre, descripción,
+    etiqueta con la tasa, saldo, barra de avance, "N% de $total" y "Vence".
+  - **Plan de pago:** `plan_pago_tab.dart`.
+  - **Pagadas:** nombre, "descripción · Liquidada mes año" y lo pagado.
+- `deuda_detalle.dart` — `DeudaDetalleContenido` es la tarjeta completa
+  (saldo, cuatro recuadros: tasa, pago mínimo, próximo pago, liquidación
+  estimada; pagos recientes; "Registrar pago"; "¿Cómo se calculó?"; "Más
+  información"). Se usa de dos formas: como **panel a la derecha** cuando el
+  área de Deudas mide ≥ 800 px (`DeudasScreen.anchoMinimoPanel`), o dentro de
+  la página `DeudaDetalle` en celular. Editar, marcar como pagada/reactivar y
+  eliminar están en su encabezado.
+- `registrar_pago_dialog.dart` — ventana pequeña centrada: a qué deuda se
+  abona y su saldo, monto (solo dígitos, mayor a 0, sin pasar del saldo) y
+  dos atajos que llenan el monto: "Mínimo" y "Liquidar".
+- `deuda_form.dart` — además de lo anterior: descripción, tipo y día de pago.
+
+Los montos de Deudas usan `formatCOP`: "Ocultar montos" **no** los oculta
+(decisión del 2026-11-11: solo oculta Inicio).
+
+**Cálculos** (`services/deudas_calculos.dart`, puro, con tests en
+`test/services/deudas_calculos_test.dart`). Todo parte de
+`InteresCalculator.resumenPrestamo`, así que la tarjeta, el detalle y el plan
+nunca muestran cifras distintas:
+
+- `ResumenDeuda`: saldo, abonado, total, fracción pagada, pago mínimo (la
+  cuota, sin pasarse del saldo) y:
+  - `proximoPago(hoy)`: el siguiente día `diaPago` del calendario (si el mes
+    no lo tiene, su último día).
+  - `ritmoMensual(hoy)`: promedio de lo abonado en los últimos meses
+    calendario completos (hasta 3; no cuenta el mes en curso ni el mes en que
+    empezó la deuda). Sin historial, o si no se abonó nada, se usa la cuota.
+  - `liquidacionEstimada(hoy)`: simula mes a mes (interés del mes, luego el
+    pago al ritmo actual) hasta saldo cero. Por eso pagar de más adelanta la
+    fecha y pagar de menos o saltarse un mes la atrasa. Si el pago no cubre
+    el interés devuelve `noBaja`. Tope: 600 meses.
+  - `interesDelMes(k, saldo)`: respeta la configuración de la deuda
+    (`saldo_insoluto`: sobre el saldo; `saldo_original` simple: sobre el
+    monto original; `saldo_original` compuesto: sobre el original
+    capitalizado). Aproximación: en `saldo_insoluto` todo el saldo se toma
+    como capital, así que con interés atrasado el estimado queda un poco por
+    encima del real, nunca por debajo.
+- `PlanPago.simular`: cada mes suma el interés de cada deuda, paga el mínimo
+  de todas y manda lo que sobra (el "extra al mes" más los mínimos de las
+  deudas ya terminadas) a la prioritaria. `EstrategiaPago.avalancha` ordena
+  por tasa mensual más alta; `bolaDeNieve` por saldo más pequeño. Devuelve
+  meses, fecha libre de deudas, intereses totales y el orden con la fecha de
+  cada deuda. La estrategia y el extra se guardan en `SharedPreferences`
+  (`valtiq_plan_estrategia`, `valtiq_plan_extra`).
 
 ## Bloqueo de la app (PIN/biometría)
 

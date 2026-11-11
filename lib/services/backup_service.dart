@@ -105,6 +105,9 @@ class BackupService {
           (r) => _conDefaults(r, const {
             'modalidadCalculo': 'simple',
             'tipoAmortizacion': 'saldo_original',
+            // Agregadas en schemaVersion 14: un respaldo anterior no las trae.
+            'descripcion': '',
+            'tipo': 'otro',
           }),
         )
         .map((r) => _enteroEnClaves(r, const ['montoOriginal', 'cuotaMensual']))

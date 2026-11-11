@@ -48,13 +48,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _programarCambioDeDia();
   }
 
-  /// Reconstruye la pantalla justo al cambiar el día, para que la fecha del
-  /// encabezado sea siempre la de hoy aunque la app quede abierta.
+  /// Reconstruye la pantalla justo al cambiar el día o el saludo (mañana,
+  /// tarde, noche), para que el encabezado esté siempre al día aunque la
+  /// app quede abierta.
   void _programarCambioDeDia() {
     final ahora = DateTime.now();
-    final manana = DateTime(ahora.year, ahora.month, ahora.day + 1);
     _timerDia = Timer(
-      manana.difference(ahora) + const Duration(seconds: 1),
+      proximoCambioDeSaludo(ahora).difference(ahora) +
+          const Duration(seconds: 1),
       () {
         if (!mounted) return;
         setState(() {});
@@ -174,7 +175,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ValueListenableBuilder<Perfil>(
                     valueListenable: PerfilService.perfil,
                     builder: (context, perfil, _) => Text(
-                      perfil.nombre.isEmpty ? 'Hola' : 'Hola, ${perfil.nombre}',
+                      // Solo el nombre (sin apellido): más cercano.
+                      perfil.nombre.isEmpty
+                          ? saludoSegunHora(DateTime.now())
+                          : '${saludoSegunHora(DateTime.now())}, '
+                                '${perfil.nombre}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.headlineMedium?.copyWith(

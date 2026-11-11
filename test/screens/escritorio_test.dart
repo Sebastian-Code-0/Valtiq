@@ -107,19 +107,22 @@ void main() {
     await montar(tester, const Size(1366, 768));
 
     expect(find.text(formatFechaEncabezado(DateTime.now())), findsOneWidget);
-    expect(find.text('Hola, Sofía'), findsOneWidget);
+    expect(
+      find.text('${saludoSegunHora(DateTime.now())}, Sofía'),
+      findsOneWidget,
+    );
     expect(find.text('Deudas activas'), findsOneWidget);
     expect(find.text('Gastos fijos mensuales'), findsOneWidget);
     expect(find.text('Gastos del día a día (mes)'), findsNothing);
     await _cerrar(tester);
   });
 
-  testWidgets('Inicio en PC sin nombre en el perfil: saluda solo "Hola"', (
+  testWidgets('Inicio en PC sin nombre en el perfil: saluda sin nombre', (
     tester,
   ) async {
     await montar(tester, const Size(1366, 768));
 
-    expect(find.text('Hola'), findsOneWidget);
+    expect(find.text(saludoSegunHora(DateTime.now())), findsOneWidget);
     await _cerrar(tester);
   });
 

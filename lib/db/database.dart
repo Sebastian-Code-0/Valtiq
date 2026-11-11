@@ -45,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor openConnection() => conn.openValtiqConnection();
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -159,7 +159,13 @@ class AppDatabase extends _$AppDatabase {
             // de lanzar error, dejando el valor 'tipo_amortizacion' guardado
             // literalmente en la columna. Ver el `if (from >= 11)` en el
             // bloque `from < 12` de más abajo — mismo mecanismo, misma razón.
-            newColumns: [deudas.tipoAmortizacion],
+            newColumns: [
+              deudas.tipoAmortizacion,
+              // schemaVersion 14 — mismo motivo que `tipoAmortizacion`.
+              deudas.descripcion,
+              deudas.tipo,
+              deudas.diaPago,
+            ],
           ),
         );
         await m.alterTable(
@@ -275,7 +281,13 @@ class AppDatabase extends _$AppDatabase {
             },
             // Mismo motivo que en el bloque `from < 10`: `tipoAmortizacion`
             // no existe todavía acá para un upgrade que arranque en v10.
-            newColumns: [deudas.tipoAmortizacion],
+            newColumns: [
+              deudas.tipoAmortizacion,
+              // schemaVersion 14 — mismo motivo que `tipoAmortizacion`.
+              deudas.descripcion,
+              deudas.tipo,
+              deudas.diaPago,
+            ],
           ),
         );
         await m.alterTable(
@@ -405,6 +417,23 @@ class AppDatabase extends _$AppDatabase {
         // propio `newColumns` y la habrían creado en su rebuild).
         if (from >= 12) {
           await m.addColumn(prestamos, prestamos.fechaPagoReal);
+        }
+      }
+      if (from < 14) {
+        // `Deudas` gana `descripcion`, `tipo` y `diaPago` para el rediseño de
+        // la pantalla de Deudas (tarjetas con nombre + descripción + imagen,
+        // "Próximo pago"). Deudas existentes quedan con descripción vacía,
+        // tipo 'otro' y sin día de pago: se ven igual que antes hasta que el
+        // usuario las edite.
+        //
+        // Mismo gotcha que `tipoAmortizacion` (bloque `from < 12`): los
+        // rebuilds de `deudas` en `from < 10`/`from < 11` ya crean estas
+        // columnas (están en su `newColumns`), así que el `addColumn` solo
+        // hace falta cuando `from` ya era >= 11.
+        if (from >= 11) {
+          await m.addColumn(deudas, deudas.descripcion);
+          await m.addColumn(deudas, deudas.tipo);
+          await m.addColumn(deudas, deudas.diaPago);
         }
       }
     },

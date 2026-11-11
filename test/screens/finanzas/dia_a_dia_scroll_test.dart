@@ -48,7 +48,7 @@ void main() {
     ('PC (1280x720)', const Size(1280, 720)),
   ]) {
     testWidgets(
-      'Día a día en $nombre con gastos en las 8 categorías: se puede bajar '
+      'Día a día en $nombre con gastos en todas las categorías: se puede bajar '
       'hasta el último gasto — antes las barras quedaban fijas arriba y la '
       'lista de gastos se quedaba sin espacio para desplazarse',
       (tester) async {
@@ -76,12 +76,14 @@ void main() {
   ) async {
     await montar(tester, const Size(360, 640));
 
-    await tester.tap(find.text('Ver 5 categorías más'));
+    await tester.tap(
+      find.text('Ver ${CategoriaGasto.values.length - 3} categorías más'),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Ver menos'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
-    // Con las 8 barras desplegadas el botón queda más abajo del borde de
+    // Con todas las barras desplegadas el botón queda más abajo del borde de
     // la pantalla: hay que desplazarse hasta él, igual que haría el usuario.
     await tester.ensureVisible(find.text('Ver menos'));
     await tester.pumpAndSettle();

@@ -78,3 +78,29 @@ String formatFechaEncabezado(DateTime fecha) =>
     '${_diasLargos[fecha.weekday - 1]} ${fecha.day} '
             '${_mesesLargos[fecha.month - 1]}'
         .toUpperCase();
+
+/// Saludo de Inicio según la hora: "Buenos días" (5:00–11:59), "Buenas
+/// tardes" (12:00–18:59), "Buenas noches" (el resto).
+String saludoSegunHora(DateTime ahora) {
+  final h = ahora.hour;
+  if (h >= 5 && h < 12) return 'Buenos días';
+  if (h >= 12 && h < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+/// Próximo momento en que cambia el saludo o el día (5:00, 12:00, 19:00 o
+/// medianoche), para refrescar el encabezado de Inicio justo entonces.
+DateTime proximoCambioDeSaludo(DateTime ahora) {
+  for (final h in const [5, 12, 19]) {
+    if (ahora.hour < h) return DateTime(ahora.year, ahora.month, ahora.day, h);
+  }
+  return DateTime(ahora.year, ahora.month, ahora.day + 1);
+}
+
+/// "12 nov" — fecha recortada, sin año.
+String formatDiaMesCorto(DateTime fecha) =>
+    '${fecha.day} ${_mesesCortos[fecha.month - 1]}';
+
+/// "may 2027" — mes recortado y año.
+String formatMesAnioCorto(DateTime fecha) =>
+    '${_mesesCortos[fecha.month - 1]} ${fecha.year}';

@@ -11,6 +11,7 @@ import '../../utils/format.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
+import '../../utils/tipo_deuda.dart';
 
 class DeudaForm extends StatefulWidget {
   const DeudaForm({super.key, required this.db, this.deuda});
@@ -25,11 +26,14 @@ class DeudaForm extends StatefulWidget {
 class _DeudaFormState extends State<DeudaForm>
     with FormularioGuardadoMixin<DeudaForm> {
   late final TextEditingController _acreedorCtrl;
+  late final TextEditingController _descripcionCtrl;
+  late final TextEditingController _diaPagoCtrl;
   late final TextEditingController _montoCtrl;
   late final TextEditingController _tasaCtrl;
   late final TextEditingController _cuotaCtrl;
   late final TextEditingController _notasCtrl;
 
+  late String _tipo;
   late String _tipoInteres;
   late String _modalidadCalculo;
   late String _tipoAmortizacion;
@@ -41,6 +45,10 @@ class _DeudaFormState extends State<DeudaForm>
     super.initState();
     final d = widget.deuda;
     _acreedorCtrl = TextEditingController(text: d?.acreedorNombre ?? '');
+    _descripcionCtrl = TextEditingController(text: d?.descripcion ?? '');
+    _diaPagoCtrl = TextEditingController(text: d?.diaPago?.toString() ?? '');
+    // Una deuda nueva arranca como "persona" (lo más común al anotar a mano).
+    _tipo = d?.tipo ?? TipoDeuda.persona.clave;
     _montoCtrl = TextEditingController(
       text: d != null ? formatCOPInput(d.montoOriginal) : '',
     );
@@ -65,6 +73,8 @@ class _DeudaFormState extends State<DeudaForm>
   @override
   void dispose() {
     _acreedorCtrl.dispose();
+    _descripcionCtrl.dispose();
+    _diaPagoCtrl.dispose();
     _montoCtrl.dispose();
     _tasaCtrl.dispose();
     _cuotaCtrl.dispose();
@@ -169,6 +179,8 @@ class _DeudaFormState extends State<DeudaForm>
     final cuota = cuotaText.isEmpty ? null : parseCOP(cuotaText);
     final notas = _notasCtrl.text.trim();
     final acreedor = _acreedorCtrl.text.trim();
+    final descripcion = _descripcionCtrl.text.trim();
+    final diaPago = int.tryParse(_diaPagoCtrl.text.trim());
 
     final dao = widget.db.deudasDao;
     final fechaPrestamo = normalizarFechaCivil(_fechaPrestamo);
@@ -180,6 +192,9 @@ class _DeudaFormState extends State<DeudaForm>
         await dao.insertDeuda(
           DeudasCompanion.insert(
             acreedorNombre: acreedor,
+            descripcion: Value(descripcion),
+            tipo: Value(_tipo),
+            diaPago: Value(diaPago),
             montoOriginal: monto,
             tasaInteres: Value(tasa),
             tipoInteres: Value(tipo),
@@ -195,6 +210,9 @@ class _DeudaFormState extends State<DeudaForm>
         await dao.updateDeuda(
           widget.deuda!.copyWith(
             acreedorNombre: acreedor,
+            descripcion: descripcion,
+            tipo: _tipo,
+            diaPago: Value(diaPago),
             montoOriginal: monto,
             tasaInteres: tasa,
             tipoInteres: tipo,
@@ -230,12 +248,38 @@ class _DeudaFormState extends State<DeudaForm>
                 TextFormField(
                   controller: _acreedorCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Acreedor',
-                    hintText: '¿A quién le debes?',
+                    labelText: 'Nombre',
+                    hintText: 'Ej.: Tarjeta Nu, Juan, Crédito del carro',
                     prefixIcon: Icon(Icons.person_outline),
                   ),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextFormField(
+                  controller: _descripcionCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Descripción',
+                    hintText: 'Opcional. Ej.: BBVA tarjeta de crédito',
+                    prefixIcon: Icon(Icons.short_text),
+                  ),
+                  maxLength: 60,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                DropdownButtonFormField<String>(
+                  value: _tipo,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  decoration: InputDecoration(
+                    labelText: 'Tipo',
+                    prefixIcon: Icon(TipoDeuda.desdeClave(_tipo).icono),
+                  ),
+                  items: [
+                    for (final t in TipoDeuda.values)
+                      DropdownMenuItem(value: t.clave, child: Text(t.nombre)),
+                  ],
+                  onChanged: (v) =>
+                      setState(() => _tipo = v ?? TipoDeuda.otro.clave),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(
@@ -379,7 +423,7 @@ class _DeudaFormState extends State<DeudaForm>
               icon: Icons.event,
               children: [
                 DatePickerField(
-                  label: 'Fecha del préstamo',
+                  label: 'Fecha en que empezó',
                   icon: Icons.calendar_today,
                   value: _fechaPrestamo,
                   onTap: _seleccionarFechaPrestamo,
@@ -393,6 +437,32 @@ class _DeudaFormState extends State<DeudaForm>
                   onClear: () => setState(() => _fechaLimite = null),
                   placeholder: 'Sin fecha límite',
                 ),
+                const SizedBox(height: AppSpacing.md),
+                TextFormField(
+                  controller: _diaPagoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Día de pago de cada mes',
+                    hintText: 'Opcional. Del 1 al 31',
+                    helperText:
+                        'Con esto Valtiq te muestra tu próximo pago. Si el '
+                        'mes no tiene ese día, cuenta el último.',
+                    helperMaxLines: 2,
+                    prefixIcon: Icon(Icons.event_repeat),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(2),
+                  ],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final dia = int.tryParse(v.trim());
+                    if (dia == null || dia < 1 || dia > 31) {
+                      return 'Escribe un día del 1 al 31';
+                    }
+                    return null;
+                  },
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -403,8 +473,8 @@ class _DeudaFormState extends State<DeudaForm>
                 TextFormField(
                   controller: _cuotaCtrl,
                   decoration: InputDecoration(
-                    labelText: 'Cuota mensual pactada',
-                    hintText: 'Opcional',
+                    labelText: 'Pago mínimo al mes',
+                    hintText: 'Opcional. La cuota que pactaste',
                     prefixIcon: const Icon(Icons.payment),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.calculate_outlined),

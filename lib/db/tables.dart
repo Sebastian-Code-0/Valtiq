@@ -3,6 +3,15 @@ import 'package:drift/drift.dart';
 class Deudas extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get acreedorNombre => text()();
+  // Segunda línea de la tarjeta ("BBVA tarjeta de crédito"). `acreedorNombre`
+  // es el nombre principal ("Tarjeta Nu"). Agregada en schemaVersion 14.
+  TextColumn get descripcion => text().withDefault(const Constant(''))();
+  // 'persona' | 'tarjeta' | 'banco' | 'tienda' | 'otro' — decide la imagen
+  // de la tarjeta (ver lib/utils/tipo_deuda.dart). schemaVersion 14.
+  TextColumn get tipo => text().withDefault(const Constant('otro'))();
+  // Día del mes (1–31) en que toca pagar; null = sin día fijo. De aquí sale
+  // "Próximo pago". schemaVersion 14.
+  IntColumn get diaPago => integer().nullable()();
   IntColumn get montoOriginal => integer()();
   RealColumn get tasaInteres => real().withDefault(const Constant(0))();
   TextColumn get tipoInteres => text().withDefault(const Constant('ninguno'))();

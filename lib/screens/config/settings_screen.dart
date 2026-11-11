@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
+import '../../utils/selector_pildoras.dart';
 import 'acerca_de_screen.dart';
 import 'apariencia_screen.dart';
 import 'como_funciona_screen.dart';
@@ -51,16 +52,16 @@ final _secciones = <_Seccion>[
     Icons.notifications_outlined,
     (db) => NotificacionesScreen(db: db),
   ),
+  _Seccion(
+    'Presupuestos',
+    Icons.pie_chart_outline,
+    (db) => PresupuestosScreen(db: db),
+  ),
   _Seccion('Seguridad', Icons.lock_outline, (_) => const SeguridadScreen()),
   _Seccion(
     'Copia de seguridad',
     Icons.backup_outlined,
     (db) => RespaldoScreen(db: db),
-  ),
-  _Seccion(
-    'Presupuestos',
-    Icons.pie_chart_outline,
-    (db) => PresupuestosScreen(db: db),
   ),
   _Seccion(
     'Cómo funciona',
@@ -115,7 +116,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-            _SelectorSeccion(
+            SelectorPildoras(
+              opciones: [
+                for (final s in _secciones) OpcionPildora(s.nombre, s.icono),
+              ],
               seleccionada: _seccion,
               onElegir: (i) => setState(() => _seccion = i),
               margen: widget.embebido ? AppSpacing.lg : AppSpacing.md,
@@ -134,96 +138,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Fila de botones tipo píldora, uno por sección. Si no caben todos (son
-/// varios), la fila se desliza de lado.
-class _SelectorSeccion extends StatelessWidget {
-  const _SelectorSeccion({
-    required this.seleccionada,
-    required this.onElegir,
-    required this.margen,
-  });
-
-  final int seleccionada;
-  final ValueChanged<int> onElegir;
-  final double margen;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colores;
-    final theme = Theme.of(context);
-    Widget pildora(int i) {
-      final elegida = i == seleccionada;
-      final color = elegida ? c.sobreAcento : c.texto;
-      return Semantics(
-        button: true,
-        selected: elegida,
-        child: Material(
-          color: elegida ? c.acentoRelleno : Colors.transparent,
-          shape: StadiumBorder(
-            side: BorderSide(
-              color: elegida ? c.acentoRelleno : c.divisor,
-              width: 1.5,
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => onElegir(i),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(_secciones[i].icono, size: 18, color: color),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    _secciones[i].nombre,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Con ratón no se puede arrastrar una fila para deslizarla, así que
-        // en pantallas anchas (PC, tablet) las píldoras se acomodan en las
-        // líneas que hagan falta. En celular van en una sola fila que se
-        // desliza con el dedo, para no gastar media pantalla.
-        if (constraints.maxWidth >= 600) {
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: margen),
-            child: Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (var i = 0; i < _secciones.length; i++)
-                  SizedBox(height: 44, child: pildora(i)),
-              ],
-            ),
-          );
-        }
-        return SizedBox(
-          height: 44,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: margen),
-            itemCount: _secciones.length,
-            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-            itemBuilder: (context, i) => pildora(i),
-          ),
-        );
-      },
     );
   }
 }

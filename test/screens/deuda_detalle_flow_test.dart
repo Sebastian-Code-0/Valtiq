@@ -43,13 +43,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('Registrar abono'));
+      await tester.tap(find.text('Registrar pago'));
       await tester.pumpAndSettle();
 
       // Abono por el 100% del saldo pendiente (sin interés: saldo == monto
       // original == 100000 exactos, aritmética entera sin residuo posible).
       await tester.enterText(find.byType(TextFormField).first, '100000');
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Guardar'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
       // pumpAndSettle() aquí avanzaría el reloj virtual hasta que el SnackBar
       // de éxito (dura 4s) aparezca Y se cierre solo, así que el texto ya no
       // estaría cuando se verifica. Un pump puntual lo captura mientras está
@@ -94,11 +94,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('Registrar abono'));
+      await tester.tap(find.text('Registrar pago'));
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextFormField).first, '99999');
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Guardar'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);

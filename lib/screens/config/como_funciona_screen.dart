@@ -244,7 +244,7 @@ class _TemaAyuda extends StatelessWidget {
             leading: Icon(icono, color: theme.colorScheme.primary),
             title: Text(
               titulo,
-              style: theme.textTheme.bodyMedium?.copyWith(
+              style: theme.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),

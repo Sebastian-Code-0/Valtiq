@@ -284,7 +284,8 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
                         const SizedBox(width: AppSpacing.sm),
                         Text(
                           'Presets rápidos',
-                          style: Theme.of(context).textTheme.titleSmall,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),

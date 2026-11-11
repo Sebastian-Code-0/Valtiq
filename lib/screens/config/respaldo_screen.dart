@@ -152,8 +152,7 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
                     'Por seguridad, la configuración de recordatorios por '
                     'correo no se incluye en este respaldo. Si restauras '
                     'estos datos en otro dispositivo, deberás configurarla '
-                    'de nuevo en Ajustes → Avanzado → Recordatorios por '
-                    'correo.',
+                    'de nuevo en Ajustes → Correo.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurface,
                     ),

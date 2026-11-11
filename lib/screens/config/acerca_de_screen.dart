@@ -115,7 +115,7 @@ class AcercaDeScreen extends StatelessWidget {
                       const SizedBox(width: AppSpacing.sm),
                       Text(
                         'Privacidad',
-                        style: theme.textTheme.titleSmall?.copyWith(
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),

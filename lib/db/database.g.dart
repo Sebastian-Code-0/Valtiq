@@ -32,6 +32,39 @@ class $DeudasTable extends Deudas with TableInfo<$DeudasTable, Deuda> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _descripcionMeta = const VerificationMeta(
+    'descripcion',
+  );
+  @override
+  late final GeneratedColumn<String> descripcion = GeneratedColumn<String>(
+    'descripcion',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _tipoMeta = const VerificationMeta('tipo');
+  @override
+  late final GeneratedColumn<String> tipo = GeneratedColumn<String>(
+    'tipo',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('otro'),
+  );
+  static const VerificationMeta _diaPagoMeta = const VerificationMeta(
+    'diaPago',
+  );
+  @override
+  late final GeneratedColumn<int> diaPago = GeneratedColumn<int>(
+    'dia_pago',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _montoOriginalMeta = const VerificationMeta(
     'montoOriginal',
   );
@@ -186,6 +219,9 @@ class $DeudasTable extends Deudas with TableInfo<$DeudasTable, Deuda> {
   List<GeneratedColumn> get $columns => [
     id,
     acreedorNombre,
+    descripcion,
+    tipo,
+    diaPago,
     montoOriginal,
     tasaInteres,
     tipoInteres,
@@ -225,6 +261,27 @@ class $DeudasTable extends Deudas with TableInfo<$DeudasTable, Deuda> {
       );
     } else if (isInserting) {
       context.missing(_acreedorNombreMeta);
+    }
+    if (data.containsKey('descripcion')) {
+      context.handle(
+        _descripcionMeta,
+        descripcion.isAcceptableOrUnknown(
+          data['descripcion']!,
+          _descripcionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tipo')) {
+      context.handle(
+        _tipoMeta,
+        tipo.isAcceptableOrUnknown(data['tipo']!, _tipoMeta),
+      );
+    }
+    if (data.containsKey('dia_pago')) {
+      context.handle(
+        _diaPagoMeta,
+        diaPago.isAcceptableOrUnknown(data['dia_pago']!, _diaPagoMeta),
+      );
     }
     if (data.containsKey('monto_original')) {
       context.handle(
@@ -355,6 +412,18 @@ class $DeudasTable extends Deudas with TableInfo<$DeudasTable, Deuda> {
         DriftSqlType.string,
         data['${effectivePrefix}acreedor_nombre'],
       )!,
+      descripcion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}descripcion'],
+      )!,
+      tipo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tipo'],
+      )!,
+      diaPago: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dia_pago'],
+      ),
       montoOriginal: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}monto_original'],
@@ -419,6 +488,9 @@ class $DeudasTable extends Deudas with TableInfo<$DeudasTable, Deuda> {
 class Deuda extends DataClass implements Insertable<Deuda> {
   final int id;
   final String acreedorNombre;
+  final String descripcion;
+  final String tipo;
+  final int? diaPago;
   final int montoOriginal;
   final double tasaInteres;
   final String tipoInteres;
@@ -435,6 +507,9 @@ class Deuda extends DataClass implements Insertable<Deuda> {
   const Deuda({
     required this.id,
     required this.acreedorNombre,
+    required this.descripcion,
+    required this.tipo,
+    this.diaPago,
     required this.montoOriginal,
     required this.tasaInteres,
     required this.tipoInteres,
@@ -454,6 +529,11 @@ class Deuda extends DataClass implements Insertable<Deuda> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['acreedor_nombre'] = Variable<String>(acreedorNombre);
+    map['descripcion'] = Variable<String>(descripcion);
+    map['tipo'] = Variable<String>(tipo);
+    if (!nullToAbsent || diaPago != null) {
+      map['dia_pago'] = Variable<int>(diaPago);
+    }
     map['monto_original'] = Variable<int>(montoOriginal);
     map['tasa_interes'] = Variable<double>(tasaInteres);
     map['tipo_interes'] = Variable<String>(tipoInteres);
@@ -480,6 +560,11 @@ class Deuda extends DataClass implements Insertable<Deuda> {
     return DeudasCompanion(
       id: Value(id),
       acreedorNombre: Value(acreedorNombre),
+      descripcion: Value(descripcion),
+      tipo: Value(tipo),
+      diaPago: diaPago == null && nullToAbsent
+          ? const Value.absent()
+          : Value(diaPago),
       montoOriginal: Value(montoOriginal),
       tasaInteres: Value(tasaInteres),
       tipoInteres: Value(tipoInteres),
@@ -510,6 +595,9 @@ class Deuda extends DataClass implements Insertable<Deuda> {
     return Deuda(
       id: serializer.fromJson<int>(json['id']),
       acreedorNombre: serializer.fromJson<String>(json['acreedorNombre']),
+      descripcion: serializer.fromJson<String>(json['descripcion']),
+      tipo: serializer.fromJson<String>(json['tipo']),
+      diaPago: serializer.fromJson<int?>(json['diaPago']),
       montoOriginal: serializer.fromJson<int>(json['montoOriginal']),
       tasaInteres: serializer.fromJson<double>(json['tasaInteres']),
       tipoInteres: serializer.fromJson<String>(json['tipoInteres']),
@@ -531,6 +619,9 @@ class Deuda extends DataClass implements Insertable<Deuda> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'acreedorNombre': serializer.toJson<String>(acreedorNombre),
+      'descripcion': serializer.toJson<String>(descripcion),
+      'tipo': serializer.toJson<String>(tipo),
+      'diaPago': serializer.toJson<int?>(diaPago),
       'montoOriginal': serializer.toJson<int>(montoOriginal),
       'tasaInteres': serializer.toJson<double>(tasaInteres),
       'tipoInteres': serializer.toJson<String>(tipoInteres),
@@ -550,6 +641,9 @@ class Deuda extends DataClass implements Insertable<Deuda> {
   Deuda copyWith({
     int? id,
     String? acreedorNombre,
+    String? descripcion,
+    String? tipo,
+    Value<int?> diaPago = const Value.absent(),
     int? montoOriginal,
     double? tasaInteres,
     String? tipoInteres,
@@ -566,6 +660,9 @@ class Deuda extends DataClass implements Insertable<Deuda> {
   }) => Deuda(
     id: id ?? this.id,
     acreedorNombre: acreedorNombre ?? this.acreedorNombre,
+    descripcion: descripcion ?? this.descripcion,
+    tipo: tipo ?? this.tipo,
+    diaPago: diaPago.present ? diaPago.value : this.diaPago,
     montoOriginal: montoOriginal ?? this.montoOriginal,
     tasaInteres: tasaInteres ?? this.tasaInteres,
     tipoInteres: tipoInteres ?? this.tipoInteres,
@@ -588,6 +685,11 @@ class Deuda extends DataClass implements Insertable<Deuda> {
       acreedorNombre: data.acreedorNombre.present
           ? data.acreedorNombre.value
           : this.acreedorNombre,
+      descripcion: data.descripcion.present
+          ? data.descripcion.value
+          : this.descripcion,
+      tipo: data.tipo.present ? data.tipo.value : this.tipo,
+      diaPago: data.diaPago.present ? data.diaPago.value : this.diaPago,
       montoOriginal: data.montoOriginal.present
           ? data.montoOriginal.value
           : this.montoOriginal,
@@ -629,6 +731,9 @@ class Deuda extends DataClass implements Insertable<Deuda> {
     return (StringBuffer('Deuda(')
           ..write('id: $id, ')
           ..write('acreedorNombre: $acreedorNombre, ')
+          ..write('descripcion: $descripcion, ')
+          ..write('tipo: $tipo, ')
+          ..write('diaPago: $diaPago, ')
           ..write('montoOriginal: $montoOriginal, ')
           ..write('tasaInteres: $tasaInteres, ')
           ..write('tipoInteres: $tipoInteres, ')
@@ -650,6 +755,9 @@ class Deuda extends DataClass implements Insertable<Deuda> {
   int get hashCode => Object.hash(
     id,
     acreedorNombre,
+    descripcion,
+    tipo,
+    diaPago,
     montoOriginal,
     tasaInteres,
     tipoInteres,
@@ -670,6 +778,9 @@ class Deuda extends DataClass implements Insertable<Deuda> {
       (other is Deuda &&
           other.id == this.id &&
           other.acreedorNombre == this.acreedorNombre &&
+          other.descripcion == this.descripcion &&
+          other.tipo == this.tipo &&
+          other.diaPago == this.diaPago &&
           other.montoOriginal == this.montoOriginal &&
           other.tasaInteres == this.tasaInteres &&
           other.tipoInteres == this.tipoInteres &&
@@ -688,6 +799,9 @@ class Deuda extends DataClass implements Insertable<Deuda> {
 class DeudasCompanion extends UpdateCompanion<Deuda> {
   final Value<int> id;
   final Value<String> acreedorNombre;
+  final Value<String> descripcion;
+  final Value<String> tipo;
+  final Value<int?> diaPago;
   final Value<int> montoOriginal;
   final Value<double> tasaInteres;
   final Value<String> tipoInteres;
@@ -704,6 +818,9 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
   const DeudasCompanion({
     this.id = const Value.absent(),
     this.acreedorNombre = const Value.absent(),
+    this.descripcion = const Value.absent(),
+    this.tipo = const Value.absent(),
+    this.diaPago = const Value.absent(),
     this.montoOriginal = const Value.absent(),
     this.tasaInteres = const Value.absent(),
     this.tipoInteres = const Value.absent(),
@@ -721,6 +838,9 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
   DeudasCompanion.insert({
     this.id = const Value.absent(),
     required String acreedorNombre,
+    this.descripcion = const Value.absent(),
+    this.tipo = const Value.absent(),
+    this.diaPago = const Value.absent(),
     required int montoOriginal,
     this.tasaInteres = const Value.absent(),
     this.tipoInteres = const Value.absent(),
@@ -740,6 +860,9 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
   static Insertable<Deuda> custom({
     Expression<int>? id,
     Expression<String>? acreedorNombre,
+    Expression<String>? descripcion,
+    Expression<String>? tipo,
+    Expression<int>? diaPago,
     Expression<int>? montoOriginal,
     Expression<double>? tasaInteres,
     Expression<String>? tipoInteres,
@@ -757,6 +880,9 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (acreedorNombre != null) 'acreedor_nombre': acreedorNombre,
+      if (descripcion != null) 'descripcion': descripcion,
+      if (tipo != null) 'tipo': tipo,
+      if (diaPago != null) 'dia_pago': diaPago,
       if (montoOriginal != null) 'monto_original': montoOriginal,
       if (tasaInteres != null) 'tasa_interes': tasaInteres,
       if (tipoInteres != null) 'tipo_interes': tipoInteres,
@@ -776,6 +902,9 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
   DeudasCompanion copyWith({
     Value<int>? id,
     Value<String>? acreedorNombre,
+    Value<String>? descripcion,
+    Value<String>? tipo,
+    Value<int?>? diaPago,
     Value<int>? montoOriginal,
     Value<double>? tasaInteres,
     Value<String>? tipoInteres,
@@ -793,6 +922,9 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
     return DeudasCompanion(
       id: id ?? this.id,
       acreedorNombre: acreedorNombre ?? this.acreedorNombre,
+      descripcion: descripcion ?? this.descripcion,
+      tipo: tipo ?? this.tipo,
+      diaPago: diaPago ?? this.diaPago,
       montoOriginal: montoOriginal ?? this.montoOriginal,
       tasaInteres: tasaInteres ?? this.tasaInteres,
       tipoInteres: tipoInteres ?? this.tipoInteres,
@@ -817,6 +949,15 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
     }
     if (acreedorNombre.present) {
       map['acreedor_nombre'] = Variable<String>(acreedorNombre.value);
+    }
+    if (descripcion.present) {
+      map['descripcion'] = Variable<String>(descripcion.value);
+    }
+    if (tipo.present) {
+      map['tipo'] = Variable<String>(tipo.value);
+    }
+    if (diaPago.present) {
+      map['dia_pago'] = Variable<int>(diaPago.value);
     }
     if (montoOriginal.present) {
       map['monto_original'] = Variable<int>(montoOriginal.value);
@@ -865,6 +1006,9 @@ class DeudasCompanion extends UpdateCompanion<Deuda> {
     return (StringBuffer('DeudasCompanion(')
           ..write('id: $id, ')
           ..write('acreedorNombre: $acreedorNombre, ')
+          ..write('descripcion: $descripcion, ')
+          ..write('tipo: $tipo, ')
+          ..write('diaPago: $diaPago, ')
           ..write('montoOriginal: $montoOriginal, ')
           ..write('tasaInteres: $tasaInteres, ')
           ..write('tipoInteres: $tipoInteres, ')
@@ -6088,6 +6232,9 @@ typedef $$DeudasTableCreateCompanionBuilder =
     DeudasCompanion Function({
       Value<int> id,
       required String acreedorNombre,
+      Value<String> descripcion,
+      Value<String> tipo,
+      Value<int?> diaPago,
       required int montoOriginal,
       Value<double> tasaInteres,
       Value<String> tipoInteres,
@@ -6106,6 +6253,9 @@ typedef $$DeudasTableUpdateCompanionBuilder =
     DeudasCompanion Function({
       Value<int> id,
       Value<String> acreedorNombre,
+      Value<String> descripcion,
+      Value<String> tipo,
+      Value<int?> diaPago,
       Value<int> montoOriginal,
       Value<double> tasaInteres,
       Value<String> tipoInteres,
@@ -6160,6 +6310,21 @@ class $$DeudasTableFilterComposer
 
   ColumnFilters<String> get acreedorNombre => $composableBuilder(
     column: $table.acreedorNombre,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get descripcion => $composableBuilder(
+    column: $table.descripcion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get diaPago => $composableBuilder(
+    column: $table.diaPago,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6273,6 +6438,21 @@ class $$DeudasTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get descripcion => $composableBuilder(
+    column: $table.descripcion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get diaPago => $composableBuilder(
+    column: $table.diaPago,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get montoOriginal => $composableBuilder(
     column: $table.montoOriginal,
     builder: (column) => ColumnOrderings(column),
@@ -6355,6 +6535,17 @@ class $$DeudasTableAnnotationComposer
     column: $table.acreedorNombre,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get descripcion => $composableBuilder(
+    column: $table.descripcion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get tipo =>
+      $composableBuilder(column: $table.tipo, builder: (column) => column);
+
+  GeneratedColumn<int> get diaPago =>
+      $composableBuilder(column: $table.diaPago, builder: (column) => column);
 
   GeneratedColumn<int> get montoOriginal => $composableBuilder(
     column: $table.montoOriginal,
@@ -6471,6 +6662,9 @@ class $$DeudasTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> acreedorNombre = const Value.absent(),
+                Value<String> descripcion = const Value.absent(),
+                Value<String> tipo = const Value.absent(),
+                Value<int?> diaPago = const Value.absent(),
                 Value<int> montoOriginal = const Value.absent(),
                 Value<double> tasaInteres = const Value.absent(),
                 Value<String> tipoInteres = const Value.absent(),
@@ -6487,6 +6681,9 @@ class $$DeudasTableTableManager
               }) => DeudasCompanion(
                 id: id,
                 acreedorNombre: acreedorNombre,
+                descripcion: descripcion,
+                tipo: tipo,
+                diaPago: diaPago,
                 montoOriginal: montoOriginal,
                 tasaInteres: tasaInteres,
                 tipoInteres: tipoInteres,
@@ -6505,6 +6702,9 @@ class $$DeudasTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String acreedorNombre,
+                Value<String> descripcion = const Value.absent(),
+                Value<String> tipo = const Value.absent(),
+                Value<int?> diaPago = const Value.absent(),
                 required int montoOriginal,
                 Value<double> tasaInteres = const Value.absent(),
                 Value<String> tipoInteres = const Value.absent(),
@@ -6521,6 +6721,9 @@ class $$DeudasTableTableManager
               }) => DeudasCompanion.insert(
                 id: id,
                 acreedorNombre: acreedorNombre,
+                descripcion: descripcion,
+                tipo: tipo,
+                diaPago: diaPago,
                 montoOriginal: montoOriginal,
                 tasaInteres: tasaInteres,
                 tipoInteres: tipoInteres,

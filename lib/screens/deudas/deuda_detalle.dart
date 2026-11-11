@@ -1,41 +1,75 @@
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
+import '../../services/deudas_calculos.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
-import '../../utils/currency_input.dart';
 import '../../utils/date_format.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
-import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
 import 'deuda_form.dart';
+import 'deuda_widgets.dart';
+import 'registrar_pago_dialog.dart';
 
-/// Congela el cálculo de interés en la fecha real de pago para una deuda ya
-/// pagada — sin esto, `InteresCalculator` sigue calculando hasta HOY por
-/// defecto (ver `fechaFin` en `interes_calculator.dart`), y una deuda
-/// cerrada hace meses mostraría interés creciendo para siempre.
-DateTime? _fechaFinCongelada(Deuda deuda) {
-  if (deuda.estado != 'pagada' || deuda.fechaPagoReal == null) return null;
-  return fechaCivilGuardada(deuda.fechaPagoReal!);
-}
-
-class DeudaDetalle extends StatefulWidget {
+/// Detalle de una deuda como PÁGINA (celular, o ventanas angostas). En PC
+/// el mismo contenido ([DeudaDetalleContenido]) va en un panel a la derecha
+/// de la lista de deudas.
+class DeudaDetalle extends StatelessWidget {
   const DeudaDetalle({super.key, required this.db, required this.deudaId});
 
   final AppDatabase db;
   final int deudaId;
 
   @override
-  State<DeudaDetalle> createState() => _DeudaDetalleState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Deuda')),
+      body: SafeArea(
+        child: DeudaDetalleContenido(
+          db: db,
+          deudaId: deudaId,
+          onSalir: () => Navigator.of(context).maybePop(),
+        ),
+      ),
+    );
+  }
 }
 
-class _DeudaDetalleState extends State<DeudaDetalle> {
+/// La tarjeta completa de una deuda: saldo, avance, tasa, pago mínimo,
+/// próximo pago, liquidación estimada, pagos recientes y el botón para
+/// registrar un pago.
+class DeudaDetalleContenido extends StatefulWidget {
+  const DeudaDetalleContenido({
+    super.key,
+    required this.db,
+    required this.deudaId,
+    required this.onSalir,
+    this.onCerrar,
+  });
+
+  final AppDatabase db;
+  final int deudaId;
+
+  /// La deuda dejó de estar en la lista que se estaba viendo (se pagó, se
+  /// reactivó o se eliminó): la página vuelve atrás, el panel se cierra.
+  final VoidCallback onSalir;
+
+  /// Si no es `null`, se muestra una X para cerrar (panel de PC).
+  final VoidCallback? onCerrar;
+
+  @override
+  State<DeudaDetalleContenido> createState() => _DeudaDetalleContenidoState();
+}
+
+class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
+  /// Cuántos pagos se muestran antes de "Ver todos".
+  static const _pagosVisibles = 5;
+
   late final Stream<Deuda?> _deudaStream;
   late final Stream<List<PagosDeudaData>> _abonosStream;
+  bool _verTodosLosPagos = false;
 
   @override
   void initState() {
@@ -46,124 +80,24 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
     _abonosStream = widget.db.pagosDeudaDao.watchPagosDeDeuda(widget.deudaId);
   }
 
-  Future<void> _editar(Deuda deuda) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DeudaForm(db: widget.db, deuda: deuda),
-      ),
-    );
-  }
+  Future<void> _editar(Deuda deuda) => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => DeudaForm(db: widget.db, deuda: deuda),
+    ),
+  );
 
-  Future<void> _marcarComoPagada() async {
+  Future<bool> _confirmar({
+    required String titulo,
+    required String mensaje,
+    required String accion,
+    bool peligro = false,
+  }) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Marcar como pagada'),
-        content: const Text(
-          '¿Confirmas que ya pagaste esta deuda por completo?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    await widget.db.deudasDao.marcarComoPagada(
-      widget.deudaId,
-      normalizarFechaCivil(DateTime.now()),
-    );
-    if (mounted) Navigator.pop(context);
-  }
-
-  Future<void> _registrarAbono(
-    Deuda deuda,
-    int totalAbonado,
-    List<AbonoInteres> abonos,
-  ) async {
-    final resumen = InteresCalculator.resumenPrestamo(
-      montoPrestado: deuda.montoOriginal,
-      tasaInteres: deuda.tasaInteres,
-      tipoInteres: deuda.tipoInteres,
-      modalidadCalculo: deuda.modalidadCalculo,
-      fechaPrestamo: deuda.fechaPrestamo,
-      totalAbonado: totalAbonado,
-      tipoAmortizacion: deuda.tipoAmortizacion,
-      abonos: abonos,
-      fechaFin: _fechaFinCongelada(deuda),
-    );
-    // Sin recortar a 0: resumen['saldoPendiente'] sí lo recorta (para no
-    // mostrar saldo negativo en la UI), pero eso permitiría abonar de a $1
-    // indefinidamente una vez saldada la deuda, ya que el recorte nunca deja
-    // ver que ya se sobrepasó.
-    final saldoPendiente =
-        resumen['totalConInteres']! - resumen['totalAbonado']!;
-    final guardado = await showDialog<bool>(
-      context: context,
-      builder: (_) => _RegistrarAbonoDialog(
-        db: widget.db,
-        deudaId: widget.deudaId,
-        saldoPendiente: saldoPendiente,
-      ),
-    );
-    if (guardado == true && mounted) {
-      final pagosActuales = await widget.db.pagosDeudaDao.getPagosDeDeuda(
-        widget.deudaId,
-      );
-      final totalAbonadoActual = pagosActuales.fold<int>(
-        0,
-        (sum, p) => sum + p.montoAbonado,
-      );
-      final resumenActual = InteresCalculator.resumenPrestamo(
-        montoPrestado: deuda.montoOriginal,
-        tasaInteres: deuda.tasaInteres,
-        tipoInteres: deuda.tipoInteres,
-        modalidadCalculo: deuda.modalidadCalculo,
-        fechaPrestamo: deuda.fechaPrestamo,
-        totalAbonado: totalAbonadoActual,
-        tipoAmortizacion: deuda.tipoAmortizacion,
-        abonos: pagosActuales
-            .map((p) => AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado))
-            .toList(),
-      );
-      final saldoPendienteActual =
-          resumenActual['totalConInteres']! - resumenActual['totalAbonado']!;
-      if (saldoPendienteActual <= 0) {
-        await widget.db.deudasDao.marcarComoPagada(
-          widget.deudaId,
-          // Normalizada a fecha civil (medianoche UTC), igual que el botón
-          // manual "marcar como pagada" y que los préstamos. Con el instante
-          // crudo, un abono registrado de noche (UTC-5) se leía como el día
-          // siguiente y la deuda pagada mostraba un día de interés de más.
-          normalizarFechaCivil(DateTime.now()),
-        );
-        if (mounted) {
-          mostrarExito(
-            context,
-            'Deuda "${deuda.acreedorNombre}" ha sido pagada por completo '
-            'y se movió a pagadas.',
-          );
-          Navigator.pop(context);
-        }
-      }
-    }
-  }
-
-  Future<void> _confirmarEliminarAbono(PagosDeudaData pago) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar abono'),
-        content: Text(
-          '¿Eliminar este abono de ${formatCOP(pago.montoAbonado)}?',
-        ),
+        title: Text(titulo),
+        content: Text(mensaje),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -172,16 +106,105 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              'Eliminar',
-              style: TextStyle(color: context.colores.alerta),
+              accion,
+              style: peligro ? TextStyle(color: ctx.colores.alerta) : null,
             ),
           ),
         ],
       ),
     );
-    if (ok == true) {
-      await widget.db.pagosDeudaDao.deletePago(pago.id);
+    return ok == true;
+  }
+
+  Future<void> _marcarComoPagada(Deuda deuda) async {
+    final ok = await _confirmar(
+      titulo: 'Marcar como pagada',
+      mensaje:
+          '¿Confirmas que ya pagaste por completo "${deuda.acreedorNombre}"?',
+      accion: 'Confirmar',
+    );
+    if (!ok) return;
+    await widget.db.deudasDao.marcarComoPagada(
+      widget.deudaId,
+      normalizarFechaCivil(DateTime.now()),
+    );
+    if (mounted) widget.onSalir();
+  }
+
+  Future<void> _reactivar(Deuda deuda) async {
+    final ok = await _confirmar(
+      titulo: 'Reactivar deuda',
+      mensaje: '¿Volver a marcar como activa "${deuda.acreedorNombre}"?',
+      accion: 'Confirmar',
+    );
+    if (!ok) return;
+    await widget.db.deudasDao.marcarComoActiva(widget.deudaId);
+    if (mounted) widget.onSalir();
+  }
+
+  Future<void> _eliminar(Deuda deuda) async {
+    final ok = await _confirmar(
+      titulo: 'Eliminar deuda',
+      mensaje:
+          '¿Eliminar "${deuda.acreedorNombre}"? También se eliminarán sus '
+          'pagos registrados.',
+      accion: 'Eliminar',
+      peligro: true,
+    );
+    if (!ok) return;
+    try {
+      await widget.db.deudasDao.deleteDeudaConPagos(widget.deudaId);
+      if (mounted) widget.onSalir();
+    } catch (_) {
+      if (mounted) mostrarAlerta(context, 'No se pudo eliminar la deuda.');
     }
+  }
+
+  Future<void> _registrarPago(ResumenDeuda r) async {
+    final deuda = r.deuda;
+    final guardado = await showDialog<bool>(
+      context: context,
+      builder: (_) => RegistrarPagoDialog(
+        db: widget.db,
+        deudaId: widget.deudaId,
+        nombre: deuda.acreedorNombre,
+        saldoPendiente: r.saldo,
+        pagoMinimo: r.pagoMinimo,
+      ),
+    );
+    if (guardado != true || !mounted) return;
+
+    // ¿Con este pago quedó en cero? Entonces pasa sola a "Pagadas".
+    final pagos = await widget.db.pagosDeudaDao.getPagosDeDeuda(widget.deudaId);
+    final actual = ResumenDeuda.calcular(deuda, [
+      for (final p in pagos)
+        AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
+    ], hoy: DateTime.now());
+    if (actual.saldo > 0) return;
+    await widget.db.deudasDao.marcarComoPagada(
+      widget.deudaId,
+      // Fecha civil (medianoche UTC), igual que el botón manual: con el
+      // instante crudo, un pago hecho de noche (UTC-5) se leía como el día
+      // siguiente y la deuda pagada mostraba un día de interés de más.
+      normalizarFechaCivil(DateTime.now()),
+    );
+    if (!mounted) return;
+    mostrarExito(
+      context,
+      'Deuda "${deuda.acreedorNombre}" ha sido pagada por completo '
+      'y se movió a pagadas.',
+    );
+    widget.onSalir();
+  }
+
+  Future<void> _eliminarPago(PagosDeudaData pago) async {
+    final ok = await _confirmar(
+      titulo: 'Eliminar pago',
+      mensaje: '¿Eliminar este pago de ${formatCOP(pago.montoAbonado)}?',
+      accion: 'Eliminar',
+      peligro: true,
+    );
+    if (ok) await widget.db.pagosDeudaDao.deletePago(pago.id);
   }
 
   @override
@@ -190,320 +213,426 @@ class _DeudaDetalleState extends State<DeudaDetalle> {
       stream: _deudaStream,
       builder: (context, deudaSnap) {
         if (deudaSnap.hasError) {
-          return Scaffold(
-            body: Center(
-              child: Text(
-                'Error al cargar los datos.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-          );
+          return const Center(child: Text('Error al cargar los datos.'));
         }
         if (!deudaSnap.hasData &&
             deudaSnap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
         final deuda = deudaSnap.data;
         if (deuda == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Deuda')),
-            body: const Center(child: Text('Deuda no encontrada')),
-          );
+          return const Center(child: Text('Deuda no encontrada'));
         }
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(deuda.acreedorNombre),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.edit),
-                tooltip: 'Editar',
-                onPressed: () => _editar(deuda),
-              ),
-              if (deuda.estado == 'activa')
-                PopupMenuButton<String>(
-                  onSelected: (v) {
-                    if (v == 'pagada') _marcarComoPagada();
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 'pagada',
-                      child: Text('Marcar como pagada'),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          body: StreamBuilder<List<PagosDeudaData>>(
-            stream: _abonosStream,
-            builder: (context, abonosSnap) {
-              if (abonosSnap.hasError) {
-                return Center(
-                  child: Text(
-                    'Error al cargar los datos.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                );
-              }
-              final abonos = abonosSnap.data ?? const <PagosDeudaData>[];
-              final totalAbonado = abonos.fold<int>(
-                0,
-                (sum, p) => sum + p.montoAbonado,
-              );
-              final abonosInteres = abonos
-                  .map(
-                    (p) => AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
-                  )
-                  .toList();
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _ResumenCard(
-                      deuda: deuda,
-                      totalAbonado: totalAbonado,
-                      abonos: abonosInteres,
-                    ),
-                    if (deuda.tasaInteres > 0) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      InteresDesgloseCard(
-                        tramos: InteresCalculator.desglosePrestamo(
-                          montoPrestado: deuda.montoOriginal,
-                          tasaInteres: deuda.tasaInteres,
-                          tipoInteres: deuda.tipoInteres,
-                          modalidadCalculo: deuda.modalidadCalculo,
-                          fechaPrestamo: deuda.fechaPrestamo,
-                          tipoAmortizacion: deuda.tipoAmortizacion,
-                          abonos: abonosInteres,
-                          fechaFin: _fechaFinCongelada(deuda),
-                        ),
-                        modalidadCalculo: deuda.modalidadCalculo,
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.md),
-                    _InfoCard(deuda: deuda),
-                    const SizedBox(height: AppSpacing.md),
-                    _AbonosSection(
-                      abonos: abonos,
-                      onRegistrar: () =>
-                          _registrarAbono(deuda, totalAbonado, abonosInteres),
-                      onEliminar: _confirmarEliminarAbono,
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+        return StreamBuilder<List<PagosDeudaData>>(
+          stream: _abonosStream,
+          builder: (context, abonosSnap) {
+            if (abonosSnap.hasError) {
+              return const Center(child: Text('Error al cargar los datos.'));
+            }
+            final pagos = abonosSnap.data ?? const <PagosDeudaData>[];
+            final hoy = DateTime.now();
+            final resumen = ResumenDeuda.calcular(deuda, [
+              for (final p in pagos)
+                AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
+            ], hoy: hoy);
+            return _contenido(context, resumen, pagos, hoy);
+          },
         );
       },
     );
   }
-}
 
-class _ResumenCard extends StatelessWidget {
-  const _ResumenCard({
-    required this.deuda,
-    required this.totalAbonado,
-    required this.abonos,
-  });
-
-  final Deuda deuda;
-  final int totalAbonado;
-  final List<AbonoInteres> abonos;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _contenido(
+    BuildContext context,
+    ResumenDeuda r,
+    List<PagosDeudaData> pagos,
+    DateTime hoy,
+  ) {
     final theme = Theme.of(context);
-    final colorSec = theme.colorSecundario;
+    final c = context.colores;
+    final deuda = r.deuda;
+    final activa = deuda.estado == 'activa';
+    final vence = activa ? r.vencimiento(hoy) : null;
+    final porcentaje = (r.fraccionPagada * 100).round();
 
-    final resumen = InteresCalculator.resumenPrestamo(
-      montoPrestado: deuda.montoOriginal,
-      tasaInteres: deuda.tasaInteres,
-      tipoInteres: deuda.tipoInteres,
-      modalidadCalculo: deuda.modalidadCalculo,
-      fechaPrestamo: deuda.fechaPrestamo,
-      totalAbonado: totalAbonado,
-      tipoAmortizacion: deuda.tipoAmortizacion,
-      abonos: abonos,
-      fechaFin: _fechaFinCongelada(deuda),
-    );
-    final interes = resumen['interesAcumulado']!;
-    final totalConInteres = resumen['totalConInteres']!;
-    final saldoReal = resumen['saldoPendiente']!;
-    final colorSaldo = saldoReal > 0 ? context.colores.alerta : context.colores.positivo;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _fila('Monto original:', deuda.montoOriginal, colorSec, theme),
-            const SizedBox(height: AppSpacing.sm),
-            _fila(
-              'Interés acumulado:',
-              interes,
-              colorSec,
-              theme,
-              colorValor: context.colores.alerta,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _fila(
-              'Total con interés:',
-              totalConInteres,
-              colorSec,
-              theme,
-              negrita: true,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            _fila(
-              'Total abonado:',
-              totalAbonado,
-              colorSec,
-              theme,
-              colorValor: context.colores.positivo,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Saldo pendiente:',
-                  style: theme.textTheme.titleSmall?.copyWith(color: colorSec),
-                ),
-                Flexible(
-                  child: Text(
-                    formatCOP(saldoReal),
-                    style: monoStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: colorSaldo,
-                    ),
+            ImagenDeuda(tipo: deuda.tipo, lado: 56),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    deuda.acreedorNombre,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.end,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (deuda.descripcion.isNotEmpty)
+                    Text(
+                      deuda.descripcion,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: c.textoSecundario,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Editar',
+              onPressed: () => _editar(deuda),
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Más acciones',
+              onSelected: (v) => switch (v) {
+                'pagada' => _marcarComoPagada(deuda),
+                'activa' => _reactivar(deuda),
+                _ => _eliminar(deuda),
+              },
+              itemBuilder: (_) => [
+                if (activa)
+                  const PopupMenuItem(
+                    value: 'pagada',
+                    child: Text('Marcar como pagada'),
+                  )
+                else
+                  const PopupMenuItem(
+                    value: 'activa',
+                    child: Text('Reactivar deuda'),
+                  ),
+                PopupMenuItem(
+                  value: 'eliminar',
+                  child: Text('Eliminar', style: TextStyle(color: c.alerta)),
+                ),
+              ],
+            ),
+            if (widget.onCerrar != null)
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: 'Cerrar',
+                onPressed: widget.onCerrar,
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          activa ? 'Saldo pendiente' : 'Total pagado',
+          style: theme.textTheme.bodySmall?.copyWith(color: c.textoSecundario),
+        ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            formatCOP(activa ? r.saldo : r.abonado),
+            style: monoStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: activa ? c.texto : c.positivo,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        BarraProgreso(fraccion: r.fraccionPagada, color: c.positivo),
+        const SizedBox(height: AppSpacing.xs),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '$porcentaje% de ${formatCOP(r.total)}',
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: c.textoSecundario,
+                ),
+              ),
+            ),
+            if (vence != null)
+              Text(
+                '${vence.vencida ? 'Venció' : 'Vence'} '
+                '${fechaCorta(vence.fecha, hoy)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: vence.vencida ? c.alerta : c.textoSecundario,
+                  fontWeight: vence.vencida ? FontWeight.bold : null,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        ..._datos(context, r, hoy),
+        if (activa) ...[
+          const SizedBox(height: AppSpacing.md),
+          FilledButton.icon(
+            onPressed: () => _registrarPago(r),
+            icon: const Icon(Icons.add),
+            label: const Text('Registrar pago'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          'Pagos recientes',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        ..._pagos(context, pagos, hoy),
+        if (r.tieneInteres) ...[
+          const SizedBox(height: AppSpacing.md),
+          InteresDesgloseCard(
+            tramos: InteresCalculator.desglosePrestamo(
+              montoPrestado: deuda.montoOriginal,
+              tasaInteres: deuda.tasaInteres,
+              tipoInteres: deuda.tipoInteres,
+              modalidadCalculo: deuda.modalidadCalculo,
+              fechaPrestamo: deuda.fechaPrestamo,
+              tipoAmortizacion: deuda.tipoAmortizacion,
+              abonos: r.abonos,
+              fechaFin: activa || deuda.fechaPagoReal == null
+                  ? null
+                  : fechaCivilGuardada(deuda.fechaPagoReal!),
+            ),
+            modalidadCalculo: deuda.modalidadCalculo,
+          ),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        _masInformacion(context, r),
+      ],
+    );
+  }
+
+  /// Los cuatro recuadros: tasa, pago mínimo, próximo pago y liquidación
+  /// estimada (o, en una deuda ya pagada, cuándo se liquidó).
+  List<Widget> _datos(BuildContext context, ResumenDeuda r, DateTime hoy) {
+    final c = context.colores;
+    final deuda = r.deuda;
+    final activa = deuda.estado == 'activa';
+    final minimo = r.pagoMinimo;
+    final proximo = r.proximoPago(hoy);
+    final estimada = r.liquidacionEstimada(hoy);
+
+    Widget fila(Widget a, Widget b) => IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: a),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: b),
+        ],
+      ),
+    );
+
+    if (!activa) {
+      final pagada = deuda.fechaPagoReal;
+      return [
+        fila(
+          _Dato(titulo: 'Tasa', valor: etiquetaTasa(deuda)),
+          _Dato(
+            titulo: 'Liquidada',
+            valor: pagada == null
+                ? 'Sin fecha'
+                : formatMesAnioCorto(fechaCivilGuardada(pagada)),
+          ),
+        ),
+      ];
+    }
+
+    final String textoEstimada;
+    if (estimada.noBaja) {
+      textoEstimada = 'No baja';
+    } else if (estimada.fecha == null) {
+      textoEstimada = 'Sin estimar';
+    } else {
+      textoEstimada = formatMesAnioCorto(estimada.fecha!);
+    }
+
+    return [
+      fila(
+        _Dato(titulo: 'Tasa', valor: etiquetaTasa(deuda)),
+        _Dato(
+          titulo: 'Pago mínimo',
+          valor: minimo == null ? 'Sin definir' : formatCOP(minimo),
+        ),
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      fila(
+        _Dato(
+          titulo: 'Próximo pago',
+          valor: proximo == null ? 'Sin fecha' : fechaCorta(proximo, hoy),
+        ),
+        _Dato(
+          titulo: 'Liquidación estimada',
+          valor: textoEstimada,
+          colorValor: estimada.noBaja ? c.alerta : null,
+        ),
+      ),
+      const SizedBox(height: AppSpacing.xs),
+      Text(
+        estimada.noBaja
+            ? 'Pagando ${formatCOP(estimada.ritmo!)} al mes la deuda no baja: '
+                  'el interés de cada mes es mayor que el pago.'
+            : estimada.fecha != null
+            ? 'Estimada con ${formatCOP(estimada.ritmo!)} al mes, que es lo '
+                  'que vienes pagando. Si pagas más, se adelanta; si pagas '
+                  'menos o te saltas un mes, se atrasa.'
+            : 'Para estimar cuándo terminas, edita la deuda y ponle un pago '
+                  'mínimo al mes.',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: estimada.noBaja ? c.alerta : c.textoSecundario,
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _pagos(
+    BuildContext context,
+    List<PagosDeudaData> pagos,
+    DateTime hoy,
+  ) {
+    final theme = Theme.of(context);
+    final c = context.colores;
+    if (pagos.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Text(
+            'Aún no has registrado pagos.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: c.textoSecundario,
+            ),
+          ),
+        ),
+      ];
+    }
+    final visibles = _verTodosLosPagos
+        ? pagos
+        : pagos.take(_pagosVisibles).toList();
+    return [
+      for (final p in visibles)
+        InkWell(
+          onLongPress: () => _eliminarPago(p),
+          onSecondaryTap: () => _eliminarPago(p),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.sm,
+              horizontal: AppSpacing.xs,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fechaCorta(fechaCivilGuardada(p.fechaPago), hoy),
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      if (p.notas.isNotEmpty)
+                        Text(
+                          p.notas,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: c.textoSecundario,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Text(
+                  formatCOP(p.montoAbonado),
+                  style: monoStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: c.positivo,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _fila(
-    String label,
-    int valor,
-    Color colorSec,
-    ThemeData theme, {
-    Color? colorValor,
-    bool negrita = false,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.bodyMedium?.copyWith(color: colorSec),
-        ),
-        Flexible(
-          child: Text(
-            formatCOP(valor),
-            style: monoStyle(
-              fontSize: 15,
-              fontWeight: negrita ? FontWeight.bold : FontWeight.w500,
-              color: colorValor,
-            ),
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.end,
           ),
         ),
-      ],
-    );
+      if (pagos.length > _pagosVisibles)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () =>
+                setState(() => _verTodosLosPagos = !_verTodosLosPagos),
+            child: Text(
+              _verTodosLosPagos ? 'Ver menos' : 'Ver los ${pagos.length} pagos',
+            ),
+          ),
+        ),
+      Text(
+        'Para eliminar un pago, mantenlo presionado (o clic derecho).',
+        style: theme.textTheme.bodySmall?.copyWith(color: c.textoSecundario),
+      ),
+    ];
   }
-}
 
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.deuda});
-
-  final Deuda deuda;
-
-  String _fmtTasa(double t) {
-    if (t == t.truncateToDouble()) return t.toStringAsFixed(0);
-    return t.toStringAsFixed(2);
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _masInformacion(BuildContext context, ResumenDeuda r) {
     final theme = Theme.of(context);
     final colorSec = theme.colorSecundario;
-    final tieneInteres = deuda.tasaInteres > 0;
+    final deuda = r.deuda;
+    InfoRow fila(String label, String valor) =>
+        InfoRow(label: label, valor: valor, colorSec: colorSec, theme: theme);
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          title: Text(
+            'Más información',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            0,
+            AppSpacing.md,
+            AppSpacing.md,
+          ),
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Información',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            fila('Monto original:', formatCOP(deuda.montoOriginal)),
+            fila(
+              'Interés acumulado:',
+              formatCOP(r.total - deuda.montoOriginal),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            InfoRow(
-              label: 'Tasa:',
-              valor: tieneInteres
-                  ? '${_fmtTasa(deuda.tasaInteres)}%'
-                  : 'Sin interés',
-              colorSec: colorSec,
-              theme: theme,
-            ),
-            InfoRow(
-              label: 'Tipo:',
-              valor: deuda.tipoInteres,
-              colorSec: colorSec,
-              theme: theme,
-            ),
-            InfoRow(
-              label: 'Modalidad:',
-              valor: deuda.modalidadCalculo,
-              colorSec: colorSec,
-              theme: theme,
-            ),
-            if (tieneInteres)
-              InfoRow(
-                label: 'Interés sobre:',
-                valor: deuda.tipoAmortizacion == 'saldo_insoluto'
+            fila('Total con interés:', formatCOP(r.total)),
+            fila('Total pagado:', formatCOP(r.abonado)),
+            if (r.tieneInteres) ...[
+              fila('Modalidad:', deuda.modalidadCalculo),
+              fila(
+                'Interés sobre:',
+                deuda.tipoAmortizacion == 'saldo_insoluto'
                     ? 'Lo que falta por pagar'
                     : 'Lo prestado al inicio',
-                colorSec: colorSec,
-                theme: theme,
               ),
-            InfoRow(
-              label: 'Fecha préstamo:',
-              valor: formatFecha(fechaCivilGuardada(deuda.fechaPrestamo)),
-              colorSec: colorSec,
-              theme: theme,
+            ],
+            fila(
+              'Fecha de inicio:',
+              formatFecha(fechaCivilGuardada(deuda.fechaPrestamo)),
             ),
-            InfoRow(
-              label: 'Fecha límite:',
-              valor: deuda.fechaLimite != null
+            fila(
+              'Fecha límite:',
+              deuda.fechaLimite != null
                   ? formatFecha(fechaCivilGuardada(deuda.fechaLimite!))
                   : 'Sin fecha',
-              colorSec: colorSec,
-              theme: theme,
             ),
-            if (deuda.cuotaMensual != null)
-              InfoRow(
-                label: 'Cuota mensual:',
-                valor: formatCOP(deuda.cuotaMensual!),
-                colorSec: colorSec,
-                theme: theme,
-              ),
+            if (deuda.diaPago != null)
+              fila('Día de pago:', 'El ${deuda.diaPago} de cada mes'),
             if (deuda.notas.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -520,246 +649,49 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-class _AbonosSection extends StatelessWidget {
-  const _AbonosSection({
-    required this.abonos,
-    required this.onRegistrar,
-    required this.onEliminar,
-  });
+/// Recuadro de bordes suaves con un dato: título pequeño arriba y el valor
+/// debajo.
+class _Dato extends StatelessWidget {
+  const _Dato({required this.titulo, required this.valor, this.colorValor});
 
-  final List<PagosDeudaData> abonos;
-  final VoidCallback onRegistrar;
-  final Future<void> Function(PagosDeudaData) onEliminar;
+  final String titulo;
+  final String valor;
+  final Color? colorValor;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorSec = theme.colorSecundario;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Abonos realizados',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: onRegistrar,
-                  icon: const Icon(Icons.add_circle_outline),
-                  tooltip: 'Registrar abono',
-                ),
-              ],
+    final c = context.colores;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: c.superficie,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: c.divisor, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            titulo,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: c.textoSecundario,
             ),
-            const SizedBox(height: AppSpacing.sm),
-            if (abonos.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                child: Center(
-                  child: Text(
-                    'Sin abonos registrados',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorSec,
-                    ),
-                  ),
-                ),
-              )
-            else
-              ...abonos.map(
-                (p) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: InkWell(
-                    onLongPress: () => onEliminar(p),
-                    onSecondaryTap: () => onEliminar(p),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.sm,
-                        horizontal: AppSpacing.sm,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.payments,
-                            size: 18,
-                            color: context.colores.positivo,
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  formatFecha(fechaCivilGuardada(p.fechaPago)),
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                                if (p.notas.isNotEmpty)
-                                  Text(
-                                    p.notas,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorSec,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Flexible(
-                            child: Text(
-                              formatCOP(p.montoAbonado),
-                              style: monoStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: context.colores.positivo,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.end,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RegistrarAbonoDialog extends StatefulWidget {
-  const _RegistrarAbonoDialog({
-    required this.db,
-    required this.deudaId,
-    required this.saldoPendiente,
-  });
-
-  final AppDatabase db;
-  final int deudaId;
-  final int saldoPendiente;
-
-  @override
-  State<_RegistrarAbonoDialog> createState() => _RegistrarAbonoDialogState();
-}
-
-class _RegistrarAbonoDialogState extends State<_RegistrarAbonoDialog>
-    with FormularioGuardadoMixin<_RegistrarAbonoDialog> {
-  final _montoCtrl = TextEditingController();
-  final _notasCtrl = TextEditingController();
-  DateTime _fecha = DateTime.now();
-
-  @override
-  void dispose() {
-    _montoCtrl.dispose();
-    _notasCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickFecha() async {
-    final f = await showDatePicker(
-      context: context,
-      initialDate: _fecha,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-      locale: const Locale('es', 'CO'),
-    );
-    if (f != null) setState(() => _fecha = f);
-  }
-
-  Future<void> _guardar() async {
-    if (!formKey.currentState!.validate()) return;
-    setState(() => guardando = true);
-    final monto = parseCOP(_montoCtrl.text);
-    if (monto == null) {
-      setState(() => guardando = false);
-      if (mounted) {
-        mostrarAlerta(context, 'Monto inválido. Verifica el valor ingresado.');
-      }
-      return;
-    }
-    await ejecutarGuardado(() async {
-      await widget.db.pagosDeudaDao.insertPago(
-        PagosDeudaCompanion.insert(
-          deudaId: widget.deudaId,
-          montoAbonado: monto,
-          fechaPago: normalizarFechaCivil(_fecha),
-          notas: Value(_notasCtrl.text.trim()),
-        ),
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Registrar abono'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _montoCtrl,
-                decoration: const InputDecoration(labelText: 'Monto'),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  CopInputFormatter(),
-                ],
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Requerido';
-                  final n = parseCOP(v);
-                  if (n == null || n <= 0) return 'Debe ser > 0';
-                  if (n - widget.saldoPendiente > 1) {
-                    return 'No puede superar el saldo pendiente '
-                        '(${formatCOP(widget.saldoPendiente)})';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-              InkWell(
-                onTap: _pickFecha,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Fecha',
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(formatFecha(_fecha)),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _notasCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Notas (opcional)',
-                ),
-                maxLines: 2,
-              ),
-            ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              valor,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorValor,
+              ),
+            ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: guardando ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: guardando ? null : _guardar,
-          child: Text(guardando ? 'Guardando...' : 'Guardar'),
-        ),
-      ],
     );
   }
 }

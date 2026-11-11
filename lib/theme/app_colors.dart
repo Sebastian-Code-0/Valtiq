@@ -30,10 +30,11 @@ abstract class AppColors {
 
   // Tema oscuro: negro puro
   static const fondoOscuro = Color(0xFF000000);
-  // Tarjetas: gris carbón cálido, lo bastante claro para distinguirse del
-  // fondo negro. Borde/divisor: el beige del tema claro (#EFE7DA) apagado
-  // al 30 % sobre la tarjeta, para que enmarque sin encandilar.
-  static const superficieOscuro = Color(0xFF1A1716);
+  // Tarjetas: carbón cálido casi negro (antes #1A1716, se veía muy claro);
+  // lo que las separa del fondo negro es sobre todo el borde. Borde/divisor:
+  // el beige del tema claro (#EFE7DA) apagado, para que enmarque sin
+  // encandilar.
+  static const superficieOscuro = Color(0xFF121010);
   static const divisorOscuro = Color(0xFF5A5551);
   // Texto: el beige del fondo claro, no blanco.
   static const textoOscuro = Color(0xFFEFE7DA);

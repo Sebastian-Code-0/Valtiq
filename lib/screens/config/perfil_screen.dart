@@ -9,7 +9,7 @@ import '../barra_lateral.dart';
 import 'settings_screen.dart';
 
 /// Ajustes → Perfil: foto redonda (se elige de la galería / archivos) y
-/// nombre + apellido. El NOMBRE es el que saluda en Inicio ("Hola, Sofía").
+/// nombre + apellido. El NOMBRE es el que saluda en Inicio ("Buenos días, Sofía").
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
 

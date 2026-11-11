@@ -1,5 +1,43 @@
 # Changelog
 
+## Deudas rediseñada: pestañas, tarjetas, plan de pago — schemaVersion 14 (2026-11-11)
+
+- **schemaVersion 13 → 14:** `Deudas` gana `descripcion`, `tipo` y `diaPago`.
+  Test `test/db/migration_v14_test.dart`; los respaldos anteriores se siguen
+  importando.
+- **Pantalla de Deudas** con tres pestañas (Activas, Plan de pago, Pagadas) y
+  "N activas" bajo el título.
+  - Activas: total de las deudas, pagos mínimos al mes y % pagado del total;
+    tarjetas en cuadrícula (hasta 3 por fila) con imagen, nombre,
+    descripción, tasa, saldo, barra de avance, "N% de $total" y "Vence".
+  - Detalle: en PC se abre como panel a la derecha; en celular, como página.
+    Cuatro recuadros (tasa, pago mínimo, próximo pago, liquidación estimada),
+    pagos recientes y botón "Registrar pago". Editar/eliminar/marcar pagada
+    están en el encabezado del detalle.
+  - Liquidación estimada: se calcula con lo que la persona viene pagando
+    (promedio de los últimos meses completos); pagar de más la adelanta,
+    pagar de menos o saltarse un mes la atrasa.
+  - "Registrar pago": ventana pequeña centrada, monto solo con dígitos, sin
+    pasar del saldo, y atajos "Mínimo" y "Liquidar".
+  - Plan de pago: estrategias avalancha y bola de nieve, extra al mes, fecha
+    libre de deudas, intereses totales (con comparación entre estrategias) y
+    orden de pago.
+  - Pagadas: nombre, "descripción · Liquidada mes año" y lo pagado.
+- Lógica nueva en `services/deudas_calculos.dart` (30 tests).
+- **Inicio:** el saludo cambia con la hora ("Buenos días / Buenas tardes /
+  Buenas noches, nombre"). Solo el nombre, sin apellido.
+- **Ajustes:** nuevo orden de secciones (Perfil, Apariencia, Notificaciones,
+  Presupuestos, Seguridad, Copia de seguridad, Cómo funciona, Correo, Acerca
+  de). Títulos de tarjeta unificados a 16 px en negrita (`FormSection`,
+  "Privacidad", "Presets rápidos") y títulos de "Cómo funciona" a 16 px.
+  Corregida una ruta vieja en el aviso de la copia de seguridad.
+- **Categorías de gasto nuevas** (gastos y presupuestos): Carro, Moto,
+  Mascotas, Servicios públicos, Restaurantes, Cuidado personal, Tecnología,
+  Viajes, Suscripciones. Los colores de las existentes no cambiaron.
+- **Tema oscuro:** tarjetas más oscuras (`#1A1716` → `#121010`).
+- `SelectorPildoras` (`utils/selector_pildoras.dart`): el selector de Ajustes
+  pasa a ser un widget compartido; Deudas lo usa para sus pestañas.
+
 ## Rediseño de PC: menú lateral, Inicio nuevo, Ajustes con secciones y Perfil (2026-11-11)
 
 - **Menú lateral (ventanas ≥ 900 px):** `screens/barra_lateral.dart`. Logo y
