@@ -46,72 +46,80 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 960),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tema',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Elige cómo se ve Valtiq. Así se verá cada uno:',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: context.colores.textoSecundario,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Row(
+                  // Cada ajuste de Apariencia va en su propia tarjeta: cuando
+                  // se agreguen más (además del tema), cada uno queda
+                  // separado y se entiende a qué pertenece.
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: _OpcionTema(
-                              nombre: 'Sistema',
-                              detalle: 'Igual que tu dispositivo',
-                              icono: Icons.brightness_auto,
-                              seleccionado: _modoActual == ThemeMode.system,
-                              escritorio: escritorio,
-                              onTap: () => _cambiarTema(ThemeMode.system),
-                              vistaPrevia: _VistaPreviaDividida(
-                                escritorio: escritorio,
-                              ),
+                          Text(
+                            'Tema',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(width: separacion),
-                          Expanded(
-                            child: _OpcionTema(
-                              nombre: 'Claro',
-                              detalle: 'Beige lino',
-                              icono: Icons.light_mode,
-                              seleccionado: _modoActual == ThemeMode.light,
-                              escritorio: escritorio,
-                              onTap: () => _cambiarTema(ThemeMode.light),
-                              vistaPrevia: _VistaPrevia(
-                                colores: ValtiqColores.claro,
-                                escritorio: escritorio,
-                              ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Elige cómo se ve Valtiq. Así se verá cada uno:',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: context.colores.textoSecundario,
                             ),
                           ),
-                          SizedBox(width: separacion),
-                          Expanded(
-                            child: _OpcionTema(
-                              nombre: 'Oscuro',
-                              detalle: 'Negro puro',
-                              icono: Icons.dark_mode,
-                              seleccionado: _modoActual == ThemeMode.dark,
-                              escritorio: escritorio,
-                              onTap: () => _cambiarTema(ThemeMode.dark),
-                              vistaPrevia: _VistaPrevia(
-                                colores: ValtiqColores.oscuro,
-                                escritorio: escritorio,
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: _OpcionTema(
+                                  nombre: 'Sistema',
+                                  detalle: 'Igual que tu dispositivo',
+                                  icono: Icons.brightness_auto,
+                                  seleccionado: _modoActual == ThemeMode.system,
+                                  escritorio: escritorio,
+                                  onTap: () => _cambiarTema(ThemeMode.system),
+                                  vistaPrevia: _VistaPreviaDividida(
+                                    escritorio: escritorio,
+                                  ),
+                                ),
                               ),
-                            ),
+                              SizedBox(width: separacion),
+                              Expanded(
+                                child: _OpcionTema(
+                                  nombre: 'Claro',
+                                  detalle: 'Beige lino',
+                                  icono: Icons.light_mode,
+                                  seleccionado: _modoActual == ThemeMode.light,
+                                  escritorio: escritorio,
+                                  onTap: () => _cambiarTema(ThemeMode.light),
+                                  vistaPrevia: _VistaPrevia(
+                                    colores: ValtiqColores.claro,
+                                    escritorio: escritorio,
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: separacion),
+                              Expanded(
+                                child: _OpcionTema(
+                                  nombre: 'Oscuro',
+                                  detalle: 'Negro puro',
+                                  icono: Icons.dark_mode,
+                                  seleccionado: _modoActual == ThemeMode.dark,
+                                  escritorio: escritorio,
+                                  onTap: () => _cambiarTema(ThemeMode.dark),
+                                  vistaPrevia: _VistaPrevia(
+                                    colores: ValtiqColores.oscuro,
+                                    escritorio: escritorio,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

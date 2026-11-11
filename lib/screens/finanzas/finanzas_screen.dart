@@ -32,6 +32,9 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
   late final Stream<List<GastosFijo>> _streamGastos;
 
   late DateTime _mesVariables;
+
+  static const _categoriasVisibles = 3;
+  bool _todasLasCategorias = false;
   late Stream<Map<String, double>> _streamTotalPorCategoria;
 
   String _capitalizar(String s) =>
@@ -322,91 +325,122 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
             Expanded(
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 400),
-                child: Column(
+                // Todo en UNA sola lista que se desplaza junta: total,
+                // barras por categoría y el detalle de cada gasto. Antes las
+                // barras quedaban fijas arriba y, con varias categorías, se
+                // comían toda la pantalla: la lista de gastos quedaba sin
+                // espacio y no se podía bajar a verla.
+                child: ListView.separated(
                   key: ValueKey(_mesVariables),
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _totalRow(
-                      theme: theme,
-                      total: total,
-                      color: context.colores.alerta,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    StreamBuilder<Map<String, double>>(
-                      stream: _streamTotalPorCategoria,
-                      builder: (context, snapCategorias) {
-                        final porCategoria = snapCategorias.data ?? {};
-                        if (porCategoria.isEmpty) {
-                          return const SizedBox.shrink();
-                        }
-
-                        final entradas = porCategoria.entries.toList()
-                          ..sort((a, b) => b.value.compareTo(a.value));
-                        final montoMaximo = entradas.first.value;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              for (final e in entradas)
-                                BarraCategoria(
-                                  categoria: e.key,
-                                  monto: e.value,
-                                  montoMaximo: montoMaximo,
-                                ),
-                            ],
+                  itemCount: gastos.isEmpty ? 2 : gastos.length + 1,
+                  separatorBuilder: (_, i) => i == 0
+                      ? const SizedBox.shrink()
+                      : const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (_, i) {
+                    if (i == 0) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _totalRow(
+                            theme: theme,
+                            total: total,
+                            color: context.colores.alerta,
                           ),
-                        );
-                      },
-                    ),
-                    Expanded(
-                      child: gastos.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.calendar_month_outlined,
-                                    size: 32,
-                                    color: colorSec,
-                                  ),
-                                  const SizedBox(height: AppSpacing.sm),
-                                  Text(
-                                    'No hay gastos del día a día este mes',
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      color: colorSec,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.separated(
-                              itemCount: gastos.length,
-                              separatorBuilder: (_, _) =>
-                                  const SizedBox(height: AppSpacing.sm),
-                              itemBuilder: (_, i) {
-                                final g = gastos[i];
-                                return _GastoVariableCard(
-                                  gasto: g,
-                                  colorSec: colorSec,
-                                  onTap: () =>
-                                      _abrirGastoVariableForm(gasto: g),
-                                  onLongPress: () =>
-                                      _confirmarEliminarGastoVariable(g),
-                                  onEditar: () =>
-                                      _abrirGastoVariableForm(gasto: g),
-                                  onEliminar: () =>
-                                      _confirmarEliminarGastoVariable(g),
-                                );
-                              },
+                          const SizedBox(height: AppSpacing.md),
+                          _resumenPorCategoria(theme),
+                        ],
+                      );
+                    }
+                    if (gastos.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.xl),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.calendar_month_outlined,
+                              size: 32,
+                              color: colorSec,
                             ),
-                    ),
-                  ],
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'No hay gastos del día a día este mes',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                color: colorSec,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    final g = gastos[i - 1];
+                    return _GastoVariableCard(
+                      gasto: g,
+                      colorSec: colorSec,
+                      onTap: () => _abrirGastoVariableForm(gasto: g),
+                      onLongPress: () => _confirmarEliminarGastoVariable(g),
+                      onEditar: () => _abrirGastoVariableForm(gasto: g),
+                      onEliminar: () => _confirmarEliminarGastoVariable(g),
+                    );
+                  },
                 ),
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  /// Barras de gasto por categoría, de mayor a menor. Solo se muestran las
+  /// [_categoriasVisibles] más grandes; el resto se despliega con un botón,
+  /// para que el resumen no empuje el detalle fuera de la pantalla.
+  Widget _resumenPorCategoria(ThemeData theme) {
+    return StreamBuilder<Map<String, double>>(
+      stream: _streamTotalPorCategoria,
+      builder: (context, snapCategorias) {
+        final porCategoria = snapCategorias.data ?? {};
+        if (porCategoria.isEmpty) return const SizedBox.shrink();
+
+        final entradas = porCategoria.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+        final montoMaximo = entradas.first.value;
+        final ocultas = entradas.length - _categoriasVisibles;
+        final visibles = _todasLasCategorias || ocultas <= 0
+            ? entradas
+            : entradas.take(_categoriasVisibles);
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final e in visibles)
+                BarraCategoria(
+                  categoria: e.key,
+                  monto: e.value,
+                  montoMaximo: montoMaximo,
+                ),
+              if (ocultas > 0)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => setState(
+                      () => _todasLasCategorias = !_todasLasCategorias,
+                    ),
+                    icon: Icon(
+                      _todasLasCategorias
+                          ? Icons.expand_less
+                          : Icons.expand_more,
+                    ),
+                    label: Text(
+                      _todasLasCategorias
+                          ? 'Ver menos'
+                          : 'Ver $ocultas ${ocultas == 1 ? 'categoría' : 'categorías'} más',
+                    ),
+                  ),
+                ),
+            ],
+          ),
         );
       },
     );
@@ -677,15 +711,27 @@ class _GastoVariableCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Row(
+              // Wrap (no Row): con una categoría de nombre largo en un
+              // celular angosto o con letra grande, la fecha baja a la
+              // siguiente línea en vez de salirse de la tarjeta.
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   AppChip(label: gasto.categoria),
-                  const SizedBox(width: AppSpacing.sm),
-                  Icon(Icons.calendar_today, size: 14, color: colorSec),
-                  const SizedBox(width: 4),
-                  Text(
-                    formatFecha(fechaCivilGuardada(gasto.fecha)),
-                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.calendar_today, size: 14, color: colorSec),
+                      const SizedBox(width: 4),
+                      Text(
+                        formatFecha(fechaCivilGuardada(gasto.fecha)),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorSec,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

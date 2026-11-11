@@ -21,11 +21,19 @@
   los ingresos únicos vencidos al volver.
 
 **Diseño:**
-- Tarjetas: casi negras con borde vino en oscuro (`#0D090A`), arena en claro
-  (`#E6DBC8`); sin sombra ni tinte. Texto del tema oscuro y texto sobre vino
+- Tarjetas: gris carbón con borde beige apagado en oscuro (`#1A1716` /
+  `#5A5551`), blanco hueso en claro (`#F4F0E8`); borde de 1,5 px, sin sombra
+  ni tinte. Texto del tema oscuro y texto sobre vino
   en beige `#EFE7DA` (sin blancos); texto del tema claro en negro puro.
 - Apariencia: selector con vista previa de cada tema (Sistema/Claro/Oscuro),
   en forma de celular o de ventana de PC según el ancho.
+
+- Finanzas → Día a día: total, barras por categoría y lista de gastos ahora
+  se desplazan juntos en una sola lista (antes las barras quedaban fijas y,
+  con varias categorías, la lista no tenía espacio para bajar). El resumen
+  muestra las 3 categorías más grandes y el resto se despliega con un botón.
+- `BarraCategoria`: el monto va junto al nombre de la categoría (izquierda)
+  en vez de pegado al borde derecho.
 
 Pendiente conocido: `Recordatorios.horaAviso`/`minutoAviso` se guardan pero
 todavía no se usan (llegan con las notificaciones programadas).

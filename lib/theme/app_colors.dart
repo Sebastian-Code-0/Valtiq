@@ -28,21 +28,21 @@ abstract class AppColors {
 
   // Tema oscuro: negro puro
   static const fondoOscuro = Color(0xFF000000);
-  // Tarjetas casi negras con un punto de vino (antes #141112, un gris que
-  // no pegaba con la paleta); el borde vino oscuro es lo que las separa
-  // del fondo.
-  static const superficieOscuro = Color(0xFF0D090A);
-  static const divisorOscuro = Color(0xFF3A2027);
+  // Tarjetas: gris carbón cálido, lo bastante claro para distinguirse del
+  // fondo negro. Borde/divisor: el beige del tema claro (#EFE7DA) apagado
+  // al 30 % sobre la tarjeta, para que enmarque sin encandilar.
+  static const superficieOscuro = Color(0xFF1A1716);
+  static const divisorOscuro = Color(0xFF5A5551);
   // Texto: el beige del fondo claro, no blanco.
   static const textoOscuro = Color(0xFFEFE7DA);
   static const textoSecundarioOscuro = Color(0xFFA99B90);
 
   // Tema claro: beige lino (sin blancos)
   static const fondoClaro = Color(0xFFEFE7DA);
-  // Tarjetas color arena, un paso MÁS oscuras que el fondo (antes #F7F1E6,
-  // casi blanco).
-  static const superficieClaro = Color(0xFFE6DBC8);
-  static const divisorClaro = Color(0xFFCDBEA6);
+  // Tarjetas: blanco opaco (hueso), más claras que el fondo para que el
+  // beige del fondo siga siendo el protagonista.
+  static const superficieClaro = Color(0xFFF4F0E8);
+  static const divisorClaro = Color(0xFFD6CAB8);
   // Texto: el mismo negro puro del fondo oscuro.
   static const textoClaro = Color(0xFF000000);
   static const textoSecundarioClaro = Color(0xFF63554E);

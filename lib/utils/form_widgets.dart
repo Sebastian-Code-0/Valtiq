@@ -479,11 +479,15 @@ class BarraCategoria extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
-              Flexible(
+              const SizedBox(width: AppSpacing.sm),
+              // El monto va pegado al nombre y crece hacia la derecha. Antes
+              // se alineaba al borde derecho: en una pantalla ancha (PC)
+              // quedaba lejísimos del nombre de su categoría. Si no cabe
+              // (celular angosto + monto enorme) se encoge en vez de cortarse.
+              Expanded(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
+                  alignment: Alignment.centerLeft,
                   child: Text(
                     formatCOP(monto),
                     style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),

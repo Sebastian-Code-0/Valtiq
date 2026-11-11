@@ -59,7 +59,7 @@ abstract class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          side: BorderSide(color: c.divisor),
+          side: BorderSide(color: c.divisor, width: 1.5),
         ),
       ),
       dialogTheme: DialogThemeData(
@@ -67,7 +67,7 @@ abstract class AppTheme {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          side: BorderSide(color: c.divisor),
+          side: BorderSide(color: c.divisor, width: 1.5),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
