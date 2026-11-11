@@ -15,6 +15,13 @@
   modo aproximado), recordatorio diario opcional para anotar gastos y ayuda
   si no llegan los avisos.
 - En Android, abrir la app antes de la hora elegida ya no adelanta el aviso.
+- El formulario de recordatorio ahora muestra y deja elegir la **hora del
+  aviso** (antes quedaba fija en 12:00 sin que el usuario la viera); la lista
+  de recordatorios también la muestra. Cambiar la hora reinicia la marca de
+  "ya avisado".
+- Nuevo selector de hora propio (`utils/selector_hora.dart`): botones para
+  hora, minutos y a. m. / p. m., siempre en formato de 12 horas. Reemplaza al
+  reloj circular de Material.
 - Sin cambios en Linux/Windows (aviso al abrir o volver) ni en los correos.
 - Visual: el vino del tema oscuro para texto/íconos pasa de `#C25A70` (se
   veía salmón) a `#B8304C`; los controles seleccionados (Finanzas,

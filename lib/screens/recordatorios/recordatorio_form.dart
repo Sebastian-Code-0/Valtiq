@@ -9,6 +9,7 @@ import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
+import '../../utils/selector_hora.dart';
 
 class RecordatorioForm extends StatefulWidget {
   const RecordatorioForm({super.key, required this.db, this.recordatorio});
@@ -98,6 +99,20 @@ class _RecordatorioFormState extends State<RecordatorioForm>
     if (f != null) setState(() => _fechaAlerta = f);
   }
 
+  Future<void> _seleccionarHora() async {
+    final elegida = await mostrarSelectorHora(
+      context,
+      hora: _horaAviso,
+      minuto: _minutoAviso,
+      titulo: 'Hora del aviso',
+    );
+    if (elegida == null) return;
+    setState(() {
+      _horaAviso = elegida.hora;
+      _minutoAviso = elegida.minuto;
+    });
+  }
+
   void _onTipoReferenciaChanged(String? nuevo) {
     if (nuevo == null) return;
     setState(() {
@@ -159,7 +174,11 @@ class _RecordatorioFormState extends State<RecordatorioForm>
         // medianoche UTC, y el `fechaAlerta` recién normalizado aquí es
         // UTC-flagged — hay que comparar el instante con
         // isAtSameMomentAs, no con !=, o esto dispararía siempre.
-        if (!widget.recordatorio!.fechaAlerta.isAtSameMomentAs(fechaAlerta)) {
+        // Cambiar la hora también cuenta: si no, un recordatorio de aviso
+        // único que ya sonó no volvería a sonar a la hora nueva.
+        if (!widget.recordatorio!.fechaAlerta.isAtSameMomentAs(fechaAlerta) ||
+            widget.recordatorio!.horaAviso != _horaAviso ||
+            widget.recordatorio!.minutoAviso != _minutoAviso) {
           await dao.resetearDeduplicacion(widget.recordatorio!.id);
         }
       }
@@ -288,6 +307,54 @@ class _RecordatorioFormState extends State<RecordatorioForm>
                   icon: Icons.calendar_today,
                   value: _fechaAlerta,
                   onTap: _seleccionarFecha,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // La hora ya se guardaba (12:00 por defecto) pero el
+                // formulario nunca la mostró ni dejó cambiarla.
+                InkWell(
+                  onTap: _seleccionarHora,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.schedule,
+                          size: 20,
+                          color: context.colores.textoSecundario,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Hora del aviso',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: context.colores.textoSecundario,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                formatHora12(_horaAviso, _minutoAviso),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          color: context.colores.textoSecundario,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(

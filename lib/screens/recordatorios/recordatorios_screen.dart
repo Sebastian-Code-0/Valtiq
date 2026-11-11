@@ -7,6 +7,7 @@ import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/notificaciones.dart';
+import '../../utils/selector_hora.dart';
 import 'recordatorio_form.dart';
 
 class RecordatoriosScreen extends StatefulWidget {
@@ -423,7 +424,9 @@ class _RecordatorioCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      '${formatFecha(diaAlertaUtc)} — ${fechaRelativa(diaAlertaUtc)}',
+                      '${formatFecha(diaAlertaUtc)} · '
+                      '${formatHora12(recordatorio.horaAviso, recordatorio.minutoAviso)}'
+                      ' — ${fechaRelativa(diaAlertaUtc)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: vencido ? context.colores.alerta : colorSec,
                         fontWeight: vencido ? FontWeight.bold : null,

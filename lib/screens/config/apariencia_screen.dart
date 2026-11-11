@@ -9,6 +9,10 @@ import '../../theme/theme.dart';
 /// celular (con barra inferior).
 const double _anchoEscritorio = 600;
 
+/// Ancho máximo de la tarjeta en PC: en un monitor grande, a todo lo ancho
+/// las miniaturas quedaban enormes. Va centrada.
+const double _anchoMaximo = 1000;
+
 class AparienciaScreen extends StatefulWidget {
   const AparienciaScreen({super.key});
 
@@ -45,9 +49,12 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
           // libre, y de ahí sale su proporción — dentro de límites, para
           // que sigan pareciendo un celular (alto) o una ventana (ancha).
           // Si la ventana es bajita, la tarjeta simplemente se desplaza.
+          final anchoTarjeta = (constraints.maxWidth - 2 * AppSpacing.md).clamp(
+            0.0,
+            _anchoMaximo,
+          );
           final anchoOpcion =
-              (constraints.maxWidth - 4 * AppSpacing.md - 2 * separacion) / 3 -
-              10;
+              (anchoTarjeta - 2 * AppSpacing.md - 2 * separacion) / 3 - 10;
           final altoLibre = constraints.maxHeight - 4 * AppSpacing.md - 170;
           final proporcion = altoLibre <= 0
               ? (escritorio ? 1.9 : 0.62)
@@ -60,7 +67,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
             children: [
               Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(),
+                  constraints: const BoxConstraints(maxWidth: _anchoMaximo),
                   // Cada ajuste de Apariencia va en su propia tarjeta: cuando
                   // se agreguen más (además del tema), cada uno queda
                   // separado y se entiende a qué pertenece.

@@ -5,6 +5,7 @@ import '../../services/notification_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/notificaciones.dart';
+import '../../utils/selector_hora.dart';
 
 /// Configuración → Notificaciones: permiso, avisos a la hora exacta y
 /// recordatorio diario. En PC solo explica cómo funcionan los avisos ahí
@@ -100,15 +101,14 @@ class _NotificacionesScreenState extends State<NotificacionesScreen>
   }
 
   Future<void> _elegirHoraDiario() async {
-    final elegida = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: _diarioMinutos ~/ 60,
-        minute: _diarioMinutos % 60,
-      ),
+    final elegida = await mostrarSelectorHora(
+      context,
+      hora: _diarioMinutos ~/ 60,
+      minuto: _diarioMinutos % 60,
+      titulo: 'Hora del aviso',
     );
     if (elegida == null) return;
-    final minutos = elegida.hour * 60 + elegida.minute;
+    final minutos = elegida.hora * 60 + elegida.minuto;
     setState(() => _diarioMinutos = minutos);
     await NotificationService.setRecordatorioDiario(
       widget.db,
@@ -117,10 +117,8 @@ class _NotificacionesScreenState extends State<NotificacionesScreen>
     );
   }
 
-  String get _horaDiario => TimeOfDay(
-    hour: _diarioMinutos ~/ 60,
-    minute: _diarioMinutos % 60,
-  ).format(context);
+  String get _horaDiario =>
+      formatHora12(_diarioMinutos ~/ 60, _diarioMinutos % 60);
 
   @override
   Widget build(BuildContext context) {
