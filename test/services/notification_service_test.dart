@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/services/notification_service.dart';
 import 'package:valtiq/utils/fecha_civil.dart';
@@ -207,4 +208,89 @@ void main() {
       expect(nueva.difference(hoy).inDays, lessThan(31));
     },
   );
+
+  group('avisos programados (Android)', () {
+    setUp(() => NotificationService.programacionSoportadaOverride = true);
+    tearDown(() => NotificationService.programacionSoportadaOverride = null);
+
+    test(
+      'un aviso programado que ya sonó con la app cerrada se anota como '
+      'avisado, y al abrir la app NO se repite',
+      () async {
+        final id = await insertarRecordatorio(db, fechaAlerta: hoy);
+        final hace1h = DateTime.now().subtract(const Duration(hours: 1));
+        final en1h = DateTime.now().add(const Duration(hours: 1));
+        SharedPreferences.setMockInitialValues({
+          'valtiq_avisos_programados': [
+            '${hace1h.millisecondsSinceEpoch}|$id',
+            '${en1h.millisecondsSinceEpoch}|$id',
+          ],
+        });
+
+        await NotificationService.conciliarProgramados(db);
+
+        expect((await recargar(db, id)).ultimaNotificacion, isNotNull);
+        // El que aún no suena sigue en la lista de pendientes.
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getStringList('valtiq_avisos_programados'), [
+          '${en1h.millisecondsSinceEpoch}|$id',
+        ]);
+        expect(await NotificationService.revisarRecordatorios(db), 0);
+      },
+    );
+
+    test(
+      'un aviso programado de un recordatorio que ya se borró no rompe nada',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'valtiq_avisos_programados': ['1000|9999', 'basura'],
+        });
+
+        await NotificationService.conciliarProgramados(db);
+
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getStringList('valtiq_avisos_programados'), isEmpty);
+      },
+    );
+
+    test(
+      'al abrir la app ANTES de la hora elegida no se avisa por adelantado '
+      '(ese aviso ya está programado para su hora)',
+      () async {
+        final id = await db.recordatoriosDao.insertRecordatorio(
+          RecordatoriosCompanion.insert(
+            titulo: 'Pago tarjeta',
+            fechaAlerta: hoy,
+            horaAviso: const Value(23),
+            minutoAviso: const Value(59),
+          ),
+        );
+
+        final notificados = await NotificationService.revisarRecordatorios(db);
+
+        expect(notificados, 0);
+        expect((await recargar(db, id)).ultimaNotificacion, isNull);
+      },
+      // A las 23:59 exactas la hora ya está cumplida y el aviso sí sale.
+      skip: DateTime.now().hour == 23 && DateTime.now().minute == 59,
+    );
+
+    test(
+      'al abrir la app DESPUÉS de la hora, lo que no sonó se avisa de '
+      'inmediato',
+      () async {
+        final id = await db.recordatoriosDao.insertRecordatorio(
+          RecordatoriosCompanion.insert(
+            titulo: 'Pago tarjeta',
+            fechaAlerta: hoy,
+            horaAviso: const Value(0),
+            minutoAviso: const Value(0),
+          ),
+        );
+
+        expect(await NotificationService.revisarRecordatorios(db), 1);
+        expect((await recargar(db, id)).ultimaNotificacion, isNotNull);
+      },
+    );
+  });
 }

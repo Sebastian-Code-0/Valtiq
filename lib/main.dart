@@ -48,7 +48,8 @@ void main() async {
 
   await CryptoService.init();
   await NotificationService.init();
-  unawaited(NotificationService.revisarRecordatorios(db));
+  unawaited(NotificationService.sincronizar(db));
+  NotificationService.observarCambios(db);
   unawaited(NotificationService.revisarIngresosUnicosVencidos(db));
 
   // Cargado ANTES de runApp (misma convención que el tema arriba) para

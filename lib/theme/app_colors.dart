@@ -6,10 +6,12 @@ import 'package:flutter/material.dart';
 /// de la app = cambiar valores aquí y en [ValtiqColores.claro]/[oscuro].
 abstract class AppColors {
   // Vino (acento). En oscuro hay dos tonos: uno profundo para rellenar
-  // botones y otro más claro para texto/íconos, porque un vino profundo
-  // sobre negro no se lee.
+  // botones y otro algo más vivo para texto/íconos, porque el vino
+  // profundo sobre negro no se lee (contraste 1,8). #B8304C es el vino más
+  // oscuro que todavía se distingue (3,6 sobre negro); el anterior #C25A70
+  // se leía mejor pero se veía salmón, no vino.
   static const vinoRellenoOscuro = Color(0xFF6A1628);
-  static const vinoTextoOscuro = Color(0xFFC25A70);
+  static const vinoTextoOscuro = Color(0xFFB8304C);
   static const vinoClaro = Color(0xFF5A1222);
   // Texto sobre vino: el mismo beige del fondo claro (nada de blancos).
   static const sobreVino = Color(0xFFEFE7DA);

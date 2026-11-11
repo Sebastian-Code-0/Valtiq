@@ -16,7 +16,7 @@ sin servidores, sin nube, sin cuentas de usuario.
 - Ingresos, gastos fijos y gastos variables por categoría
 - Dashboard con balance real: Ingresos − Gastos Fijos − Gastos Variables
 - Comparativo mensual de gastos variables por categoría
-- Recordatorios de pago con notificación del sistema y/o correo SMTP
+- Recordatorios de pago con notificación del sistema (en Android llegan a su hora aunque la app esté cerrada) y/o correo SMTP
 - Bloqueo de la app con PIN o biometría (opcional, desactivado por defecto)
 - Tema claro/oscuro con color de acento personalizable
 - Credenciales SMTP cifradas localmente con AES-256

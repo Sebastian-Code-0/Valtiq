@@ -480,14 +480,16 @@ class BarraCategoria extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              // El monto va pegado al nombre y crece hacia la derecha. Antes
-              // se alineaba al borde derecho: en una pantalla ancha (PC)
-              // quedaba lejísimos del nombre de su categoría. Si no cabe
-              // (celular angosto + monto enorme) se encoge en vez de cortarse.
+              // El monto va anclado al borde DERECHO (encima del final de
+              // la barra) y crece hacia la izquierda. Originalmente había un
+              // Spacer + Flexible: cada uno tomaba la mitad del espacio y el
+              // monto arrancaba en el centro de la pantalla, flotando lejos
+              // de ambos bordes en pantallas anchas. Si no cabe (celular
+              // angosto + monto enorme) se encoge en vez de cortarse.
               Expanded(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
+                  alignment: Alignment.centerRight,
                   child: Text(
                     formatCOP(monto),
                     style: monoStyle(fontSize: 13, fontWeight: FontWeight.w600),
@@ -790,7 +792,8 @@ class SwitchTile extends StatelessWidget {
             Switch(
               value: value,
               onChanged: onChanged,
-              activeColor: theme.colorScheme.primary,
+              activeColor: context.colores.sobreAcento,
+              activeTrackColor: context.colores.acentoRelleno,
             ),
           ],
         ),

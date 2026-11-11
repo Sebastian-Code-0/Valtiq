@@ -1,61 +1,73 @@
 # Notificaciones en background — Android
 
-## Comportamiento actual
+## Comportamiento actual (desde 2026-11-10)
 
-Las notificaciones se evalúan en revisarRecordatorios(), que se
-ejecuta al abrir o reanudar la app. Esto funciona correctamente con
-la app abierta o al volver a abrirla: se revisan todos los
-recordatorios activos y se disparan de inmediato (`show()`) los que
-correspondan según la ventana de aviso y la deduplicación por
-frecuencia.
+Los recordatorios se le dejan **programados al sistema operativo** con
+`zonedSchedule` (flutter_local_notifications). Suenan a la hora que el
+usuario eligió (`Recordatorios.horaAviso`/`minutoAviso`) **aunque Valtiq
+esté cerrado**, y sobreviven a reiniciar o apagar el celular. Todo es local:
+no hay servidor, ni FCM, ni conexión de red.
 
-**No existe ningún scheduling de notificaciones futuras.** El
-proyecto no llama a `zonedSchedule` ni usa `AndroidScheduleMode` en
-ningún punto del código (`lib/services/notification_service.dart`).
-Si el usuario no abre la app, ningún recordatorio se notifica por su
-cuenta — el aviso solo llega la próxima vez que la app se abre o pasa
-a primer plano, aunque la fecha del recordatorio ya haya llegado o
-pasado.
+Piezas (`lib/services/`):
 
-## Por qué no se usó WorkManager
+- `notification_planner.dart` — función pura que decide qué avisos programar
+  y para cuándo (ventana de `diasAnticipacion` días antes hasta 7 días
+  después, frecuencia única/diaria, repetición mensual, horizonte de 45 días,
+  tope de 60 avisos). Cubierta por `test/services/notification_planner_test.dart`.
+- `NotificationService.sincronizar(db)` — se llama al arrancar y cada vez que
+  la app vuelve a primer plano:
+  1. `conciliarProgramados`: anota como "ya avisados" los avisos programados
+     cuya hora ya pasó (sonaron con la app cerrada), para no repetirlos.
+  2. `revisarRecordatorios`: avisa de inmediato lo que debió sonar y no sonó
+     (recordatorio creado después de su hora, permiso recién concedido),
+     reprograma los mensuales vencidos y envía los correos.
+  3. `replanificar`: cancela lo programado y lo programa de nuevo.
+- `NotificationService.observarCambios(db)` — vuelve a planear cada vez que
+  cambia la tabla `recordatorios` (crear, editar, borrar, pagar una deuda…).
 
-WorkManager fue implementado y probado en Samsung A52.
-Resultado: las tareas periódicas fallan silenciosamente con
-battery optimization activa (comportamiento por defecto en
-Samsung y la mayoría de fabricantes Android).
+## Reinicio y apagado
 
-El único workaround es pedirle al usuario que desactive la
-optimización de batería para Valtiq en los ajustes del sistema
-— fricción inaceptable para una app de uso personal.
+`AndroidManifest.xml` declara `RECEIVE_BOOT_COMPLETED` y los receptores del
+plugin (`ScheduledNotificationReceiver`, `ScheduledNotificationBootReceiver`).
+Al encender o reiniciar, el plugin vuelve a registrar los avisos pendientes
+sin que el usuario abra la app.
 
-## Por qué no se usó exactAllowWhileIdle ni alarmClock
+## Hora aproximada vs. hora exacta
 
-- exactAllowWhileIdle: lanza PlatformException en dispositivos
-  donde SCHEDULE_EXACT_ALARM no está pre-concedido
-  (mayoría de Android 12+).
-- alarmClock: funciona sin permisos especiales pero crea
-  entradas visibles en la app de Reloj del sistema con sonido
-  de alarma — inaceptable para recordatorios financieros.
+- **Por defecto:** `AndroidScheduleMode.inexactAllowWhileIdle`. No necesita
+  ningún permiso especial; Android puede retrasar el aviso unos minutos para
+  ahorrar batería.
+- **Opcional** (Configuración → Notificaciones → "Avisar a la hora exacta"):
+  `exactAllowWhileIdle`, que requiere `SCHEDULE_EXACT_ALARM`. En Android 12–13
+  suele venir concedido; en Android 14+ viene negado y la app abre la pantalla
+  "Alarmas y recordatorios" para que el usuario decida. Si no lo concede, o lo
+  retira después, se cae automáticamente al modo aproximado (nunca se pierde
+  el aviso por eso).
 
-## Solución adoptada: revisión al abrir la app, sin scheduling
+## Recordatorio diario
 
-De las tres alternativas evaluadas, ninguna quedó implementada como
-scheduling activo. `AndroidScheduleMode.inexact` se documentó en su
-momento como la opción menos mala (sin permisos especiales, sin
-entradas en el Reloj del sistema, tolerancia ~15 min aceptable para
-recordatorios de pagos), pero el código actual no la usa: la solución
-realmente vigente es el chequeo síncrono en `revisarRecordatorios()`
-al abrir/reanudar la app, descrito arriba. No se determinó si el
-scheduling con `inexact` llegó a implementarse y luego se removió, o
-si nunca se llegó a integrar — no hay commits recientes que toquen
-`notification_service.dart` para esclarecerlo.
+Opcional (apagado por defecto): un aviso diario a la hora elegida para anotar
+los gastos del día (`matchDateTimeComponents: time`).
 
-## Mejora futura posible
+## Límites conocidos
 
-Si se quiere que los avisos lleguen sin que el usuario abra la app,
-la opción de menor fricción documentada sigue siendo
-`AndroidScheduleMode.inexact` (ver también la ADR 003), programada
-vía `zonedSchedule` en el momento en que se crea o actualiza cada
-recordatorio — hoy no implementada. Alternativamente, detectar en
-runtime si `SCHEDULE_EXACT_ALARM` está disponible y usar
-`exactAllowWhileIdle` en ese caso, con fallback a `inexact`.
+- **"Forzar detención":** Android cancela todas las alarmas de la app hasta
+  que el usuario la abra de nuevo. Ninguna app puede evitarlo.
+- **Fabricantes con ahorro de batería agresivo** (Xiaomi, Huawei, Oppo…):
+  pueden bloquear el receptor de arranque o retrasar avisos. La pantalla de
+  Notificaciones le explica al usuario qué ajustes revisar.
+- **Correos:** una notificación programada no ejecuta código, así que los
+  recordatorios por correo se siguen enviando solo al abrir la app.
+- **Husos horarios:** la hora se entrega a Android como instante absoluto
+  (UTC). Si el usuario cambia de huso u horario de verano, los avisos ya
+  programados suenan a la hora vieja hasta que abra la app (que replanifica).
+- **Pendiente de verificar en dispositivo real:** que un aviso cuya hora pasó
+  con el celular apagado se muestre al encender.
+
+## Alternativas descartadas
+
+- **WorkManager:** implementado y probado en un Samsung A52; las tareas
+  periódicas fallan en silencio con la optimización de batería activa.
+- **alarmClock:** crea entradas visibles en la app Reloj, con sonido de alarma.
+- **Push desde servidor (FCM):** requiere servidor propio y servicios de
+  Google; incompatible con la privacidad del proyecto y con F-Droid.

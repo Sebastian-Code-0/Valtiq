@@ -463,10 +463,12 @@ Inicializa flutter_local_notifications en Linux, Android y Windows.
 Ejecuta revisarRecordatorios() al arrancar o reanudar la app: evalúa
 cada recordatorio activo, aplica deduplicación por frecuencia
 (unica/diaria) y canal (sistema/correo), y dispara de inmediato
-(`show()`) las notificaciones que correspondan. No hay scheduling de
-notificaciones futuras (no se usa `zonedSchedule`/
-`AndroidScheduleMode`): si el usuario no abre la app, no llega ningún
-aviso hasta que vuelva a abrirla. Las referencias de deuda/préstamo/
+(`show()`) las notificaciones que correspondan. En Android, además,
+`sincronizar()` deja los próximos avisos PROGRAMADOS en el sistema
+(`zonedSchedule`, plan calculado por `NotificationPlanner`) para que
+suenen a su hora con la app cerrada y tras reiniciar — ver
+`docs/background-notifications-android.md`. En Linux/Windows no hay
+scheduling: el aviso llega al abrir o volver a la app. Las referencias de deuda/préstamo/
 gasto de los recordatorios se cargan en batch (no una query por
 recordatorio). También aloja `revisarIngresosUnicosVencidos()` (llamado
 igual desde `main.dart`) — un nombre algo genérico para lo que hace hoy,

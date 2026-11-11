@@ -1,5 +1,27 @@
 # Changelog
 
+## Notificaciones programadas: llegan con la app cerrada (2026-11-10)
+
+- Android: los recordatorios se programan en el sistema (`zonedSchedule`) a
+  la hora elegida (`horaAviso`/`minutoAviso`, que antes se guardaba pero no se
+  usaba). Suenan con Valtiq cerrado y se reprograman tras reiniciar o encender
+  el celular (`RECEIVE_BOOT_COMPLETED` + receptores del plugin).
+- Nuevo `NotificationPlanner` (función pura, con tests) y
+  `NotificationService.sincronizar()` / `replanificar()` /
+  `observarCambios()`. `timezone` pasa a dependencia directa (ya era
+  transitiva).
+- Nueva pantalla Configuración → Notificaciones: estado del permiso, "Avisar
+  a la hora exacta" (permiso opcional `SCHEDULE_EXACT_ALARM`, con caída al
+  modo aproximado), recordatorio diario opcional para anotar gastos y ayuda
+  si no llegan los avisos.
+- En Android, abrir la app antes de la hora elegida ya no adelanta el aviso.
+- Sin cambios en Linux/Windows (aviso al abrir o volver) ni en los correos.
+- Visual: el vino del tema oscuro para texto/íconos pasa de `#C25A70` (se
+  veía salmón) a `#B8304C`; los controles seleccionados (Finanzas,
+  interruptores) se rellenan con el vino profundo; el monto de cada barra de
+  categoría va anclado al borde derecho; las vistas previas de Apariencia
+  aprovechan el ancho y alto de la pantalla.
+
 ## Fixes de fechas, recordatorios y bloqueo + ajuste de paleta y Apariencia (2026-11-10)
 
 **Bugs corregidos:**

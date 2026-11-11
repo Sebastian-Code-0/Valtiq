@@ -40,12 +40,27 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
         builder: (context, constraints) {
           final escritorio = constraints.maxWidth >= _anchoEscritorio;
           final separacion = escritorio ? AppSpacing.lg : AppSpacing.sm;
+          // Las miniaturas se estiran para aprovechar la pantalla: se
+          // calcula cuánto ancho le toca a cada una y cuánto alto queda
+          // libre, y de ahí sale su proporción — dentro de límites, para
+          // que sigan pareciendo un celular (alto) o una ventana (ancha).
+          // Si la ventana es bajita, la tarjeta simplemente se desplaza.
+          final anchoOpcion =
+              (constraints.maxWidth - 4 * AppSpacing.md - 2 * separacion) / 3 -
+              10;
+          final altoLibre = constraints.maxHeight - 4 * AppSpacing.md - 170;
+          final proporcion = altoLibre <= 0
+              ? (escritorio ? 1.9 : 0.62)
+              : (anchoOpcion / altoLibre).clamp(
+                  escritorio ? 1.2 : 0.46,
+                  escritorio ? 1.9 : 0.62,
+                );
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
               Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 960),
+                  constraints: const BoxConstraints(),
                   // Cada ajuste de Apariencia va en su propia tarjeta: cuando
                   // se agreguen más (además del tema), cada uno queda
                   // separado y se entiende a qué pertenece.
@@ -79,6 +94,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                                   icono: Icons.brightness_auto,
                                   seleccionado: _modoActual == ThemeMode.system,
                                   escritorio: escritorio,
+                                  proporcion: proporcion,
                                   onTap: () => _cambiarTema(ThemeMode.system),
                                   vistaPrevia: _VistaPreviaDividida(
                                     escritorio: escritorio,
@@ -93,6 +109,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                                   icono: Icons.light_mode,
                                   seleccionado: _modoActual == ThemeMode.light,
                                   escritorio: escritorio,
+                                  proporcion: proporcion,
                                   onTap: () => _cambiarTema(ThemeMode.light),
                                   vistaPrevia: _VistaPrevia(
                                     colores: ValtiqColores.claro,
@@ -108,6 +125,7 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                                   icono: Icons.dark_mode,
                                   seleccionado: _modoActual == ThemeMode.dark,
                                   escritorio: escritorio,
+                                  proporcion: proporcion,
                                   onTap: () => _cambiarTema(ThemeMode.dark),
                                   vistaPrevia: _VistaPrevia(
                                     colores: ValtiqColores.oscuro,
@@ -140,6 +158,7 @@ class _OpcionTema extends StatelessWidget {
     required this.icono,
     required this.seleccionado,
     required this.escritorio,
+    required this.proporcion,
     required this.onTap,
     required this.vistaPrevia,
   });
@@ -149,6 +168,9 @@ class _OpcionTema extends StatelessWidget {
   final IconData icono;
   final bool seleccionado;
   final bool escritorio;
+
+  /// Ancho ÷ alto de la miniatura.
+  final double proporcion;
   final VoidCallback onTap;
   final Widget vistaPrevia;
 
@@ -179,8 +201,7 @@ class _OpcionTema extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 child: AspectRatio(
-                  // Celular: pantalla alta. PC: ventana apaisada.
-                  aspectRatio: escritorio ? 16 / 10 : 9 / 16,
+                  aspectRatio: proporcion,
                   child: ExcludeSemantics(child: vistaPrevia),
                 ),
               ),

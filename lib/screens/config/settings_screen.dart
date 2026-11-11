@@ -7,6 +7,7 @@ import 'acerca_de_screen.dart';
 import 'apariencia_screen.dart';
 import 'como_funciona_screen.dart';
 import 'config_smtp_screen.dart';
+import 'notificaciones_screen.dart';
 import 'presupuestos_screen.dart';
 import 'respaldo_screen.dart';
 import 'seguridad_screen.dart';
@@ -41,6 +42,23 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const AparienciaScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.notifications_outlined),
+                  title: const Text('Notificaciones'),
+                  subtitle: const Text(
+                    'Avisos, hora exacta y recordatorio diario',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => NotificacionesScreen(db: db),
+                    ),
                   ),
                 ),
               ),

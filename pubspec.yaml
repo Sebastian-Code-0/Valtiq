@@ -43,6 +43,9 @@ dependencies:
   path: ^1.9.1
   mailer: ^7.1.0
   flutter_local_notifications: ^20.1.0
+  # Ya venía como dependencia de flutter_local_notifications; se declara
+  # porque los avisos programados usan su tipo TZDateTime directamente.
+  timezone: ^0.10.1
   encrypt: ^5.0.3
   url_launcher: ^6.3.1
   shared_preferences: ^2.5.3

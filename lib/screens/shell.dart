@@ -91,11 +91,10 @@ class _ShellScreenState extends State<ShellScreen>
   /// días, y en ese tiempo no salía ningún aviso aunque se abriera a diario.
   Future<void> _alVolver() async {
     unawaited(
-      NotificationService.revisarRecordatorios(widget.db).catchError((
+      NotificationService.sincronizar(widget.db).catchError((
         Object e,
       ) {
         debugPrint('ShellScreen: fallo al revisar recordatorios al volver: $e');
-        return 0;
       }),
     );
 

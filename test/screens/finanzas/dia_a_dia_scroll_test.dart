@@ -94,22 +94,27 @@ void main() {
     await _cerrar(tester);
   });
 
-  testWidgets(
-    'el monto de cada barra va pegado al nombre de la categoría (a la '
-    'izquierda), no en el borde derecho de una pantalla ancha',
-    (tester) async {
-      await montar(tester, const Size(1280, 720));
+  for (final (nombre, tamano) in [
+    ('celular (360x640)', const Size(360, 640)),
+    ('PC (1280x720)', const Size(1280, 720)),
+  ]) {
+    testWidgets(
+      'en $nombre el monto de cada barra queda pegado al borde derecho '
+      '(donde termina la barra), no flotando en el centro',
+      (tester) async {
+        await montar(tester, tamano);
 
-      final nombre = tester.getTopRight(find.text('Otros'));
-      final monto = tester.getTopLeft(
-        find.descendant(
-          of: find.byType(BarraCategoria).first,
+        final barra = find.byType(BarraCategoria).first;
+        final monto = find.descendant(
+          of: barra,
           matching: find.textContaining(r'$'),
-        ),
-      );
-      expect(monto.dx, greaterThan(nombre.dx));
-      expect(monto.dx, lessThan(300));
-      await _cerrar(tester);
-    },
-  );
+        );
+        expect(
+          tester.getTopRight(monto).dx,
+          closeTo(tester.getTopRight(barra).dx, 1),
+        );
+        await _cerrar(tester);
+      },
+    );
+  }
 }

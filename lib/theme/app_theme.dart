@@ -107,6 +107,14 @@ abstract class AppTheme {
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
         ),
       ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? c.sobreAcento : null,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? c.acentoRelleno : null,
+        ),
+      ),
       dividerTheme: DividerThemeData(color: c.divisor, thickness: 0.5),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: c.superficie,

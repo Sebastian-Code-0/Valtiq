@@ -62,6 +62,12 @@ tu propia cuenta de Gmail o cualquier proveedor de correo).
 
 - **Notificaciones (POST_NOTIFICATIONS)**: para mostrar recordatorios de
   pago dentro del dispositivo.
+- **Iniciar al encender (RECEIVE_BOOT_COMPLETED)**: para volver a programar
+  tus recordatorios después de reiniciar o encender el celular. No abre la
+  app ni envía nada a ningún lado.
+- **Alarmas y recordatorios (SCHEDULE_EXACT_ALARM)**: opcional. Solo se usa
+  si activas "Avisar a la hora exacta"; sin él, tus avisos llegan igual, con
+  unos minutos de margen.
 - **Internet (INTERNET)**: usado únicamente si activas la función de
   recordatorios por correo SMTP, para conectarse al servidor que
   configuraste. Si no usas esa función, la app no realiza ninguna conexión

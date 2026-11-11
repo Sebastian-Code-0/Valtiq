@@ -1,13 +1,19 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mailer/mailer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/timezone.dart' as tz;
+
+import 'package:drift/drift.dart' show TableUpdateQuery;
 
 import '../db/database.dart';
 import '../utils/date_format.dart';
 import '../utils/fecha_civil.dart';
 import '../utils/format.dart';
+import 'notification_planner.dart';
 import 'smtp_service.dart';
 
 class NotificationService {
@@ -152,34 +158,10 @@ class NotificationService {
     final hoyCivil = normalizarFechaCivil(ahora);
     int notificados = 0;
 
-    // Carga en lote las referencias (deuda/préstamo/gasto) en vez de una
-    // consulta por recordatorio (evita N+1).
-    final deudaIds = <int>[];
-    final prestamoIds = <int>[];
-    final gastoIds = <int>[];
-    for (final r in lista) {
-      final id = r.referenciaId;
-      if (id == null) continue;
-      switch (r.referenciaTabla) {
-        case 'deuda':
-          deudaIds.add(id);
-        case 'prestamo':
-          prestamoIds.add(id);
-        case 'gasto':
-          gastoIds.add(id);
-      }
-    }
-    final deudasPorId = {
-      for (final d in await db.deudasDao.getDeudasByIds(deudaIds)) d.id: d,
-    };
-    final prestamosPorId = {
-      for (final p in await db.prestamosDao.getPrestamosByIds(prestamoIds))
-        p.id: p,
-    };
-    final gastosPorId = {
-      for (final g in await db.gastosFijosDao.getGastosFijosByIds(gastoIds))
-        g.id: g,
-    };
+    final refs = await _cargarReferencias(db, lista);
+    final deudasPorId = refs.deudas;
+    final prestamosPorId = refs.prestamos;
+    final gastosPorId = refs.gastos;
 
     // Resuelve ventana/reprogramación una sola vez; solo los recordatorios
     // "accionables" (dentro de ventana, no reprogramados este ciclo) pueden
@@ -262,7 +244,21 @@ class NotificationService {
           diasFaltantes,
         );
 
-        if (tipo == 'sistema' || tipo == 'ambos') {
+        // Donde hay avisos programados (Android), el aviso de HOY ya está
+        // agendado para su hora: mostrarlo ahora, antes de tiempo, lo
+        // duplicaría. Aquí solo se atiende lo que ya debió sonar y no sonó
+        // (recordatorio creado tarde, permiso recién concedido…). En PC no
+        // hay nada programado, así que se avisa al abrir, como siempre.
+        final horaAviso = DateTime(
+          ahora.year,
+          ahora.month,
+          ahora.day,
+          r.horaAviso,
+          r.minutoAviso,
+        );
+        final horaCumplida = !programacionSoportada || !ahora.isBefore(horaAviso);
+
+        if ((tipo == 'sistema' || tipo == 'ambos') && horaCumplida) {
           if (_debeAvisar(
             frecuencia: r.frecuenciaAviso,
             ultimoAviso: r.ultimaNotificacion,
@@ -317,6 +313,374 @@ class NotificationService {
     }
 
     return notificados;
+  }
+
+  // ───────────────────────── Avisos programados ─────────────────────────
+  //
+  // En Android los avisos se le dejan PROGRAMADOS al sistema operativo
+  // (`zonedSchedule`): suenan a su hora aunque Valtiq esté cerrado, y el
+  // receptor de arranque del plugin (ver AndroidManifest.xml) los vuelve a
+  // programar solo después de reiniciar o encender el celular. Todo local:
+  // sin servidor ni internet.
+  //
+  // Linux no permite programar avisos y Windows solo con empaquetado MSIX,
+  // así que en PC se mantiene el aviso al abrir / volver a la app.
+
+  /// Sobreescribible en tests (el host de `flutter test` nunca es Android).
+  @visibleForTesting
+  static bool? programacionSoportadaOverride;
+
+  static bool get programacionSoportada =>
+      programacionSoportadaOverride ?? (!kIsWeb && Platform.isAndroid);
+
+  static const _kProgramados = 'valtiq_avisos_programados';
+  static const _kExactos = 'valtiq_avisos_exactos';
+  static const _kDiario = 'valtiq_recordatorio_diario';
+  static const _kDiarioMinutos = 'valtiq_recordatorio_diario_minutos';
+
+  /// Los avisos programados usan ids desde aquí hacia arriba, para no
+  /// chocar con los avisos inmediatos (que usan el id del recordatorio).
+  static const _idBaseProgramados = 1000000;
+  static const _idRecordatorioDiario = 999999;
+
+  /// 8:00 p. m., en minutos desde medianoche.
+  static const recordatorioDiarioPorDefecto = 20 * 60;
+
+  static const _detallesAndroid = AndroidNotificationDetails(
+    'valtiq_recordatorios',
+    'Recordatorios',
+    channelDescription: 'Notificaciones de recordatorios de pagos',
+    importance: Importance.high,
+    priority: Priority.high,
+    icon: '@drawable/ic_stat_notif',
+    largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+  );
+
+  static AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >();
+
+  /// Punto único de entrada: al arrancar y cada vez que la app vuelve a
+  /// primer plano. 1) anota como "ya avisados" los avisos programados que
+  /// sonaron con la app cerrada, 2) revisa lo pendiente (y envía correos),
+  /// 3) deja programados los próximos avisos.
+  static Future<void> sincronizar(AppDatabase db) async {
+    await conciliarProgramados(db);
+    await revisarRecordatorios(db);
+    await replanificar(db);
+  }
+
+  /// Un aviso programado suena sin que la app se entere. Aquí se revisa la
+  /// lista guardada de lo que se programó: todo lo que ya pasó de hora se
+  /// da por avisado, para que la revisión al abrir no lo repita.
+  @visibleForTesting
+  static Future<void> conciliarProgramados(
+    AppDatabase db, {
+    DateTime? ahora,
+  }) async {
+    if (!programacionSoportada) return;
+    final prefs = await SharedPreferences.getInstance();
+    final guardados = prefs.getStringList(_kProgramados) ?? const [];
+    if (guardados.isEmpty) return;
+    final ahoraMs = (ahora ?? DateTime.now()).millisecondsSinceEpoch;
+
+    final pendientes = <String>[];
+    final ultimoPorRecordatorio = <int, int>{};
+    for (final linea in guardados) {
+      final partes = linea.split('|');
+      final cuandoMs = partes.length == 2 ? int.tryParse(partes[0]) : null;
+      final recordatorioId = partes.length == 2 ? int.tryParse(partes[1]) : null;
+      if (cuandoMs == null || recordatorioId == null) continue;
+      if (cuandoMs > ahoraMs) {
+        pendientes.add(linea);
+      } else if (cuandoMs > (ultimoPorRecordatorio[recordatorioId] ?? 0)) {
+        ultimoPorRecordatorio[recordatorioId] = cuandoMs;
+      }
+    }
+
+    for (final e in ultimoPorRecordatorio.entries) {
+      final r = await db.recordatoriosDao.getRecordatorioById(e.key);
+      if (r == null) continue;
+      final cuando = DateTime.fromMillisecondsSinceEpoch(e.value);
+      final previa = r.ultimaNotificacion;
+      if (previa == null || previa.isBefore(cuando)) {
+        await db.recordatoriosDao.marcarNotificado(r.id, cuando);
+      }
+    }
+    await prefs.setStringList(_kProgramados, pendientes);
+  }
+
+  static bool _replanificando = false;
+  static bool _replanPendiente = false;
+
+  /// Borra lo que estaba programado y lo vuelve a programar desde cero según
+  /// el estado actual de los recordatorios. Se llama al abrir/volver a la
+  /// app y cada vez que cambia la tabla de recordatorios (ver
+  /// [observarCambios]).
+  static Future<void> replanificar(AppDatabase db) async {
+    if (!programacionSoportada) return;
+    if (_replanificando) {
+      // Llegó un cambio mientras se planeaba: se repite una vez al terminar
+      // para no quedar con un plan viejo.
+      _replanPendiente = true;
+      return;
+    }
+    _replanificando = true;
+    try {
+      do {
+        _replanPendiente = false;
+        await _replanificar(db);
+      } while (_replanPendiente);
+    } catch (e) {
+      debugPrint('NotificationService: fallo al programar avisos: $e');
+    } finally {
+      _replanificando = false;
+    }
+  }
+
+  static Future<void> _replanificar(AppDatabase db) async {
+    await init();
+    final prefs = await SharedPreferences.getInstance();
+
+    final pendientes = await _plugin.pendingNotificationRequests();
+    for (final p in pendientes) {
+      if (p.id >= _idRecordatorioDiario) await _plugin.cancel(id: p.id);
+    }
+
+    final lista = await db.recordatoriosDao.getRecordatoriosActivos();
+    final refs = await _cargarReferencias(db, lista);
+    final plan = NotificationPlanner.planear(
+      recordatorios: lista,
+      ahora: DateTime.now(),
+      cuerpo: (r, dias) => _buildContenido(
+        r,
+        refs.deudas,
+        refs.prestamos,
+        refs.gastos,
+        dias,
+      ).sistema,
+    );
+
+    final modo = await _modoProgramacion(prefs);
+    const detalles = NotificationDetails(android: _detallesAndroid);
+    final guardados = <String>[];
+    for (var i = 0; i < plan.length; i++) {
+      final aviso = plan[i];
+      final programado = await _programar(
+        id: _idBaseProgramados + i,
+        cuando: aviso.cuando,
+        titulo: aviso.titulo,
+        cuerpo: aviso.cuerpo,
+        detalles: detalles,
+        modo: modo,
+      );
+      if (programado) {
+        guardados.add(
+          '${aviso.cuando.millisecondsSinceEpoch}|${aviso.recordatorioId}',
+        );
+      }
+    }
+    await prefs.setStringList(_kProgramados, guardados);
+
+    if (prefs.getBool(_kDiario) ?? false) {
+      final minutos =
+          prefs.getInt(_kDiarioMinutos) ?? recordatorioDiarioPorDefecto;
+      final ahora = DateTime.now();
+      var cuando = DateTime(
+        ahora.year,
+        ahora.month,
+        ahora.day,
+        minutos ~/ 60,
+        minutos % 60,
+      );
+      if (!cuando.isAfter(ahora)) cuando = cuando.add(const Duration(days: 1));
+      await _programar(
+        id: _idRecordatorioDiario,
+        cuando: cuando,
+        titulo: '¿Ya anotaste tus gastos de hoy?',
+        cuerpo: 'Te toma menos de un minuto registrarlos en Valtiq.',
+        detalles: detalles,
+        modo: modo,
+        repetirCadaDia: true,
+      );
+    }
+  }
+
+  /// La hora se le entrega a Android como instante absoluto (UTC): así no
+  /// hace falta la base de datos de husos horarios ni otra dependencia. El
+  /// plan se rehace cada vez que se abre la app, lo que corrige cualquier
+  /// cambio de huso u horario de verano.
+  static Future<bool> _programar({
+    required int id,
+    required DateTime cuando,
+    required String titulo,
+    required String cuerpo,
+    required NotificationDetails detalles,
+    required AndroidScheduleMode modo,
+    bool repetirCadaDia = false,
+  }) async {
+    Future<void> intentar(AndroidScheduleMode m) => _plugin.zonedSchedule(
+      id: id,
+      scheduledDate: tz.TZDateTime.from(cuando, tz.UTC),
+      notificationDetails: detalles,
+      androidScheduleMode: m,
+      title: titulo,
+      body: cuerpo,
+      matchDateTimeComponents: repetirCadaDia ? DateTimeComponents.time : null,
+    );
+    try {
+      await intentar(modo);
+      return true;
+    } catch (e) {
+      // Lo más común: el usuario retiró el permiso de alarmas exactas
+      // después de activarlo. Se reintenta en modo aproximado, que no
+      // necesita ningún permiso especial.
+      if (modo == AndroidScheduleMode.inexactAllowWhileIdle) {
+        debugPrint('NotificationService: no se pudo programar el aviso $id: $e');
+        return false;
+      }
+      try {
+        await intentar(AndroidScheduleMode.inexactAllowWhileIdle);
+        return true;
+      } catch (e2) {
+        debugPrint('NotificationService: no se pudo programar el aviso $id: $e2');
+        return false;
+      }
+    }
+  }
+
+  static Future<AndroidScheduleMode> _modoProgramacion(
+    SharedPreferences prefs,
+  ) async {
+    if (prefs.getBool(_kExactos) ?? false) {
+      if (await _android?.canScheduleExactNotifications() ?? false) {
+        return AndroidScheduleMode.exactAllowWhileIdle;
+      }
+    }
+    return AndroidScheduleMode.inexactAllowWhileIdle;
+  }
+
+  static StreamSubscription<void>? _subCambios;
+  static Timer? _debounceCambios;
+
+  /// Vuelve a planear cada vez que cambia la tabla de recordatorios (crear,
+  /// editar, borrar, o que una deuda pagada desactive los suyos). Un solo
+  /// punto de enganche en vez de acordarse de llamar a [replanificar] desde
+  /// cada pantalla.
+  static void observarCambios(AppDatabase db) {
+    if (!programacionSoportada || _subCambios != null) return;
+    _subCambios = db
+        .tableUpdates(TableUpdateQuery.onTable(db.recordatorios))
+        .listen((_) {
+          _debounceCambios?.cancel();
+          _debounceCambios = Timer(
+            const Duration(milliseconds: 600),
+            () => unawaited(replanificar(db)),
+          );
+        });
+  }
+
+  static Future<void> dejarDeObservarCambios() async {
+    _debounceCambios?.cancel();
+    _debounceCambios = null;
+    await _subCambios?.cancel();
+    _subCambios = null;
+  }
+
+  // ── Ajustes (pantalla Configuración → Notificaciones) ──
+
+  /// `null` si la plataforma no permite saberlo.
+  static Future<bool?> notificacionesPermitidas() async {
+    if (!programacionSoportada) return null;
+    await init();
+    return _android?.areNotificationsEnabled();
+  }
+
+  static Future<bool> avisosExactosActivados() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool(_kExactos) ?? false)) return false;
+    if (!programacionSoportada) return false;
+    await init();
+    return await _android?.canScheduleExactNotifications() ?? false;
+  }
+
+  /// Activa/desactiva los avisos a la hora exacta. Al activar, Android 12+
+  /// abre su pantalla "Alarmas y recordatorios" para que el usuario dé el
+  /// permiso. Devuelve si quedaron activados de verdad.
+  static Future<bool> setAvisosExactos(AppDatabase db, bool activar) async {
+    final prefs = await SharedPreferences.getInstance();
+    var concedido = false;
+    if (activar && programacionSoportada) {
+      await init();
+      concedido = await _android?.canScheduleExactNotifications() ?? false;
+      if (!concedido) {
+        await _android?.requestExactAlarmsPermission();
+        concedido = await _android?.canScheduleExactNotifications() ?? false;
+      }
+    }
+    await prefs.setBool(_kExactos, activar && concedido);
+    await replanificar(db);
+    return activar && concedido;
+  }
+
+  static Future<({bool activo, int minutos})> recordatorioDiario() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (
+      activo: prefs.getBool(_kDiario) ?? false,
+      minutos: prefs.getInt(_kDiarioMinutos) ?? recordatorioDiarioPorDefecto,
+    );
+  }
+
+  static Future<void> setRecordatorioDiario(
+    AppDatabase db, {
+    required bool activo,
+    required int minutos,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kDiario, activo);
+    await prefs.setInt(_kDiarioMinutos, minutos);
+    await replanificar(db);
+  }
+
+  /// Carga en lote las referencias (deuda/préstamo/gasto) de una lista de
+  /// recordatorios, en vez de una consulta por recordatorio (evita N+1).
+  static Future<
+    ({
+      Map<int, Deuda> deudas,
+      Map<int, Prestamo> prestamos,
+      Map<int, GastosFijo> gastos,
+    })
+  >
+  _cargarReferencias(AppDatabase db, List<Recordatorio> lista) async {
+    final deudaIds = <int>[];
+    final prestamoIds = <int>[];
+    final gastoIds = <int>[];
+    for (final r in lista) {
+      final id = r.referenciaId;
+      if (id == null) continue;
+      switch (r.referenciaTabla) {
+        case 'deuda':
+          deudaIds.add(id);
+        case 'prestamo':
+          prestamoIds.add(id);
+        case 'gasto':
+          gastoIds.add(id);
+      }
+    }
+    return (
+      deudas: {
+        for (final d in await db.deudasDao.getDeudasByIds(deudaIds)) d.id: d,
+      },
+      prestamos: {
+        for (final p in await db.prestamosDao.getPrestamosByIds(prestamoIds))
+          p.id: p,
+      },
+      gastos: {
+        for (final g in await db.gastosFijosDao.getGastosFijosByIds(gastoIds))
+          g.id: g,
+      },
+    );
   }
 
   /// Nombres (`concepto`) de los ingresos 'unico' que la última corrida de

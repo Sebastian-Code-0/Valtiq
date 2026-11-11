@@ -1,5 +1,15 @@
 # 003 - Notificaciones Android: inexact scheduling
 
+> **Actualización 2026-11-10 — esta decisión quedó implementada y ampliada.**
+> Los recordatorios ahora SÍ se programan con `zonedSchedule`:
+> `inexactAllowWhileIdle` por defecto (sin permisos especiales) y
+> `exactAllowWhileIdle` como opción del usuario si concede
+> `SCHEDULE_EXACT_ALARM`, con caída automática al modo aproximado. Se
+> reprograman tras reiniciar (receptor de arranque). El detalle vigente está
+> en `docs/background-notifications-android.md`; lo que sigue abajo es el
+> registro histórico de la decisión original.
+
+
 ## Estado
 
 Aceptada — 2026-06. **No implementada en el código actual** (verificado

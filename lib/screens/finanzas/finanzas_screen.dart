@@ -271,12 +271,10 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                   onSelectionChanged: (s) => setState(() => _modo = s.first),
                   showSelectedIcon: false,
                   style: SegmentedButton.styleFrom(
-                    selectedBackgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primary,
-                    selectedForegroundColor: Theme.of(
-                      context,
-                    ).colorScheme.onPrimary,
+                    // Relleno vino profundo (no el tono de texto, que en
+                    // oscuro es más claro y como fondo se veía salmón).
+                    selectedBackgroundColor: context.colores.acentoRelleno,
+                    selectedForegroundColor: context.colores.sobreAcento,
                   ),
                 ),
               ),
