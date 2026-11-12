@@ -10,6 +10,7 @@ import '../../utils/format.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
 import '../../utils/selector_hora.dart';
+import '../../utils/selector_pildoras.dart';
 
 class RecordatorioForm extends StatefulWidget {
   const RecordatorioForm({super.key, required this.db, this.recordatorio});
@@ -277,205 +278,195 @@ class _RecordatorioFormState extends State<RecordatorioForm>
   Widget build(BuildContext context) {
     final esEdicion = widget.recordatorio != null;
     final refSelector = _buildReferenciaSelector();
+    final c = context.colores;
+    const espacio = SizedBox(height: AppSpacing.md);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(esEdicion ? 'Editar recordatorio' : 'Nuevo recordatorio'),
-      ),
-      body: Form(
-        key: formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+    return PaginaFormulario(
+      formKey: formKey,
+      kicker: 'Recordatorio',
+      titulo: esEdicion ? 'Editar recordatorio' : 'Nuevo recordatorio',
+      children: [
+        FormSection(
+          title: 'Detalles',
+          icon: Icons.notifications_outlined,
           children: [
-            FormSection(
-              title: 'Detalles',
-              icon: Icons.notifications_outlined,
+            CampoEtiquetado(
+              etiqueta: 'Título',
+              child: TextFormField(
+                controller: _tituloCtrl,
+                decoration: const InputDecoration(
+                  hintText: 'Pago de Netflix, cobrar a Juan...',
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+              ),
+            ),
+            espacio,
+            FilaCampos(
               children: [
-                TextFormField(
-                  controller: _tituloCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Título',
-                    hintText: 'Pago de Netflix, cobrar a Juan...',
-                    prefixIcon: Icon(Icons.title),
+                CampoEtiquetado(
+                  etiqueta: 'Fecha de alerta',
+                  child: DatePickerField(
+                    label: 'Fecha de alerta',
+                    mostrarEtiqueta: false,
+                    icon: Icons.calendar_today,
+                    value: _fechaAlerta,
+                    onTap: _seleccionarFecha,
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                 ),
-                const SizedBox(height: AppSpacing.md),
-                DatePickerField(
-                  label: 'Fecha de alerta',
-                  icon: Icons.calendar_today,
-                  value: _fechaAlerta,
-                  onTap: _seleccionarFecha,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                // La hora ya se guardaba (12:00 por defecto) pero el
-                // formulario nunca la mostró ni dejó cambiarla.
-                InkWell(
-                  onTap: _seleccionarHora,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  child: Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Theme.of(context).dividerColor),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                CampoEtiquetado(
+                  etiqueta: 'Hora del aviso',
+                  // Mismo aspecto que el campo de fecha.
+                  child: Material(
+                    color: c.relieve,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusCampo,
+                      ),
+                      side: BorderSide(
+                        color: c.divisor,
+                        width: AppSpacing.borde,
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.schedule,
-                          size: 20,
-                          color: context.colores.textoSecundario,
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: _seleccionarHora,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 50),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: 6,
+                          ),
+                          child: Row(
                             children: [
-                              Text(
-                                'Hora del aviso',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: context.colores.textoSecundario,
-                                    ),
+                              Icon(
+                                Icons.schedule,
+                                size: 18,
+                                color: c.textoSecundario,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                formatHora12(_horaAviso, _minutoAviso),
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  formatHora12(_horaAviso, _minutoAviso),
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right,
+                                color: c.textoSecundario,
                               ),
                             ],
                           ),
                         ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: context.colores.textoSecundario,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _diasCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Días de anticipación',
-                    hintText: '¿Cuántos días antes quieres el aviso?',
-                    prefixIcon: Icon(Icons.alarm),
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(3),
-                  ],
-                  validator: (v) {
-                    final n = int.tryParse(v ?? '');
-                    if (n == null || n < 1) {
-                      return 'Mínimo 1 día de anticipación';
-                    }
-                    return null;
-                  },
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Notificación',
-              icon: Icons.notifications_active_outlined,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: _tipoNotificacion,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo de notificación',
-                    prefixIcon: Icon(Icons.send_outlined),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'sistema', child: Text('Sistema')),
-                    DropdownMenuItem(value: 'correo', child: Text('Correo')),
-                    DropdownMenuItem(value: 'ambos', child: Text('Ambos')),
-                  ],
-                  onChanged: (v) =>
-                      setState(() => _tipoNotificacion = v ?? 'sistema'),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<String>(
-                  value: _frecuenciaAviso,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  decoration: const InputDecoration(
-                    labelText: 'Frecuencia del aviso',
-                    prefixIcon: Icon(Icons.repeat_one_outlined),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'unica',
-                      child: Text('Un solo aviso'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'diaria',
-                      child: Text('Avisar cada día'),
-                    ),
-                  ],
-                  onChanged: (v) =>
-                      setState(() => _frecuenciaAviso = v ?? 'unica'),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Único: avisa una sola vez. Diario: te recuerda cada día hasta la fecha.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                SwitchTile(
-                  icon: Icons.repeat,
-                  title: '¿Se repite cada mes?',
-                  subtitle: 'Si está activo, se reprogramará automáticamente',
-                  value: _repetir,
-                  onChanged: (v) => setState(() => _repetir = v),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Referencia',
-              icon: Icons.link,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: _tipoReferencia,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  decoration: const InputDecoration(
-                    labelText: 'Vincular con',
-                    prefixIcon: Icon(Icons.link),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'ninguna',
-                      child: Text('Sin referencia'),
-                    ),
-                    DropdownMenuItem(value: 'deuda', child: Text('Deuda')),
-                    DropdownMenuItem(
-                      value: 'prestamo',
-                      child: Text('Préstamo'),
-                    ),
-                    DropdownMenuItem(value: 'gasto', child: Text('Gasto fijo')),
-                  ],
-                  onChanged: _onTipoReferenciaChanged,
-                ),
-                if (refSelector != null) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  refSelector,
+            espacio,
+            CampoEtiquetado(
+              etiqueta: 'Días de anticipación',
+              ayuda: '¿Cuántos días antes de la fecha quieres el aviso?',
+              child: TextFormField(
+                controller: _diasCtrl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(3),
                 ],
-              ],
+                validator: (v) {
+                  final n = int.tryParse(v ?? '');
+                  if (n == null || n < 1) {
+                    return 'Mínimo 1 día de anticipación';
+                  }
+                  return null;
+                },
+              ),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: guardando),
-            const SizedBox(height: AppSpacing.md),
           ],
         ),
-      ),
+        espacio,
+        FormSection(
+          title: 'Notificación',
+          icon: Icons.notifications_active_outlined,
+          children: [
+            FilaCampos(
+              children: [
+                CampoEtiquetado(
+                  etiqueta: '¿Cómo te avisamos?',
+                  child: GrupoPildoras<String>(
+                    opciones: const {
+                      'sistema': 'Sistema',
+                      'correo': 'Correo',
+                      'ambos': 'Ambos',
+                    },
+                    valor: _tipoNotificacion,
+                    onElegir: (v) => setState(() => _tipoNotificacion = v),
+                  ),
+                ),
+                CampoEtiquetado(
+                  etiqueta: '¿Cuántas veces?',
+                  child: GrupoPildoras<String>(
+                    opciones: const {
+                      'unica': 'Un solo aviso',
+                      'diaria': 'Cada día',
+                    },
+                    valor: _frecuenciaAviso,
+                    onElegir: (v) => setState(() => _frecuenciaAviso = v),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _frecuenciaAviso == 'unica'
+                  ? 'Un solo aviso: te avisa una sola vez.'
+                  : 'Cada día: te recuerda todos los días hasta la fecha.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: c.textoSecundario),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SwitchTile(
+              icon: Icons.repeat,
+              title: '¿Se repite cada mes?',
+              subtitle: 'Si está activo, se reprogramará automáticamente',
+              value: _repetir,
+              onChanged: (v) => setState(() => _repetir = v),
+            ),
+          ],
+        ),
+        espacio,
+        FormSection(
+          title: 'Referencia',
+          icon: Icons.link,
+          children: [
+            CampoEtiquetado(
+              etiqueta: 'Vincular con (opcional)',
+              child: GrupoPildoras<String>(
+                opciones: const {
+                  'ninguna': 'Nada',
+                  'deuda': 'Deuda',
+                  'prestamo': 'Préstamo',
+                  'gasto': 'Gasto fijo',
+                },
+                valor: _tipoReferencia,
+                onElegir: _onTipoReferenciaChanged,
+              ),
+            ),
+            if (refSelector != null) ...[espacio, refSelector],
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FormSaveButton(
+          onPressed: _guardar,
+          loading: guardando,
+          label: esEdicion ? 'Guardar cambios' : 'Guardar recordatorio',
+        ),
+      ],
     );
   }
 }

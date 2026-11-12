@@ -1,5 +1,21 @@
 # Changelog
 
+## Recordatorios con el estilo nuevo (2026-11-11)
+
+- **Recordatorios:** encabezado con "N pendientes" (misma cuenta que la
+  insignia del menú) y botón "Nuevo recordatorio"; pestañas Activos /
+  Inactivos (antes un botón "Ver inactivos"); cada recordatorio en una
+  tarjeta con recuadro de día y mes (aro rojo si está vencido, vino si ya
+  está cerca), etiqueta con cuánto falta, detalle y hora. "Vaciar
+  inactivos" va en la fila de las pestañas, a la derecha. Un solo stream
+  para las dos pestañas.
+- **Formulario de recordatorio:** mismo diseño que los demás
+  (`PaginaFormulario`); tipo de aviso, frecuencia y "vincular con" pasan
+  de listas desplegables a píldoras.
+- `BotonLimpiarHistorial` acepta `texto`.
+- La lógica no cambió.
+- Tests: 355 (3 nuevos, `test/screens/recordatorios/`).
+
 ## Finanzas con el estilo nuevo, detalle de préstamo en panel y ajustes (2026-11-11)
 
 - **Finanzas:** encabezado con el mes y botón de crear que cambia con la

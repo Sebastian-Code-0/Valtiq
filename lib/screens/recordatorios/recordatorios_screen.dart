@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 import '../../db/database.dart';
 import '../../services/notification_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/confirmar.dart';
 import '../../utils/date_format.dart';
+import '../../utils/encabezado_pantalla.dart';
 import '../../utils/fecha_civil.dart';
+import '../../utils/form_widgets.dart';
 import '../../utils/notificaciones.dart';
 import '../../utils/selector_hora.dart';
+import '../../utils/selector_pildoras.dart';
 import 'recordatorio_form.dart';
 
 class RecordatoriosScreen extends StatefulWidget {
@@ -20,14 +24,19 @@ class RecordatoriosScreen extends StatefulWidget {
 }
 
 class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
-  bool _mostrarInactivos = false;
+  static const _pestanas = [
+    OpcionPildora('Activos'),
+    OpcionPildora('Inactivos'),
+  ];
 
-  Stream<List<Recordatorio>> _stream() {
-    return (widget.db.select(widget.db.recordatorios)
-          ..where((r) => r.activo.equals(!_mostrarInactivos))
-          ..orderBy([(r) => OrderingTerm.asc(r.fechaAlerta)]))
-        .watch();
-  }
+  // Un solo stream para las dos pestañas; se separan en Dart.
+  late final Stream<List<Recordatorio>> _stream = (widget.db.select(
+    widget.db.recordatorios,
+  )..orderBy([(r) => OrderingTerm.asc(r.fechaAlerta)])).watch();
+
+  int _pestana = 0;
+
+  bool get _mostrarInactivos => _pestana == 1;
 
   Future<void> _abrirForm({Recordatorio? recordatorio}) async {
     await Navigator.push(
@@ -40,29 +49,14 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
   }
 
   Future<void> _confirmarEliminar(Recordatorio r) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar recordatorio'),
-        content: Text('¿Eliminar el recordatorio "${r.titulo}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Eliminar',
-              style: TextStyle(color: context.colores.alerta),
-            ),
-          ),
-        ],
-      ),
+    final ok = await confirmar(
+      context,
+      titulo: 'Eliminar recordatorio',
+      mensaje: '¿Eliminar el recordatorio "${r.titulo}"?',
+      accion: 'Eliminar',
+      peligro: true,
     );
-    if (ok == true) {
-      await widget.db.recordatoriosDao.deleteRecordatorio(r.id);
-    }
+    if (ok) await widget.db.recordatoriosDao.deleteRecordatorio(r.id);
   }
 
   Future<void> _inactivar(Recordatorio r) async {
@@ -81,30 +75,16 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
   }
 
   Future<void> _vaciarInactivos() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Vaciar recordatorios inactivos'),
-        content: const Text(
+    final ok = await confirmar(
+      context,
+      titulo: 'Vaciar recordatorios inactivos',
+      mensaje:
           '¿Eliminar permanentemente todos los recordatorios inactivos? '
           'Esta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Eliminar todos',
-              style: TextStyle(color: context.colores.alerta),
-            ),
-          ),
-        ],
-      ),
+      accion: 'Eliminar todos',
+      peligro: true,
     );
-    if (ok != true) return;
+    if (!ok) return;
     final eliminados = await widget.db.recordatoriosDao
         .eliminarRecordatoriosInactivos();
     if (mounted) {
@@ -133,128 +113,194 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorSec = theme.colorSecundario;
+    final c = context.colores;
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.sm,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    'Recordatorios',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+        child: StreamBuilder<List<Recordatorio>>(
+          stream: _stream,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(child: Text('Error al cargar los datos.'));
+            }
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final todos = snapshot.data!;
+            final activos = [
+              for (final r in todos)
+                if (r.activo) r,
+            ];
+            final inactivos = [
+              for (final r in todos)
+                if (!r.activo) r,
+            ];
+            // Los que ya están en su ventana de aviso o vencidos: el mismo
+            // número de la insignia del menú.
+            final pendientes = activos
+                .where((r) => _Tiempo(r).pendiente)
+                .length;
+            final lista = _mostrarInactivos ? inactivos : activos;
+
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final ancho = constraints.maxWidth >= 800;
+                final margen = ancho ? AppSpacing.xl : AppSpacing.md;
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: AppSpacing.anchoContenido + 2 * margen,
                     ),
-                  ),
-                  const Spacer(),
-                  if (_mostrarInactivos)
-                    IconButton(
-                      onPressed: _vaciarInactivos,
-                      icon: const Icon(Icons.delete_sweep_outlined),
-                      tooltip: 'Vaciar recordatorios inactivos',
-                      color: context.colores.alerta,
-                    )
-                  else
-                    FloatingActionButton.small(
-                      heroTag: 'fab_recordatorios',
-                      onPressed: () => _abrirForm(),
-                      child: const Icon(Icons.add),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () =>
-                      setState(() => _mostrarInactivos = !_mostrarInactivos),
-                  icon: Icon(
-                    _mostrarInactivos ? Icons.visibility : Icons.history,
-                  ),
-                  label: Text(
-                    _mostrarInactivos ? 'Ver activos' : 'Ver inactivos',
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: StreamBuilder<List<Recordatorio>>(
-                stream: _stream(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Error al cargar los datos.',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    );
-                  }
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final lista = snapshot.data!;
-                  if (lista.isEmpty) {
-                    final mensaje = _mostrarInactivos
-                        ? 'No tienes recordatorios inactivos'
-                        : 'No tienes recordatorios';
-                    return Center(
-                      child: Text(
-                        mensaje,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: colorSec,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            margen,
+                            margen,
+                            margen,
+                            AppSpacing.lg,
+                          ),
+                          child: EncabezadoPantalla(
+                            kicker: switch (pendientes) {
+                              0 => 'Nada pendiente',
+                              1 => '1 pendiente',
+                              _ => '$pendientes pendientes',
+                            },
+                            titulo: 'Recordatorios',
+                            accion: BotonCrear(
+                              texto: 'Nuevo recordatorio',
+                              heroTag: 'fab_recordatorios',
+                              onPressed: () => _abrirForm(),
+                            ),
+                          ),
                         ),
-                      ),
-                    );
-                  }
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: lista.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (_, i) {
-                      final r = lista[i];
-                      return _RecordatorioCard(
-                        recordatorio: r,
-                        atenuada: _mostrarInactivos,
-                        colorSec: colorSec,
-                        onTap: () => _abrirForm(recordatorio: r),
-                        onLongPress: () => _confirmarEliminar(r),
-                        onProbarNotificacion: () => _probarNotificacion(r),
-                        onInactivar: _mostrarInactivos
-                            ? null
-                            : () => _inactivar(r),
-                        onActivar: _mostrarInactivos ? () => _activar(r) : null,
-                        onEliminar: () => _confirmarEliminar(r),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+                        // Pestañas a la izquierda y, en "Inactivos", el botón
+                        // de vaciar a la derecha, en la misma fila.
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SelectorPildoras(
+                                opciones: _pestanas,
+                                seleccionada: _pestana,
+                                margen: margen,
+                                repartirEnCelular: true,
+                                onElegir: (i) => setState(() => _pestana = i),
+                              ),
+                            ),
+                            if (_mostrarInactivos && inactivos.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(right: margen),
+                                child: BotonLimpiarHistorial(
+                                  texto: 'Vaciar inactivos',
+                                  onPressed: _vaciarInactivos,
+                                ),
+                              ),
+                          ],
+                        ),
+                        SizedBox(height: ancho ? AppSpacing.md : AppSpacing.sm),
+                        Expanded(
+                          child: lista.isEmpty
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(
+                                      AppSpacing.lg,
+                                    ),
+                                    child: Text(
+                                      _mostrarInactivos
+                                          ? 'No tienes recordatorios inactivos'
+                                          : 'No tienes recordatorios.\n'
+                                                'Toca + para crear uno.',
+                                      textAlign: TextAlign.center,
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(color: c.textoSecundario),
+                                    ),
+                                  ),
+                                )
+                              : ListView.separated(
+                                  padding: EdgeInsets.fromLTRB(
+                                    margen,
+                                    AppSpacing.sm,
+                                    margen,
+                                    margen,
+                                  ),
+                                  itemCount: lista.length,
+                                  separatorBuilder: (_, _) =>
+                                      const SizedBox(height: 10),
+                                  itemBuilder: (_, i) {
+                                    final r = lista[i];
+                                    return _RecordatorioCard(
+                                      key: ValueKey(r.id),
+                                      recordatorio: r,
+                                      atenuada: _mostrarInactivos,
+                                      onTap: () => _abrirForm(recordatorio: r),
+                                      onProbarNotificacion: () =>
+                                          _probarNotificacion(r),
+                                      onInactivar: _mostrarInactivos
+                                          ? null
+                                          : () => _inactivar(r),
+                                      onActivar: _mostrarInactivos
+                                          ? () => _activar(r)
+                                          : null,
+                                      onEliminar: () => _confirmarEliminar(r),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );
   }
 }
 
+/// Cuánto falta para un recordatorio, contado en días de calendario.
+class _Tiempo {
+  _Tiempo(Recordatorio r) {
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    // fechaAlerta se guarda como medianoche UTC (fecha civil); se extrae con
+    // .toUtc() y se reconstruye en convención local para comparar contra
+    // "hoy" (también local) con diferencias exactas de 24h.
+    fecha = fechaCivilGuardada(r.fechaAlerta);
+    dias = DateTime(fecha.year, fecha.month, fecha.day).difference(hoy).inDays;
+    vencido = dias < 0;
+    proximo = !vencido && dias <= r.diasAnticipacion;
+  }
+
+  late final DateTime fecha;
+  late final int dias;
+  late final bool vencido;
+
+  /// Ya entró en sus días de anticipación.
+  late final bool proximo;
+
+  bool get pendiente => vencido || proximo;
+}
+
+String _labelReferencia(String tabla) => switch (tabla) {
+  'deuda' => 'Deuda',
+  'prestamo' => 'Préstamo',
+  'gasto' => 'Gasto fijo',
+  _ => tabla,
+};
+
+/// Tarjeta de un recordatorio: recuadro con el día y el mes (con aro rojo
+/// si está vencido, vino si ya está cerca), título, de qué es y cuánto
+/// falta, la hora del aviso y el menú de acciones.
 class _RecordatorioCard extends StatelessWidget {
   const _RecordatorioCard({
+    super.key,
     required this.recordatorio,
     required this.atenuada,
-    required this.colorSec,
     required this.onTap,
-    required this.onLongPress,
     required this.onProbarNotificacion,
     required this.onEliminar,
     this.onInactivar,
@@ -263,210 +309,183 @@ class _RecordatorioCard extends StatelessWidget {
 
   final Recordatorio recordatorio;
   final bool atenuada;
-  final Color colorSec;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
   final VoidCallback onProbarNotificacion;
   final VoidCallback onEliminar;
   final VoidCallback? onInactivar;
   final VoidCallback? onActivar;
 
-  String _labelReferencia(String tabla) {
-    switch (tabla) {
-      case 'deuda':
-        return 'Deuda';
-      case 'prestamo':
-        return 'Préstamo';
-      case 'gasto':
-        return 'Gasto fijo';
-      default:
-        return tabla;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final ahora = DateTime.now();
-    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
-    // fechaAlerta se guarda como medianoche UTC (fecha civil); se extrae con
-    // .toUtc() y se reconstruye en convención local para comparar contra
-    // "hoy" (también local) con diferencias exactas de 24h.
-    final diaAlertaUtc = fechaCivilGuardada(recordatorio.fechaAlerta);
-    final diaAlerta = DateTime(
-      diaAlertaUtc.year,
-      diaAlertaUtc.month,
-      diaAlertaUtc.day,
+    final c = context.colores;
+    final r = recordatorio;
+    final t = _Tiempo(r);
+    final vencido = t.vencido && !atenuada;
+    final proximo = t.proximo && !atenuada;
+    final colorEstado = vencido
+        ? c.alerta
+        : proximo
+        ? c.acento
+        : c.textoSecundario;
+    final pequeno = theme.textTheme.bodySmall?.copyWith(
+      color: c.textoSecundario,
     );
-    final diasFaltantes = diaAlerta.difference(hoy).inDays;
-    final vencido = diasFaltantes < 0;
-    final proximo = !vencido && diasFaltantes <= recordatorio.diasAnticipacion;
+    final detalles = [
+      if (r.referenciaTabla != null) _labelReferencia(r.referenciaTabla!),
+      if (r.repetir) 'Cada mes',
+      formatHora12(r.horaAviso, r.minutoAviso),
+    ].join(' · ');
 
     final card = Card(
-      color: proximo ? theme.colorScheme.primary.withValues(alpha: 0.12) : null,
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: c.divisor, width: AppSpacing.borde),
+      ),
       child: InkWell(
         onTap: onTap,
-        onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        child: Container(
-          decoration: vencido
-              ? BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: context.colores.alerta, width: 3),
-                  ),
-                )
-              : null,
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        onLongPress: onEliminar,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 10, 14),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      recordatorio.titulo,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert, color: colorSec, size: 20),
-                    tooltip: 'Acciones',
-                    onSelected: (v) {
-                      switch (v) {
-                        case 'probar':
-                          onProbarNotificacion();
-                          break;
-                        case 'inactivar':
-                          onInactivar?.call();
-                          break;
-                        case 'activar':
-                          onActivar?.call();
-                          break;
-                        case 'eliminar':
-                          onEliminar();
-                          break;
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'probar',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.notifications_outlined,
-                              size: 18,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            const Text('Probar notificación'),
-                          ],
-                        ),
-                      ),
-                      if (onInactivar != null)
-                        const PopupMenuItem(
-                          value: 'inactivar',
-                          child: Row(
-                            children: [
-                              Icon(Icons.pause_circle_outline, size: 18),
-                              SizedBox(width: AppSpacing.sm),
-                              Text('Inactivar'),
-                            ],
-                          ),
-                        ),
-                      if (onActivar != null)
-                        PopupMenuItem(
-                          value: 'activar',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.play_circle_outline,
-                                size: 18,
-                                color: context.colores.positivo,
-                              ),
-                              SizedBox(width: AppSpacing.sm),
-                              Text('Activar'),
-                            ],
-                          ),
-                        ),
-                      PopupMenuItem(
-                        value: 'eliminar',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline,
-                              size: 18,
-                              color: context.colores.alerta,
-                            ),
-                            SizedBox(width: AppSpacing.sm),
-                            Text(
-                              'Eliminar',
-                              style: TextStyle(color: context.colores.alerta),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 14, color: colorSec),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      '${formatFecha(diaAlertaUtc)} · '
-                      '${formatHora12(recordatorio.horaAviso, recordatorio.minutoAviso)}'
-                      ' — ${fechaRelativa(diaAlertaUtc)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: vencido ? context.colores.alerta : colorSec,
-                        fontWeight: vencido ? FontWeight.bold : null,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              if (vencido) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Vencido',
-                  style: TextStyle(
-                    color: context.colores.alerta,
-                    fontWeight: FontWeight.bold,
+              // Día y mes.
+              Container(
+                width: 46,
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: vencido || proximo ? colorEstado : c.divisor,
+                    width: vencido || proximo ? 1.5 : AppSpacing.borde,
                   ),
                 ),
-              ],
-              if (recordatorio.referenciaTabla != null ||
-                  recordatorio.repetir) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.xs,
+                child: Column(
                   children: [
-                    if (recordatorio.referenciaTabla != null)
-                      AppChip(
-                        label: _labelReferencia(recordatorio.referenciaTabla!),
+                    Text(
+                      '${t.fecha.day}',
+                      style: TextStyle(
+                        fontFamily: fuenteTexto,
+                        fontSize: 18,
+                        height: 1.1,
+                        fontWeight: FontWeight.w700,
+                        color: c.texto,
                       ),
-                    if (recordatorio.repetir) const AppChip(label: 'Mensual'),
+                    ),
+                    Text(
+                      SelectorMes.nombreMesCorto(t.fecha.month).toUpperCase(),
+                      style: TextStyle(
+                        fontFamily: fuenteTexto,
+                        fontSize: 10.5,
+                        letterSpacing: 0.8,
+                        fontWeight: FontWeight.w600,
+                        color: c.textoSecundario,
+                      ),
+                    ),
                   ],
                 ),
-              ],
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      r.titulo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // Cuánto falta, en una etiqueta del color del estado.
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 2,
+                          ),
+                          decoration: ShapeDecoration(
+                            color: vencido || proximo
+                                ? colorEstado.withValues(alpha: 0.14)
+                                : c.relieve,
+                            shape: const StadiumBorder(),
+                          ),
+                          child: Text(
+                            vencido
+                                ? 'Vencido · ${fechaRelativa(t.fecha).toLowerCase()}'
+                                : fechaRelativa(t.fecha),
+                            style: pequeno?.copyWith(
+                              color: colorEstado,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Text(detalles, style: pequeno),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: c.textoSecundario,
+                    size: 20,
+                  ),
+                  padding: EdgeInsets.zero,
+                  tooltip: 'Acciones',
+                  onSelected: (v) => switch (v) {
+                    'editar' => onTap(),
+                    'probar' => onProbarNotificacion(),
+                    'inactivar' => onInactivar?.call(),
+                    'activar' => onActivar?.call(),
+                    _ => onEliminar(),
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'editar', child: Text('Editar')),
+                    const PopupMenuItem(
+                      value: 'probar',
+                      child: Text('Probar notificación'),
+                    ),
+                    if (onInactivar != null)
+                      const PopupMenuItem(
+                        value: 'inactivar',
+                        child: Text('Inactivar'),
+                      ),
+                    if (onActivar != null)
+                      const PopupMenuItem(
+                        value: 'activar',
+                        child: Text('Activar'),
+                      ),
+                    PopupMenuItem(
+                      value: 'eliminar',
+                      child: Text(
+                        'Eliminar',
+                        style: TextStyle(color: c.alerta),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
 
-    return AtenuableCard(atenuada: atenuada, child: card);
+    return atenuada ? Opacity(opacity: 0.6, child: card) : card;
   }
 }

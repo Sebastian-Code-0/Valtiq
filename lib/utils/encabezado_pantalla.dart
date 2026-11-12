@@ -119,11 +119,16 @@ class BotonCrear extends StatelessWidget {
 /// En celular es solo el ícono (el texto no cabe junto a las pestañas).
 /// Quien lo usa pide la confirmación.
 class BotonLimpiarHistorial extends StatelessWidget {
-  const BotonLimpiarHistorial({super.key, required this.onPressed});
+  const BotonLimpiarHistorial({
+    super.key,
+    required this.onPressed,
+    this.texto = 'Limpiar historial',
+  });
 
   final VoidCallback onPressed;
 
-  static const _texto = 'Limpiar historial';
+  /// Lo que dice el botón (y su texto de ayuda en celular).
+  final String texto;
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +136,7 @@ class BotonLimpiarHistorial extends StatelessWidget {
     if (MediaQuery.sizeOf(context).width < 600) {
       return IconButton(
         onPressed: onPressed,
-        tooltip: _texto,
+        tooltip: texto,
         color: c.alerta,
         icon: const Icon(Icons.delete_sweep_outlined),
       );
@@ -140,7 +145,7 @@ class BotonLimpiarHistorial extends StatelessWidget {
       onPressed: onPressed,
       style: TextButton.styleFrom(foregroundColor: c.alerta),
       icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-      label: const Text(_texto),
+      label: Text(texto),
     );
   }
 }

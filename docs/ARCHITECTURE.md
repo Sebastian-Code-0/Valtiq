@@ -347,7 +347,7 @@ nube y de la transferencia entre dispositivos.
 | Deudas        | deudas_screen.dart        | Pestañas Activas (totales + cuadrícula de tarjetas), Plan de pago y Pagadas — ver "Pantalla de Deudas" |
 | Préstamos     | prestamos_screen.dart     | Pestañas Por cobrar (totales + cuadrícula con "Registrar abono") y Cobrados — ver "Pantalla de Préstamos" |
 | Finanzas      | finanzas_screen.dart      | Pestañas Ingresos, Gastos fijos y Día a día — ver "Pantalla de Finanzas" |
-| Recordatorios | recordatorios_screen.dart | Lista y gestión de recordatorios      |
+| Recordatorios | recordatorios_screen.dart | Pestañas Activos / Inactivos; una tarjeta por recordatorio con su fecha, estado y hora — ver "Pantalla de Recordatorios" |
 | Ajustes       | settings_screen.dart      | Una sola pantalla con selector de secciones; cada sección es una de las pantallas de abajo |
 | Perfil        | perfil_screen.dart        | Foto, nombre y apellido (el nombre saluda en Inicio) |
 | Notificaciones | notificaciones_screen.dart | Permiso, hora exacta, recordatorio diario |
@@ -405,8 +405,7 @@ pantallas no deberían fijar radios ni bordes a mano.
 - **Formularios:** `PaginaFormulario` (columna centrada de 760 px máx.) →
   `FormSection` → `FilaCampos` → `CampoEtiquetado` (nombre encima del
   campo). Lo usan los formularios de deuda, préstamo, ingreso, gasto fijo
-  y gasto del día a día. Falta el de recordatorio (usa aún `labelText`
-  dentro del campo).
+  gasto del día a día y recordatorio (todos los de datos).
 - **Confirmaciones:** `confirmar(context, titulo, mensaje, accion,
   peligro)` (`utils/confirmar.dart`) en vez de `AlertDialog` a mano.
 - **Listas de filas:** una sola `Card` con filas separadas por `Divider`
@@ -471,6 +470,22 @@ formulario). Cada pestaña: totales sueltos arriba y una tarjeta con filas
 (`_Fila`: ícono, nombre, detalle, monto y menú). El botón de crear del
 encabezado cambia con la pestaña. Día a día sigue siendo UNA sola lista
 desplazable (totales + selector de mes + "Por categoría" + gastos).
+
+### Pantalla de Recordatorios (2026-11-11)
+
+`RecordatoriosScreen` usa UN stream con todos los recordatorios y separa en
+Dart "Activos" e "Inactivos" (antes un botón "Ver inactivos" y una consulta
+por pestaña). El rótulo del encabezado cuenta los pendientes con la misma
+regla que la insignia del menú (`ShellScreen._recordatoriosPendientes`):
+vencidos o ya dentro de sus días de anticipación — la cuenta la hace
+`_Tiempo`.
+
+Cada recordatorio es una tarjeta: recuadro con día y mes (aro rojo si está
+vencido, vino si ya está cerca), título, etiqueta con cuánto falta, de qué
+es / si se repite / hora, y menú (Editar, Probar notificación, Inactivar o
+Activar, Eliminar). "Vaciar inactivos" va en la fila de las pestañas, a la
+derecha (`BotonLimpiarHistorial(texto: …)`). La lógica (DAO, deduplicación
+al reactivar, prueba de notificación) no cambió.
 
 ### Plan de pago: aviso de pago mínimo (2026-11-11)
 
