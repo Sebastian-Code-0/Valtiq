@@ -13,6 +13,7 @@ import 'services/notification_service.dart';
 import 'services/perfil_service.dart';
 import 'theme/theme.dart';
 import 'utils/format.dart';
+import 'utils/preferencia_menu.dart';
 
 final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(
   ThemeMode.system,
@@ -50,6 +51,7 @@ void main() async {
 
   await PerfilService.cargar();
   await cargarMontosOcultos();
+  await cargarMenuSuperior();
 
   await CryptoService.init();
   await NotificationService.init();

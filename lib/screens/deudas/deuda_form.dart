@@ -12,6 +12,7 @@ import '../../utils/fecha_civil.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
 import '../../utils/selector_pildoras.dart';
+import '../../utils/tasa_input.dart';
 import '../../utils/tipo_deuda.dart';
 
 class DeudaForm extends StatefulWidget {
@@ -53,9 +54,8 @@ class _DeudaFormState extends State<DeudaForm>
     _montoCtrl = TextEditingController(
       text: d != null ? formatCOPInput(d.montoOriginal) : '',
     );
-    _tasaCtrl = TextEditingController(
-      text: d != null ? formatTasaInicial(d.tasaInteres) : '0',
-    );
+    // Sin "0" inicial: así no hay que borrarlo antes de escribir la tasa.
+    _tasaCtrl = TextEditingController(text: tasaParaCampo(d?.tasaInteres ?? 0));
     _cuotaCtrl = TextEditingController(
       text: d?.cuotaMensual != null ? formatCOPInput(d!.cuotaMensual!) : '',
     );
@@ -83,10 +83,14 @@ class _DeudaFormState extends State<DeudaForm>
     super.dispose();
   }
 
-  bool get _tieneInteres {
-    final v = double.tryParse(_tasaCtrl.text.replaceAll(',', '.'));
-    return v != null && v > 0;
-  }
+  bool get _tieneInteres => parseTasa(_tasaCtrl.text) > 0;
+
+  /// Hay tasa pero falta decir si es mensual o anual. Sin eso el interés no
+  /// se calcula (quedaría guardada como "sin interés" sin que se note).
+  bool get _faltaTipoInteres => _tieneInteres && _tipoInteres == 'ninguno';
+
+  /// Se enciende al intentar guardar sin elegir el tipo de interés.
+  bool _avisarTipoInteres = false;
 
   Future<void> _seleccionarFechaPrestamo() async {
     final f = await showDatePicker(
@@ -129,7 +133,10 @@ class _DeudaFormState extends State<DeudaForm>
           controller: cuotasCtrl,
           autofocus: true,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(3),
+          ],
           decoration: const InputDecoration(labelText: '¿En cuántos meses?'),
         ),
         actions: [
@@ -145,7 +152,7 @@ class _DeudaFormState extends State<DeudaForm>
       ),
     );
     if (numeroCuotas == null || numeroCuotas <= 0) return;
-    final tasa = double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
+    final tasa = parseTasa(_tasaCtrl.text);
     final cuota = InteresCalculator.calcularCuotaFijaDesdeTasa(
       capital: monto,
       tasaInteres: tasa,
@@ -161,18 +168,24 @@ class _DeudaFormState extends State<DeudaForm>
   }
 
   Future<void> _guardar() async {
-    if (!formKey.currentState!.validate()) return;
+    final camposOk = formKey.currentState!.validate();
+    if (_faltaTipoInteres) {
+      setState(() => _avisarTipoInteres = true);
+      mostrarAlerta(context, '$errorTipoInteres.');
+      return;
+    }
+    if (!camposOk) return;
     setState(() => guardando = true);
 
     final monto = parseCOP(_montoCtrl.text);
     if (monto == null) {
       setState(() => guardando = false);
       if (mounted) {
-        mostrarAlerta(context, 'Monto inválido. Verifica el valor ingresado.');
+        mostrarAlerta(context, 'Monto inválido. El máximo es $textoMaxMonto.');
       }
       return;
     }
-    final tasa = double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
+    final tasa = parseTasa(_tasaCtrl.text);
     final tipo = tasa > 0 ? _tipoInteres : 'ninguno';
     final modalidad = tasa > 0 ? _modalidadCalculo : 'simple';
     final amortizacion = tasa > 0 ? _tipoAmortizacion : 'saldo_original';
@@ -334,7 +347,10 @@ class _DeudaFormState extends State<DeudaForm>
                   child: TextFormField(
                     controller: _tasaCtrl,
                     style: monoStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    decoration: const InputDecoration(suffixText: '%'),
+                    decoration: const InputDecoration(
+                      hintText: '0',
+                      suffixText: '%',
+                    ),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -345,25 +361,18 @@ class _DeudaFormState extends State<DeudaForm>
                         _tipoAmortizacion = 'saldo_original';
                       }
                     }),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return null;
-                      final tasa = double.tryParse(
-                        v.trim().replaceAll(',', '.'),
-                      );
-                      if (tasa == null) return 'Ingresa un número válido';
-                      if (tasa < 0) return 'La tasa no puede ser negativa';
-                      return null;
-                    },
+                    validator: validarTasa,
                   ),
                 ),
                 CampoEtiquetado(
-                  etiqueta: 'Tipo de interés',
+                  etiqueta: 'La tasa es',
+                  // Obligatorio cuando hay tasa: sin esto no se sabe cuánto
+                  // interés cobrar.
+                  error: _avisarTipoInteres && _faltaTipoInteres
+                      ? errorTipoInteres
+                      : null,
                   child: GrupoPildoras<String>(
-                    opciones: const {
-                      'ninguno': 'Ninguno',
-                      'mensual': 'Mensual',
-                      'anual': 'Anual',
-                    },
+                    opciones: const {'mensual': 'Mensual', 'anual': 'Anual'},
                     valor: _tipoInteres,
                     onElegir: tieneInteres
                         ? (v) => setState(() => _tipoInteres = v)

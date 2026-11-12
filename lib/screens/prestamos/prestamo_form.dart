@@ -11,6 +11,7 @@ import '../../utils/format.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
+import '../../utils/tasa_input.dart';
 
 class PrestamoForm extends StatefulWidget {
   const PrestamoForm({super.key, required this.db, this.prestamo});
@@ -45,9 +46,8 @@ class _PrestamoFormState extends State<PrestamoForm>
     _montoCtrl = TextEditingController(
       text: p != null ? formatCOPInput(p.montoPrestado) : '',
     );
-    _tasaCtrl = TextEditingController(
-      text: p != null ? formatTasaInicial(p.tasaInteres) : '0',
-    );
+    // Sin "0" inicial: así no hay que borrarlo antes de escribir la tasa.
+    _tasaCtrl = TextEditingController(text: tasaParaCampo(p?.tasaInteres ?? 0));
     _notasCtrl = TextEditingController(text: p?.notas ?? '');
     _tipoInteres = p?.tipoInteres ?? 'ninguno';
     _modalidadCalculo = p?.modalidadCalculo ?? 'simple';
@@ -70,10 +70,7 @@ class _PrestamoFormState extends State<PrestamoForm>
     super.dispose();
   }
 
-  bool get _tieneInteres {
-    final v = double.tryParse(_tasaCtrl.text.replaceAll(',', '.'));
-    return v != null && v > 0;
-  }
+  bool get _tieneInteres => parseTasa(_tasaCtrl.text) > 0;
 
   Future<void> _seleccionarFechaPrestamo() async {
     final f = await showDatePicker(
@@ -116,7 +113,10 @@ class _PrestamoFormState extends State<PrestamoForm>
           controller: cuotasCtrl,
           autofocus: true,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(3),
+          ],
           decoration: const InputDecoration(labelText: '¿En cuántos meses?'),
         ),
         actions: [
@@ -132,7 +132,7 @@ class _PrestamoFormState extends State<PrestamoForm>
       ),
     );
     if (numeroCuotas == null || numeroCuotas <= 0) return;
-    final tasa = double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
+    final tasa = parseTasa(_tasaCtrl.text);
     final cuota = InteresCalculator.calcularCuotaFijaDesdeTasa(
       capital: monto,
       tasaInteres: tasa,
@@ -154,11 +154,11 @@ class _PrestamoFormState extends State<PrestamoForm>
     if (monto == null) {
       setState(() => guardando = false);
       if (mounted) {
-        mostrarAlerta(context, 'Monto inválido. Verifica el valor ingresado.');
+        mostrarAlerta(context, 'Monto inválido. El máximo es $textoMaxMonto.');
       }
       return;
     }
-    final tasa = double.tryParse(_tasaCtrl.text.replaceAll(',', '.')) ?? 0;
+    final tasa = parseTasa(_tasaCtrl.text);
     final tipo = tasa > 0 ? _tipoInteres : 'ninguno';
     final modalidad = tasa > 0 ? _modalidadCalculo : 'simple';
     final amortizacion = tasa > 0 ? _tipoAmortizacion : 'saldo_original';
@@ -271,6 +271,7 @@ class _PrestamoFormState extends State<PrestamoForm>
                   controller: _tasaCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Tasa de interés (%)',
+                    hintText: '0',
                     prefixIcon: Icon(Icons.percent),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
@@ -283,28 +284,43 @@ class _PrestamoFormState extends State<PrestamoForm>
                       _tipoAmortizacion = 'saldo_original';
                     }
                   }),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return null;
-                    final tasa = double.tryParse(v.trim().replaceAll(',', '.'));
-                    if (tasa == null) return 'Ingresa un número válido';
-                    if (tasa < 0) return 'La tasa no puede ser negativa';
-                    return null;
-                  },
+                  validator: validarTasa,
                 ),
                 const SizedBox(height: AppSpacing.md),
+                // Con tasa, es obligatorio decir si es mensual o anual: sin
+                // eso el interés no se calcula. "Ninguno" solo existe
+                // mientras no hay tasa (y ahí el campo está apagado).
                 DropdownButtonFormField<String>(
-                  value: _tipoInteres,
+                  key: ValueKey('tipo-interes-$tieneInteres'),
+                  value: tieneInteres && _tipoInteres == 'ninguno'
+                      ? null
+                      : _tipoInteres,
                   isExpanded: true,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   decoration: const InputDecoration(
-                    labelText: 'Tipo de interés',
+                    labelText: 'La tasa es',
                     prefixIcon: Icon(Icons.swap_horiz),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'ninguno', child: Text('Ninguno')),
-                    DropdownMenuItem(value: 'mensual', child: Text('Mensual')),
-                    DropdownMenuItem(value: 'anual', child: Text('Anual')),
+                  hint: const Text('Elige mensual o anual'),
+                  items: [
+                    if (!tieneInteres)
+                      const DropdownMenuItem(
+                        value: 'ninguno',
+                        child: Text('Sin interés'),
+                      ),
+                    const DropdownMenuItem(
+                      value: 'mensual',
+                      child: Text('Mensual'),
+                    ),
+                    const DropdownMenuItem(
+                      value: 'anual',
+                      child: Text('Anual'),
+                    ),
                   ],
+                  validator: (v) =>
+                      tieneInteres && (v == null || v == 'ninguno')
+                      ? errorTipoInteres
+                      : null,
                   onChanged: tieneInteres
                       ? (v) => setState(() => _tipoInteres = v ?? 'ninguno')
                       : null,
@@ -345,7 +361,9 @@ class _PrestamoFormState extends State<PrestamoForm>
                     ),
                     DropdownMenuItem(
                       value: 'saldo_insoluto',
-                      child: Text('Lo que falta por pagar (baja con cada abono)'),
+                      child: Text(
+                        'Lo que falta por pagar (baja con cada abono)',
+                      ),
                     ),
                   ],
                   onChanged: tieneInteres

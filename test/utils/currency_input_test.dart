@@ -31,18 +31,45 @@ void main() {
       expect(parseCOP(r'  $1.000  '), 1000);
     });
 
-    test(
-      'valor con coma decimal (formato europeo) → se redondea al peso',
-      () {
-        // La función reemplaza ',' por '.' → '1000,50' se interpreta como
-        // 1000.5 y se redondea al peso más cercano (money = int, sin
-        // centavos) → 1001.
-        expect(parseCOP('1000,50'), 1001);
-      },
-    );
+    test('valor con coma decimal (formato europeo) → se redondea al peso', () {
+      // La función reemplaza ',' por '.' → '1000,50' se interpreta como
+      // 1000.5 y se redondea al peso más cercano (money = int, sin
+      // centavos) → 1001.
+      expect(parseCOP('1000,50'), 1001);
+    });
 
     test(r'$100.000.000 (cien millones) → 100000000', () {
       expect(parseCOP(r'$100.000.000'), 100000000);
+    });
+  });
+
+  group('tope de montos (12 dígitos)', () {
+    test('el máximo se acepta; uno más ya no', () {
+      expect(parseCOP('999.999.999.999'), maxMonto);
+      expect(parseCOP('1.000.000.000.000'), isNull);
+    });
+
+    test('un 1 seguido de 19 ceros no cabe en un entero: se rechaza en vez '
+        'de aplastarse a 9.223.372.036.854.775.807', () {
+      expect(parseCOP('10000000000000000000'), isNull);
+      expect(parseCOP('1${'0' * 40}'), isNull);
+    });
+
+    test('el campo no deja escribir más de 12 dígitos', () {
+      final f = CopInputFormatter();
+      const doce = TextEditingValue(text: '999.999.999.999');
+      final trece = f.formatEditUpdate(
+        doce,
+        const TextEditingValue(text: '999.999.999.9991'),
+      );
+      expect(trece.text, '999.999.999.999');
+      // Pegar de golpe un número enorme en un campo vacío: se recorta.
+      final pegado = f.formatEditUpdate(
+        TextEditingValue.empty,
+        const TextEditingValue(text: '10000000000000000000'),
+      );
+      expect(pegado.text, '100.000.000.000');
+      expect(parseCOP(pegado.text), 100000000000);
     });
   });
 

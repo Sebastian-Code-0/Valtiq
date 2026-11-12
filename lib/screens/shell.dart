@@ -8,6 +8,7 @@ import '../services/crypto_service.dart';
 import '../services/notification_service.dart';
 import '../utils/notificaciones.dart';
 import '../utils/fecha_civil.dart';
+import '../utils/preferencia_menu.dart';
 import 'barra_lateral.dart';
 import 'config/config_smtp_screen.dart';
 import 'config/settings_screen.dart';
@@ -236,65 +237,81 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       ],
     );
 
-    return Scaffold(
-      // Siempre un Row, con o sin menú: el contenido lleva clave para que
-      // las pestañas conserven su estado si la ventana cruza el ancho que
-      // separa el diseño de PC del de celular.
-      body: Row(
-        children: [
-          if (escritorio)
-            StreamBuilder<List<Recordatorio>>(
-              key: const ValueKey('barra-lateral'),
-              stream: _streamRecordatoriosActivos,
-              builder: (context, snap) => BarraLateral(
-                items: [
-                  const ItemBarraLateral('Inicio'),
-                  const ItemBarraLateral('Deudas'),
-                  const ItemBarraLateral('Préstamos'),
-                  const ItemBarraLateral('Finanzas'),
-                  ItemBarraLateral(
-                    'Recordatorios',
-                    contador: _recordatoriosPendientes(snap.data ?? const []),
+    return ValueListenableBuilder<bool>(
+      valueListenable: menuSuperiorNotifier,
+      builder: (context, menuArriba, _) => Scaffold(
+        // Siempre un Flex, con o sin menú y esté el menú al lado o arriba: el
+        // contenido lleva clave para que las pestañas conserven su estado si
+        // la ventana cruza el ancho que separa el diseño de PC del de celular
+        // o si se cambia la posición del menú.
+        body: Flex(
+          direction: escritorio && menuArriba ? Axis.vertical : Axis.horizontal,
+          children: [
+            if (escritorio)
+              StreamBuilder<List<Recordatorio>>(
+                key: ValueKey(menuArriba ? 'barra-superior' : 'barra-lateral'),
+                stream: _streamRecordatoriosActivos,
+                builder: (context, snap) {
+                  final items = [
+                    const ItemBarraLateral('Inicio'),
+                    const ItemBarraLateral('Deudas'),
+                    const ItemBarraLateral('Préstamos'),
+                    const ItemBarraLateral('Finanzas'),
+                    ItemBarraLateral(
+                      'Recordatorios',
+                      contador: _recordatoriosPendientes(snap.data ?? const []),
+                    ),
+                  ];
+                  return menuArriba
+                      ? BarraSuperior(
+                          items: items,
+                          indice: indice,
+                          indiceAjustes: _indiceAjustes,
+                          onElegir: _cambiarIndice,
+                          onPerfil: _abrirPerfil,
+                        )
+                      : BarraLateral(
+                          items: items,
+                          indice: indice,
+                          indiceAjustes: _indiceAjustes,
+                          onElegir: _cambiarIndice,
+                          onPerfil: _abrirPerfil,
+                        );
+                },
+              ),
+            Expanded(key: const ValueKey('contenido'), child: contenido),
+          ],
+        ),
+        bottomNavigationBar: escritorio
+            ? null
+            : BottomNavigationBar(
+                currentIndex: indice,
+                onTap: _cambiarIndice,
+                type: BottomNavigationBarType.fixed,
+                items: const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.dashboard),
+                    label: 'Inicio',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.credit_card),
+                    label: 'Deudas',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.handshake_outlined),
+                    label: 'Préstamos',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.account_balance),
+                    label: 'Finanzas',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.notifications),
+                    label: 'Recordatorios',
                   ),
                 ],
-                indice: indice,
-                indiceAjustes: _indiceAjustes,
-                onElegir: _cambiarIndice,
-                onPerfil: _abrirPerfil,
               ),
-            ),
-          Expanded(key: const ValueKey('contenido'), child: contenido),
-        ],
       ),
-      bottomNavigationBar: escritorio
-          ? null
-          : BottomNavigationBar(
-              currentIndex: indice,
-              onTap: _cambiarIndice,
-              type: BottomNavigationBarType.fixed,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.dashboard),
-                  label: 'Inicio',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.credit_card),
-                  label: 'Deudas',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.handshake_outlined),
-                  label: 'Préstamos',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.account_balance),
-                  label: 'Finanzas',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.notifications),
-                  label: 'Recordatorios',
-                ),
-              ],
-            ),
     );
   }
 }

@@ -15,6 +15,22 @@ import 'numero_utils.dart';
 // a 1e21 (1e21 - 1 ULP), que sí formatea en notación fija.
 const _maxValorEdicion = 999999999999999868928.0;
 
+/// Monto más grande que se puede escribir en Valtiq: 12 dígitos
+/// (999.999.999.999, casi un billón de pesos).
+///
+/// Por qué hay tope: los montos se guardan como enteros de 64 bits, que
+/// llegan hasta 9.223.372.036.854.775.807 (19 dígitos). Un número más largo
+/// no cabe: antes se "aplastaba" a ese máximo al guardar y, al sumarlo con
+/// otros, la suma se desbordaba y daba totales absurdos. Con 12 dígitos por
+/// monto, ni las sumas ni los intereses se acercan a ese límite.
+const int maxMonto = 999999999999;
+const int maxDigitosMonto = 12;
+
+/// [maxMonto] escrito para mostrarlo en un mensaje.
+const String textoMaxMonto = r'$999.999.999.999';
+
+/// Convierte lo escrito a pesos enteros. Devuelve `null` si no es un número
+/// o si pasa de [maxMonto].
 int? parseCOP(String input) {
   var s = input.trim();
   if (s.isEmpty) return null;
@@ -23,7 +39,9 @@ int? parseCOP(String input) {
   s = s.replaceAll('.', '');
   s = s.replaceAll(',', '.');
   final parsed = double.tryParse(s);
-  return parsed?.round();
+  if (parsed == null || !parsed.isFinite) return null;
+  if (parsed.abs() > maxMonto) return null;
+  return parsed.round();
 }
 
 String formatCOPInput(num value) {
@@ -45,6 +63,15 @@ class CopInputFormatter extends TextInputFormatter {
     final digits = newValue.text.replaceAll(_noDigitos, '');
     if (digits.isEmpty) {
       return const TextEditingValue();
+    }
+    // Tope de [maxDigitosMonto] dígitos: lo que pase de ahí se descarta,
+    // tanto al escribir un dígito de más como al pegar un número enorme.
+    if (digits.length > maxDigitosMonto) {
+      final recortado = agruparMiles(digits.substring(0, maxDigitosMonto));
+      return TextEditingValue(
+        text: recortado,
+        selection: TextSelection.collapsed(offset: recortado.length),
+      );
     }
     final formatted = agruparMiles(digits);
     return TextEditingValue(

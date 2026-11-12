@@ -35,7 +35,8 @@ abstract class AppColors {
   // el beige del tema claro (#EFE7DA) apagado, para que enmarque sin
   // encandilar.
   static const superficieOscuro = Color(0xFF121010);
-  static const divisorOscuro = Color(0xFF5A5551);
+  // 2026-11: antes #5A5551; se suavizó porque los bordes se veían gruesos.
+  static const divisorOscuro = Color(0xFF322E2C);
   // Texto: el beige del fondo claro, no blanco.
   static const textoOscuro = Color(0xFFEFE7DA);
   static const textoSecundarioOscuro = Color(0xFFA99B90);
@@ -45,7 +46,7 @@ abstract class AppColors {
   // Tarjetas: blanco opaco (hueso), más claras que el fondo para que el
   // beige del fondo siga siendo el protagonista.
   static const superficieClaro = Color(0xFFF4F0E8);
-  static const divisorClaro = Color(0xFFD6CAB8);
+  static const divisorClaro = Color(0xFFDCD2C2);
   // Texto: el mismo negro puro del fondo oscuro.
   static const textoClaro = Color(0xFF000000);
   static const textoSecundarioClaro = Color(0xFF63554E);

@@ -151,7 +151,7 @@ class ResumenDeuda {
         final f = fechaCivilGuardada(a.fecha);
         if (!f.isBefore(desde) && f.isBefore(hasta)) suma += a.monto;
       }
-      final promedio = (suma / ventana).round();
+      final promedio = InteresCalculator.aPesos(suma / ventana);
       if (promedio > 0) return promedio;
     }
     return (cuota != null && cuota > 0) ? cuota : null;
@@ -415,7 +415,9 @@ class PlanPago {
       presupuestoMensual: presupuesto,
       meses: mesesTotales,
       fechaLibre: activas.isEmpty ? null : fechaDe(mesesTotales),
-      interesesTotales: mesesTotales == null ? 0 : intereses.round(),
+      interesesTotales: mesesTotales == null
+          ? 0
+          : InteresCalculator.aPesos(intereses),
       orden: [
         for (var i = 0; i < activas.length; i++)
           PasoPlan(

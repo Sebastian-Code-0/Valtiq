@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
+import '../../utils/encabezado_pantalla.dart';
 import '../../utils/selector_pildoras.dart';
 import 'acerca_de_screen.dart';
 import 'apariencia_screen.dart';
@@ -94,7 +95,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: widget.embebido ? null : AppBar(title: const Text('Ajustes')),
       body: SafeArea(
@@ -102,36 +102,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (widget.embebido)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
+              const Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.xl,
+                  AppSpacing.xl,
                   AppSpacing.lg,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  AppSpacing.sm,
                 ),
-                child: Text(
-                  'Ajustes',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: EncabezadoPantalla(
+                  kicker: 'Este dispositivo',
+                  titulo: 'Ajustes',
                 ),
               ),
             SelectorPildoras(
               opciones: [
-                for (final s in _secciones) OpcionPildora(s.nombre, s.icono),
+                // En PC van sin ícono (como el resto de pestañas) para que
+                // quepan en una sola línea.
+                for (final s in _secciones)
+                  OpcionPildora(s.nombre, widget.embebido ? null : s.icono),
               ],
               seleccionada: _seccion,
               onElegir: (i) => setState(() => _seccion = i),
-              margen: widget.embebido ? AppSpacing.lg : AppSpacing.md,
+              margen: widget.embebido ? AppSpacing.xl : AppSpacing.md,
             ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: AjustesEmbebido(
-                // Clave por sección: al cambiar, la sección anterior se
-                // desmonta y la nueva arranca limpia.
-                child: KeyedSubtree(
-                  key: ValueKey(_seccion),
-                  child: _secciones[_seccion].construir(widget.db),
+                // En PC, un margen extra para que el contenido de cada
+                // sección quede alineado con el título y el selector.
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: widget.embebido ? AppSpacing.md : 0,
+                  ),
+                  // Clave por sección: al cambiar, la sección anterior se
+                  // desmonta y la nueva arranca limpia.
+                  child: KeyedSubtree(
+                    key: ValueKey(_seccion),
+                    child: _secciones[_seccion].construir(widget.db),
+                  ),
                 ),
               ),
             ),

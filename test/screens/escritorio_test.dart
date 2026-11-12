@@ -14,6 +14,7 @@ import 'package:valtiq/theme/theme.dart';
 import 'package:valtiq/utils/date_format.dart';
 import 'package:valtiq/utils/fecha_civil.dart';
 import 'package:valtiq/utils/format.dart';
+import 'package:valtiq/utils/preferencia_menu.dart';
 
 Future<void> _cerrar(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox());
@@ -43,15 +44,56 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.dark(), home: ShellScreen(db: db)),
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: ShellScreen(db: db),
+      ),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
   }
 
   test('formatFechaEncabezado: día de la semana, día y mes en mayúsculas', () {
-    expect(formatFechaEncabezado(DateTime(2026, 11, 10)), 'MARTES 10 NOVIEMBRE');
+    expect(
+      formatFechaEncabezado(DateTime(2026, 11, 10)),
+      'MARTES 10 NOVIEMBRE',
+    );
     expect(formatFechaEncabezado(DateTime(2026, 3, 1)), 'DOMINGO 1 MARZO');
+  });
+
+  testWidgets('con el menú "Arriba" (Apariencia) las secciones van en una '
+      'barra superior y se puede navegar igual', (tester) async {
+    menuSuperiorNotifier.value = true;
+    addTearDown(() => menuSuperiorNotifier.value = false);
+    await montar(tester, const Size(1366, 768));
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(BarraSuperior), findsOneWidget);
+    expect(find.byType(BarraLateral), findsNothing);
+    expect(find.byType(BottomNavigationBar), findsNothing);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BarraSuperior),
+        matching: find.text('Deudas'),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Nueva deuda'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Ajustes'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    // Volver al menú lateral no desmonta lo que estaba abierto.
+    menuSuperiorNotifier.value = false;
+    await tester.pump();
+    expect(find.byType(BarraLateral), findsOneWidget);
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    await _cerrar(tester);
   });
 
   testWidgets('en PC (ventana ancha) hay menú lateral con todas las secciones '
@@ -158,7 +200,9 @@ void main() {
     await montar(tester, const Size(1366, 768));
     final barra = find.byType(BarraLateral);
 
-    await tester.tap(find.descendant(of: barra, matching: find.text('Ajustes')));
+    await tester.tap(
+      find.descendant(of: barra, matching: find.text('Ajustes')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(BarraLateral), findsOneWidget);

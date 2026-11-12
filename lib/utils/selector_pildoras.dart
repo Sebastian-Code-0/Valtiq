@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
@@ -131,27 +133,7 @@ class SelectorPildoras extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth >= 600) {
-          return Padding(
-            padding: EdgeInsets.symmetric(horizontal: margen),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.all(_aire),
-                decoration: pista,
-                child: Wrap(
-                  spacing: 2,
-                  runSpacing: 2,
-                  children: [
-                    for (var i = 0; i < opciones.length; i++)
-                      SizedBox(height: _altoPildora, child: pildora(i)),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-        if (repartirEnCelular) {
+        if (repartirEnCelular && constraints.maxWidth < 600) {
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: margen),
             child: Container(
@@ -170,18 +152,57 @@ class SelectorPildoras extends StatelessWidget {
             ),
           );
         }
+        // Siempre UNA sola línea. Si las opciones caben, la pista mide lo
+        // que ellas; si no caben, la pista ocupa todo el ancho y las
+        // opciones se deslizan dentro (con el dedo, o arrastrando con el
+        // ratón). Antes, en PC se partían en dos líneas disparejas.
         return Padding(
           padding: EdgeInsets.symmetric(horizontal: margen),
-          child: Container(
-            height: _altoPildora + 2 * _aire,
-            padding: const EdgeInsets.all(_aire),
-            decoration: pista,
-            clipBehavior: Clip.antiAlias,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: opciones.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 2),
-              itemBuilder: (context, i) => pildora(i),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              height: _altoPildora + 2 * _aire,
+              padding: const EdgeInsets.all(_aire),
+              decoration: pista,
+              clipBehavior: Clip.antiAlias,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: PointerDeviceKind.values.toSet(),
+                  scrollbars: false,
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var i = 0; i < opciones.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 2),
+                        SizedBox(
+                          height: _altoPildora,
+                          child: Builder(
+                            builder: (ctx) => _Pildora(
+                              nombre: opciones[i].nombre,
+                              icono: opciones[i].icono,
+                              elegida: i == seleccionada,
+                              onTap: () {
+                                onElegir(i);
+                                // Trae a la vista la opción tocada si estaba
+                                // cortada por el borde.
+                                Scrollable.ensureVisible(
+                                  ctx,
+                                  alignment: 0.5,
+                                  duration: const Duration(milliseconds: 250),
+                                  curve: Curves.easeOut,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         );

@@ -1,5 +1,41 @@
 # Changelog
 
+## Inicio con el estilo nuevo, topes de montos y tasas, "Borrar todo", menú arriba (2026-11-11)
+
+- **Fix — montos gigantes:** un monto de más de 18 dígitos no cabe en un
+  entero de 64 bits; `parseCOP` lo "aplastaba" a 9.223.372.036.854.775.807
+  y las sumas siguientes se desbordaban (totales absurdos, saldo en cero).
+  Ahora hay tope de 12 dígitos (`maxMonto` = 999.999.999.999):
+  `CopInputFormatter` no deja escribir ni pegar más y `parseCOP` devuelve
+  `null` por encima. Aplica a todos los campos de dinero.
+- **Fix — resultados de interés:** `InteresCalculator.aPesos` acota
+  cualquier resultado a ±9e15 antes de redondear (interés compuesto con
+  tasas disparatadas ya no desborda ni revienta con infinito). Tasa máxima:
+  500% (`utils/tasa_input.dart`: `validarTasa`, `parseTasa`).
+- **Fix — tasa sin tipo de interés:** con tasa > 0 y tipo "ninguno" el
+  interés no se calculaba y la deuda quedaba como "sin interés" sin avisar.
+  Ahora, en deudas y préstamos, con tasa es obligatorio elegir mensual o
+  anual ("Ninguno" ya no es una opción cuando hay tasa).
+- El campo de tasa arranca vacío (antes traía un "0" que había que borrar).
+- **Bordes más sutiles:** `divisorOscuro` #5A5551 → #322E2C, `divisorClaro`
+  #D6CAB8 → #DCD2C2.
+- **`SelectorPildoras`:** siempre una sola línea; si no cabe, se desliza
+  dentro de la pista (también arrastrando con el ratón). Antes, en PC, las
+  secciones de Ajustes se partían en dos líneas disparejas. Ajustes en PC:
+  encabezado nuevo, pestañas sin ícono y contenido alineado con el título.
+- **Borrar todo** (Ajustes → Copia de seguridad): `BorradoService.borrarTodo`
+  vacía todas las tablas, borra la foto, limpia todas las preferencias
+  (perfil, tema, PIN, avisos) y cancela los avisos programados. Pide
+  escribir BORRAR y, si hay bloqueo, el PIN; ofrece guardar una copia antes.
+- **Menú arriba o a la izquierda** (Ajustes → Apariencia, solo en pantallas
+  de 900 px o más): `menuSuperiorNotifier` (`utils/preferencia_menu.dart`),
+  `BarraSuperior` en `barra_lateral.dart`; `ShellScreen` usa un `Flex` para
+  que cambiar la posición no desmonte la pantalla abierta.
+- **Inicio:** encabezado (fecha + saludo) también en celular; tarjetas de
+  totales con cifra grande y nota; ancho máximo de contenido; títulos y
+  rellenos de las tarjetas al estilo nuevo. Mismos datos que antes.
+- Tests: 337 (8 nuevos).
+
 ## Estilo nuevo (base) + Deudas y su formulario con ese estilo (2026-11-11)
 
 Primer paso de aplicar el diseño de la plantilla de PC. Solo cambia el

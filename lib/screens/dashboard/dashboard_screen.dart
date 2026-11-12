@@ -7,6 +7,7 @@ import '../../services/dashboard_service.dart';
 import '../../services/perfil_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
+import '../../utils/encabezado_pantalla.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../barra_lateral.dart';
@@ -81,6 +82,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }) => [
     _ResumenCard(
       titulo: 'Deudas activas',
+      nota: 'Lo que debes hoy',
       icono: Icons.credit_card,
       colorIcono: context.colores.alerta,
       stream: _streamDeudas,
@@ -88,6 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
     _ResumenCard(
       titulo: 'Prestado activo',
+      nota: 'Lo que te deben hoy',
       icono: Icons.handshake_outlined,
       colorIcono: Theme.of(context).colorScheme.primary,
       stream: _streamPrestamos,
@@ -95,6 +98,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
     _ResumenCard(
       titulo: 'Ingresos mensuales',
+      nota: 'Lo que entra este mes',
       icono: Icons.trending_up,
       colorIcono: context.colores.positivo,
       stream: _streamIngresos,
@@ -102,6 +106,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
     _ResumenCard(
       titulo: 'Gastos fijos mensuales',
+      nota: 'Lo que sale cada mes',
       icono: Icons.trending_down,
       colorIcono: context.colores.alerta,
       stream: _streamGastos,
@@ -122,9 +127,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context, ocultos, _) => Scaffold(
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(escritorio ? AppSpacing.lg : AppSpacing.md),
+            padding: EdgeInsets.all(escritorio ? AppSpacing.xl : AppSpacing.md),
             child: escritorio
-                ? _contenidoEscritorio(context, ocultos)
+                // En monitores grandes el contenido no se estira de más.
+                ? Align(
+                    alignment: Alignment.topLeft,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: AppSpacing.anchoContenido,
+                      ),
+                      child: _contenidoEscritorio(context, ocultos),
+                    ),
+                  )
                 : _contenidoCelular(context, ocultos),
           ),
         ),
@@ -135,6 +149,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _botonOcultar(bool ocultos, {required bool conTexto}) {
     final icono = Icon(
       ocultos ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+      size: conTexto ? 18 : null,
     );
     final texto = ocultos ? 'Mostrar montos' : 'Ocultar montos';
     return conTexto
@@ -150,55 +165,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
   }
 
+  /// Fecha de hoy (rótulo) + saludo (título grande).
+  Widget _encabezado({Widget? accion}) => ValueListenableBuilder<Perfil>(
+    valueListenable: PerfilService.perfil,
+    builder: (context, perfil, _) => EncabezadoPantalla(
+      kicker: formatFechaEncabezado(DateTime.now()),
+      // Solo el nombre (sin apellido): más cercano.
+      titulo: perfil.nombre.isEmpty
+          ? saludoSegunHora(DateTime.now())
+          : '${saludoSegunHora(DateTime.now())}, ${perfil.nombre}',
+      accion: accion,
+    ),
+  );
+
   Widget _contenidoEscritorio(BuildContext context, bool ocultos) {
-    final theme = Theme.of(context);
-    final c = context.colores;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    formatFechaEncabezado(DateTime.now()),
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: c.textoSecundario,
-                      letterSpacing: 1.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  ValueListenableBuilder<Perfil>(
-                    valueListenable: PerfilService.perfil,
-                    builder: (context, perfil, _) => Text(
-                      // Solo el nombre (sin apellido): más cercano.
-                      perfil.nombre.isEmpty
-                          ? saludoSegunHora(DateTime.now())
-                          : '${saludoSegunHora(DateTime.now())}, '
-                                '${perfil.nombre}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            _botonOcultar(ocultos, conTexto: true),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
+        _encabezado(accion: _botonOcultar(ocultos, conTexto: true)),
+        const SizedBox(height: 28),
         // Cuatro tarjetas pequeñas, una al lado de la otra. (La de "gastos
         // del día a día" se quitó aquí: con cinco se rompía la fila.)
         SizedBox(
-          height: 104,
+          height: 132,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -265,6 +254,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
+        const SizedBox(height: AppSpacing.sm),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: _encabezado(),
+        ),
         const SizedBox(height: AppSpacing.md),
         GridView.count(
           crossAxisCount: 2,
@@ -287,6 +281,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               height: altoFila,
               child: _ResumenCard(
                 titulo: 'Gastos del día a día (mes)',
+                nota: 'Lo que llevas gastado este mes',
                 icono: Icons.shopping_bag_outlined,
                 colorIcono: context.colores.alerta,
                 stream: _streamGastosVariables,
@@ -310,19 +305,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+/// Tarjeta de un total: rótulo con ícono arriba, la cifra grande y una
+/// nota corta debajo.
 class _ResumenCard extends StatelessWidget {
   const _ResumenCard({
     required this.titulo,
+    required this.nota,
     required this.icono,
     required this.colorIcono,
     required this.stream,
     this.compacta = false,
   });
 
-  /// Versión pequeña (fila de cuatro en PC): menos relleno.
+  /// Versión de la fila de cuatro en PC: cifra más grande.
   final bool compacta;
 
   final String titulo;
+  final String nota;
   final IconData icono;
   final Color colorIcono;
   final Stream<double> stream;
@@ -330,11 +329,12 @@ class _ResumenCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final c = context.colores;
     return Card(
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: compacta ? 12 : AppSpacing.md,
+          horizontal: compacta ? 20 : AppSpacing.md,
+          vertical: compacta ? 18 : AppSpacing.md,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,12 +342,15 @@ class _ResumenCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icono, color: colorIcono, size: 20),
-                const SizedBox(width: AppSpacing.sm),
+                Icon(icono, color: colorIcono, size: 16),
+                const SizedBox(width: 7),
                 Expanded(
                   child: Text(
                     titulo,
-                    style: theme.textTheme.bodySmall,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 12.5,
+                      color: c.textoSecundario,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -381,11 +384,22 @@ class _ResumenCard extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     formatMonto(valor),
-                    style: monoStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: monoStyle(
+                      fontSize: compacta ? 26 : 20,
+                      fontWeight: FontWeight.w600,
+                    ),
                     maxLines: 1,
                   ),
                 );
               },
+            ),
+            Text(
+              nota,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: c.textoSecundario,
+              ),
             ),
           ],
         ),
@@ -405,7 +419,7 @@ class _BalanceMensualCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.all(26),
         child:
             StreamBuilder<({double ingresos, double gastos, double variables})>(
               stream: streamBalance,
@@ -443,7 +457,8 @@ class _BalanceMensualCard extends StatelessWidget {
                     Text(
                       'Balance mensual',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -511,8 +526,9 @@ class _BalanceMensualCard extends StatelessWidget {
                       children: [
                         Text(
                           'Disponible',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         Flexible(
@@ -522,7 +538,7 @@ class _BalanceMensualCard extends StatelessWidget {
                               formatMonto(disponible),
                               style: monoStyle(
                                 fontSize: 24,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                                 color: disponibleColor,
                               ),
                               maxLines: 1,
@@ -554,7 +570,7 @@ class _PosicionPrestamosCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.all(26),
         child: StreamBuilder<double>(
           stream: streamPrestamos,
           builder: (context, snapPres) {
@@ -608,7 +624,8 @@ class _PosicionPrestamosCard extends StatelessWidget {
                     Text(
                       'Posición de préstamos',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -639,8 +656,9 @@ class _PosicionPrestamosCard extends StatelessWidget {
                       children: [
                         Text(
                           'Neto',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         Flexible(
@@ -650,7 +668,7 @@ class _PosicionPrestamosCard extends StatelessWidget {
                               formatMonto(neto),
                               style: monoStyle(
                                 fontSize: 24,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                                 color: netoColor,
                               ),
                               maxLines: 1,
@@ -690,7 +708,10 @@ class _FilaMonto extends StatelessWidget {
         Flexible(
           child: Text(
             label,
-            style: theme.textTheme.bodyLarge,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: 13.5,
+              color: context.colores.textoSecundario,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -699,7 +720,7 @@ class _FilaMonto extends StatelessWidget {
           child: Text(
             valor,
             style: monoStyle(
-              fontSize: 16,
+              fontSize: 14.5,
               fontWeight: FontWeight.w600,
               color: color,
             ),

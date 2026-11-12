@@ -197,6 +197,186 @@ class _Entrada extends StatelessWidget {
   }
 }
 
+/// Menú de PC en su versión de ARRIBA (se elige en Ajustes → Apariencia):
+/// logo y nombre a la izquierda, las secciones en fila y, a la derecha,
+/// Ajustes y la foto de perfil. Mismas secciones que [BarraLateral].
+class BarraSuperior extends StatelessWidget {
+  const BarraSuperior({
+    super.key,
+    required this.items,
+    required this.indice,
+    required this.indiceAjustes,
+    required this.onElegir,
+    required this.onPerfil,
+  });
+
+  final List<ItemBarraLateral> items;
+  final int indice;
+  final int indiceAjustes;
+  final ValueChanged<int> onElegir;
+  final VoidCallback onPerfil;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colores;
+    final theme = Theme.of(context);
+    final enAjustes = indice == indiceAjustes;
+    return Container(
+      decoration: BoxDecoration(
+        color: c.fondo,
+        border: Border(bottom: BorderSide(color: c.divisor)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: 12,
+          ),
+          child: Row(
+            children: [
+              Image.asset(
+                'assets/logo_icono.png',
+                height: 28,
+                color: c.acento,
+                colorBlendMode: BlendMode.srcIn,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Valtiq',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: c.texto,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              // Si la ventana es angosta, las secciones se deslizan.
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < items.length; i++)
+                        _EntradaSuperior(
+                          etiqueta: items[i].etiqueta,
+                          contador: items[i].contador,
+                          seleccionada: indice == i,
+                          onTap: () => onElegir(i),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              IconButton(
+                tooltip: 'Ajustes',
+                isSelected: enAjustes,
+                onPressed: () => onElegir(indiceAjustes),
+                style: IconButton.styleFrom(
+                  backgroundColor: enAjustes ? c.superficie : null,
+                  foregroundColor: enAjustes ? c.texto : c.textoSecundario,
+                  side: BorderSide(color: c.divisor),
+                ),
+                icon: const Icon(Icons.settings_outlined, size: 20),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              ValueListenableBuilder<Perfil>(
+                valueListenable: PerfilService.perfil,
+                builder: (context, perfil, _) => Tooltip(
+                  message: perfil.nombre.isEmpty
+                      ? 'Tu perfil'
+                      : perfil.nombreCompleto,
+                  child: InkWell(
+                    onTap: onPerfil,
+                    customBorder: const CircleBorder(),
+                    child: FotoPerfil(perfil: perfil, radio: 18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EntradaSuperior extends StatelessWidget {
+  const _EntradaSuperior({
+    required this.etiqueta,
+    required this.seleccionada,
+    required this.onTap,
+    this.contador = 0,
+  });
+
+  final String etiqueta;
+  final bool seleccionada;
+  final VoidCallback onTap;
+  final int contador;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colores;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Semantics(
+        button: true,
+        selected: seleccionada,
+        child: Material(
+          color: seleccionada ? c.superficie : Colors.transparent,
+          shape: const StadiumBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    etiqueta,
+                    style: TextStyle(
+                      fontFamily: fuenteTexto,
+                      fontSize: 14,
+                      fontWeight: seleccionada
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      color: seleccionada ? c.texto : c.textoSecundario,
+                    ),
+                  ),
+                  if (contador > 0) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 1,
+                      ),
+                      decoration: ShapeDecoration(
+                        color: c.acentoRelleno,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: Text(
+                        contador > 99 ? '99+' : '$contador',
+                        style: TextStyle(
+                          fontFamily: fuenteTexto,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: c.sobreAcento,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Foto redonda + nombre, al fondo del menú. Toca para ir a Ajustes → Perfil.
 class _PerfilResumen extends StatelessWidget {
   const _PerfilResumen({required this.onTap});

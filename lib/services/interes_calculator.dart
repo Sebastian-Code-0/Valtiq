@@ -124,6 +124,19 @@ abstract class InteresCalculator {
   desglosarPeriodo(DateTime inicio, DateTime fin) =>
       _desglosarMeses(inicio, fin);
 
+  /// Techo de cualquier resultado en pesos. Un interés compuesto con una
+  /// tasa disparatada durante muchos meses crece sin límite; pasado este
+  /// valor se deja ahí en vez de convertirlo a entero, porque un `double`
+  /// enorme "se aplasta" al entero más grande posible y las sumas siguientes
+  /// se desbordan (totales absurdos o negativos).
+  static const double techoPesos = 9e15;
+
+  /// Redondea al peso un resultado intermedio, acotado a ±[techoPesos].
+  static int aPesos(double valor) {
+    if (valor.isNaN) return 0;
+    return valor.clamp(-techoPesos, techoPesos).round();
+  }
+
   static double _tasaMensualPct(double tasaInteres, String tipoInteres) =>
       tipoInteres == 'anual' ? tasaInteres / 12 : tasaInteres;
 
@@ -144,7 +157,7 @@ abstract class InteresCalculator {
     final meses = _mesesTranscurridos(fechaInicio, fin);
     if (meses <= 0) return 0;
     final tasaMensual = _tasaMensualPct(tasaInteres, tipoInteres);
-    return (monto * (tasaMensual / 100) * meses).round();
+    return aPesos(monto * (tasaMensual / 100) * meses);
   }
 
   static int calcularInteresCompuesto({
@@ -160,7 +173,7 @@ abstract class InteresCalculator {
     if (meses <= 0) return 0;
     final tasaMensual = _tasaMensualPct(tasaInteres, tipoInteres) / 100;
     final factor = math.pow(1 + tasaMensual, meses).toDouble();
-    return (monto * (factor - 1)).round();
+    return aPesos(monto * (factor - 1));
   }
 
   static int calcularDeudaTotal({
@@ -448,7 +461,7 @@ abstract class InteresCalculator {
   /// cuota "sugerida" con sueltos de $1-$99 no es realista como cuota fija
   /// pactada; el usuario prefiere un número redondo aunque implique que la
   /// última cuota del crédito real quede un poco distinta.
-  static int _redondearACentena(double valor) => (valor / 100).round() * 100;
+  static int _redondearACentena(double valor) => aPesos(valor / 100) * 100;
 
   /// Igual que [calcularCuotaFija] pero recibiendo la tasa con la misma
   /// convención que el resto de la app (`tasaInteres` en porcentaje,

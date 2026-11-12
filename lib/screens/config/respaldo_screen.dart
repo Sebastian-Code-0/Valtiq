@@ -4,7 +4,9 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
+import '../../services/app_lock_service.dart';
 import '../../services/backup_service.dart';
+import '../../services/borrado_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/notificaciones.dart';
 import 'settings_screen.dart';
@@ -21,6 +23,7 @@ class RespaldoScreen extends StatefulWidget {
 class _RespaldoScreenState extends State<RespaldoScreen> {
   bool _exportando = false;
   bool _importando = false;
+  bool _borrando = false;
 
   String _nombreArchivoSugerido() {
     final hoy = DateTime.now();
@@ -120,11 +123,32 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
     }
   }
 
+  Future<void> _borrarTodo() async {
+    final pideClave = await AppLockService.bloqueoActivo();
+    if (!mounted) return;
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (_) =>
+          _BorrarTodoDialog(pideClave: pideClave, onGuardarCopia: _exportar),
+    );
+    if (confirmado != true || !mounted) return;
+    setState(() => _borrando = true);
+    try {
+      await BorradoService.borrarTodo(widget.db);
+      if (!mounted) return;
+      mostrarExito(context, 'Listo: Valtiq quedó como recién instalada.');
+    } catch (_) {
+      if (!mounted) return;
+      mostrarAlerta(context, 'No se pudo borrar todo. Inténtalo de nuevo.');
+    } finally {
+      if (mounted) setState(() => _borrando = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorFondo = theme.colorScheme.surfaceContainerHighest;
-    final colorBorde = theme.colorScheme.outline;
+    final c = context.colores;
 
     return Scaffold(
       appBar: barraAjustes(context, 'Copia de seguridad'),
@@ -133,9 +157,8 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: colorFondo,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              border: Border.all(color: colorBorde),
+              color: c.relieve,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusRecuadro),
             ),
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Row(
@@ -191,7 +214,203 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
               onTap: _importando ? null : _importar,
             ),
           ),
+          const SizedBox(height: AppSpacing.xl),
+          // Separado y en rojo: es lo único de esta pantalla que destruye.
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusTarjeta),
+              side: BorderSide(
+                color: c.alerta.withValues(alpha: 0.45),
+                width: AppSpacing.borde,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Borrar todo',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Deja Valtiq como recién instalada en este dispositivo: '
+                    'borra todos tus datos, tu perfil y tus ajustes. No se '
+                    'puede deshacer.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 13,
+                      color: c.textoSecundario,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  FilledButton.icon(
+                    onPressed: _borrando ? null : _borrarTodo,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: c.alerta.withValues(alpha: 0.14),
+                      foregroundColor: c.alerta,
+                    ),
+                    icon: const Icon(Icons.delete_forever_outlined, size: 18),
+                    label: Text(_borrando ? 'Borrando...' : 'Borrar todo'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Confirmación de "Borrar todo". Para que no pase por accidente pide:
+/// escribir la palabra BORRAR y, si la app tiene bloqueo, el PIN. Ofrece
+/// guardar una copia antes.
+class _BorrarTodoDialog extends StatefulWidget {
+  const _BorrarTodoDialog({
+    required this.pideClave,
+    required this.onGuardarCopia,
+  });
+
+  final bool pideClave;
+  final Future<void> Function() onGuardarCopia;
+
+  @override
+  State<_BorrarTodoDialog> createState() => _BorrarTodoDialogState();
+}
+
+class _BorrarTodoDialogState extends State<_BorrarTodoDialog> {
+  static const _palabra = 'BORRAR';
+
+  final _palabraCtrl = TextEditingController();
+  final _pinCtrl = TextEditingController();
+  String? _errorPin;
+  bool _verificando = false;
+
+  @override
+  void dispose() {
+    _palabraCtrl.dispose();
+    _pinCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _palabraOk => _palabraCtrl.text.trim().toUpperCase() == _palabra;
+
+  Future<void> _confirmar() async {
+    if (!_palabraOk) return;
+    if (widget.pideClave) {
+      setState(() => _verificando = true);
+      final ok = await AppLockService.verificarPin(_pinCtrl.text);
+      if (!mounted) return;
+      setState(() => _verificando = false);
+      if (!ok) {
+        setState(() => _errorPin = 'PIN incorrecto');
+        return;
+      }
+    }
+    Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colores;
+    final secundario = theme.textTheme.bodySmall?.copyWith(
+      fontSize: 13,
+      height: 1.45,
+      color: c.textoSecundario,
+    );
+    return Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(26),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '¿Borrar todo?',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.4,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Se borran tus deudas, préstamos, pagos, ingresos, gastos, '
+                'recordatorios y presupuestos; tu perfil y tu foto; el PIN; '
+                'el correo configurado y todos los ajustes. Valtiq queda '
+                'como recién instalada. No se puede deshacer.',
+                style: secundario,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: widget.onGuardarCopia,
+                  icon: const Icon(Icons.upload_outlined, size: 18),
+                  label: const Text('Guardar una copia antes'),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Para confirmar, escribe $_palabra',
+                style: secundario?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextField(
+                key: const ValueKey('borrar-palabra'),
+                controller: _palabraCtrl,
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(hintText: _palabra),
+                onChanged: (_) => setState(() {}),
+              ),
+              if (widget.pideClave) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Tu PIN',
+                  style: secundario?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  key: const ValueKey('borrar-pin'),
+                  controller: _pinCtrl,
+                  obscureText: true,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(errorText: _errorPin),
+                  onChanged: (_) => setState(() => _errorPin = null),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+              OverflowBar(
+                alignment: MainAxisAlignment.end,
+                overflowAlignment: OverflowBarAlignment.end,
+                spacing: AppSpacing.sm,
+                overflowSpacing: AppSpacing.sm,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    onPressed: _palabraOk && !_verificando ? _confirmar : null,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: c.alerta,
+                      foregroundColor: c.fondo,
+                    ),
+                    child: const Text('Borrar todo'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

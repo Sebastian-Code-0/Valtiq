@@ -9,6 +9,7 @@ import 'package:valtiq/screens/config/perfil_screen.dart';
 import 'package:valtiq/screens/config/settings_screen.dart';
 import 'package:valtiq/services/perfil_service.dart';
 import 'package:valtiq/theme/theme.dart';
+import 'package:valtiq/utils/selector_pildoras.dart';
 
 void main() {
   late AppDatabase db;
@@ -52,12 +53,12 @@ void main() {
       expect(find.byType(AppBar), findsOneWidget);
       expect(find.text('Ajustes'), findsOneWidget);
 
-      // La última sección está fuera de la vista en celular: hay que
-      // deslizar el selector.
+      // Si no caben todas en una línea, la última sección queda fuera de
+      // la vista: hay que deslizar el selector (con el dedo o el ratón).
       if (find.text('Acerca de').hitTestable().evaluate().isEmpty) {
         await tester.dragUntilVisible(
           find.text('Acerca de').hitTestable(),
-          find.byType(ListView).first,
+          find.byType(SelectorPildoras),
           const Offset(-150, 0),
         );
         await tester.pumpAndSettle();

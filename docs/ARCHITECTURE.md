@@ -409,6 +409,33 @@ pantallas no deberían fijar radios ni bordes a mano.
 - Colores y letras NO cambiaron (vino/negro/beige/morado, verde y rojo con
   su significado, Manrope + JetBrains Mono).
 
+### Límites de lo que se puede escribir (2026-11-11)
+
+- **Montos:** máximo 12 dígitos (`maxMonto`, `utils/currency_input.dart`).
+  Los montos son `int` de 64 bits (tope real 9,2e18); con 12 dígitos por
+  monto, ni las sumas ni los intereses se acercan. `CopInputFormatter`
+  recorta y `parseCOP` devuelve `null` por encima.
+- **Tasas:** máximo 500% (`maxTasa`, `utils/tasa_input.dart`). Con tasa > 0
+  es obligatorio el tipo (mensual/anual); "ninguno" solo se guarda con
+  tasa 0.
+- **Resultados:** todo redondeo a pesos de un cálculo pasa por
+  `InteresCalculator.aPesos` (acota a ±9e15; NaN → 0).
+
+### Menú de PC: a la izquierda o arriba (2026-11-11)
+
+`menuSuperiorNotifier` (preferencia `valtiq_menu_superior`) decide entre
+`BarraLateral` y `BarraSuperior`. `ShellScreen` arma el cuerpo con un `Flex`
+(horizontal o vertical) y el contenido lleva clave, así que cambiar la
+posición —o cruzar el ancho de 900 px— no desmonta las pestañas.
+
+### Borrar todo (2026-11-11)
+
+`BorradoService.borrarTodo(db)`: vacía las 10 tablas en una transacción
+(hijas primero), borra la foto de perfil, hace `prefs.clear()`, devuelve a
+su valor de fábrica los notifiers en memoria (perfil, tema, ocultar montos,
+menú, desbloqueo) y replanifica los avisos (queda todo cancelado). La clave
+de cifrado del correo se conserva a propósito.
+
 ### Pantalla de Deudas (2026-11-11)
 
 `screens/deudas/`:

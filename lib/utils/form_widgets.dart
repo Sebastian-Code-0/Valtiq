@@ -116,11 +116,16 @@ class CampoEtiquetado extends StatelessWidget {
     required this.etiqueta,
     required this.child,
     this.ayuda,
+    this.error,
   });
 
   final String etiqueta;
   final Widget child;
   final String? ayuda;
+
+  /// Mensaje en rojo debajo del campo (para lo que no es un campo de texto,
+  /// que ya muestra su propio error).
+  final String? error;
 
   @override
   Widget build(BuildContext context) {
@@ -140,6 +145,16 @@ class CampoEtiquetado extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         child,
+        if (error != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            error!,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: context.colores.alerta,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
         if (ayuda != null) ...[
           const SizedBox(height: 6),
           Text(

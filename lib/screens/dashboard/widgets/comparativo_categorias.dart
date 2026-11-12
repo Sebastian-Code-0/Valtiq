@@ -34,7 +34,7 @@ class _ComparativoCategoriasState extends State<ComparativoCategorias> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.all(26),
         child: StreamBuilder<Map<String, double>>(
           stream: widget.db.gastosVariablesDao
               .watchTotalPorCategoria(_mesB.year, _mesB.month)
@@ -79,7 +79,8 @@ class _ComparativoCategoriasState extends State<ComparativoCategorias> {
                     Text(
                       'Comparación entre meses',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),

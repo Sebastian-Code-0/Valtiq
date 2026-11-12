@@ -10,6 +10,7 @@ import 'package:valtiq/db/database.dart';
 import 'package:valtiq/screens/deudas/deuda_form.dart';
 import 'package:valtiq/theme/theme.dart';
 import 'package:valtiq/utils/fecha_civil.dart';
+import 'package:valtiq/utils/tasa_input.dart';
 
 void main() {
   late AppDatabase db;
@@ -30,6 +31,16 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
+  }
+
+  /// Desliza el formulario hasta [objetivo]. Antes suelta el campo que se
+  /// estaba escribiendo: si no, el campo con el cursor vuelve a traerse a
+  /// la vista y deshace el desplazamiento.
+  Future<void> irA(WidgetTester tester, Finder objetivo) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(objetivo);
     await tester.pumpAndSettle();
   }
 
@@ -87,19 +98,47 @@ void main() {
     });
   }
 
-  testWidgets('el tipo de interés y la modalidad se eligen con píldoras y se '
-      'guardan', (tester) async {
+  testWidgets('una deuda nueva no trae un "0" en la tasa, y sin tasa se '
+      'guarda sin interés', (tester) async {
+    await montar(tester, const Size(1366, 768));
+    final tasa = tester.widget<TextFormField>(find.byType(TextFormField).at(3));
+    expect(tasa.controller!.text, isEmpty);
+    await tester.enterText(find.byType(TextFormField).at(0), 'Juan');
+    await tester.enterText(find.byType(TextFormField).at(2), '50000');
+    await irA(tester, find.text('Guardar deuda'));
+    await tester.tap(find.text('Guardar deuda'));
+    await tester.pumpAndSettle();
+    final deuda = (await db.deudasDao.getAllDeudas()).single;
+    expect(deuda.tasaInteres, 0);
+    expect(deuda.tipoInteres, 'ninguno');
+  });
+
+  testWidgets('el tipo de interés es obligatorio si hay tasa; con píldoras '
+      'se elige y se guarda', (tester) async {
     await montar(tester, const Size(1366, 768));
     await tester.enterText(find.byType(TextFormField).at(0), 'Tarjeta Nu');
     await tester.enterText(find.byType(TextFormField).at(2), '1000000');
     // Tasa > 0 enciende las opciones de interés.
     await tester.enterText(find.byType(TextFormField).at(3), '2');
     await tester.pump();
+    // Con tasa y sin decir si es mensual o anual, no deja guardar.
+    await irA(tester, find.text('Guardar deuda'));
+    await tester.tap(find.text('Guardar deuda'));
+    await tester.pump();
+    expect(await db.deudasDao.getAllDeudas(), isEmpty);
+    expect(find.text(errorTipoInteres), findsOneWidget);
+    // El aviso flotante tapa el botón de guardar: se espera a que se vaya.
+    // (Termina de entrar, cumple sus 4 segundos y termina de salir.)
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsNothing);
+
+    await irA(tester, find.text('Mensual'));
     await tester.tap(find.text('Mensual'));
     await tester.tap(find.text('Compuesto'));
     await tester.pump();
-    await tester.ensureVisible(find.text('Guardar deuda'));
-    await tester.pump();
+    await irA(tester, find.text('Guardar deuda'));
     await tester.tap(find.text('Guardar deuda'));
     await tester.pumpAndSettle();
 

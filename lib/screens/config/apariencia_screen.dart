@@ -3,6 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../main.dart';
 import '../../theme/theme.dart';
+import '../../utils/preferencia_menu.dart';
+import '../../utils/selector_pildoras.dart';
+import '../barra_lateral.dart';
 import 'settings_screen.dart';
 
 /// A partir de este ancho la pantalla se considera "de PC": las vistas
@@ -151,6 +154,54 @@ class _AparienciaScreenState extends State<AparienciaScreen> {
                   ),
                 ),
               ),
+              // Solo en pantallas grandes: en celular el menú va abajo y no
+              // hay nada que elegir.
+              if (MediaQuery.sizeOf(context).width >= anchoMinimoBarraLateral)
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _anchoMaximo),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.md),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Menú',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                'Dónde va el menú de secciones en esta '
+                                'pantalla: a la izquierda o arriba.',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: context.colores.textoSecundario,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              ValueListenableBuilder<bool>(
+                                valueListenable: menuSuperiorNotifier,
+                                builder: (context, arriba, _) =>
+                                    GrupoPildoras<bool>(
+                                      opciones: const {
+                                        false: 'A la izquierda',
+                                        true: 'Arriba',
+                                      },
+                                      valor: arriba,
+                                      onElegir: setMenuSuperior,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           );
         },
