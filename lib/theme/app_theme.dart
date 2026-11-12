@@ -182,11 +182,6 @@ abstract class AppTheme {
         ),
       ),
       dividerTheme: DividerThemeData(color: c.divisor, thickness: 0.5),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: c.superficie,
-        selectedItemColor: c.acento,
-        unselectedItemColor: c.textoSecundario,
-      ),
     );
   }
 }

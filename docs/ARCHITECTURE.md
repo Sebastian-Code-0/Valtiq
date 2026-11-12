@@ -370,8 +370,17 @@ nube y de la transferencia entre dispositivos.
   `embebido: true`), no una ruta nueva. `DashboardScreen` usa el mismo límite
   para cambiar a su diseño de PC (fecha, saludo, cuatro tarjetas en fila, dos
   columnas).
-- **Celular (< 900 px):** `BottomNavigationBar` de siempre; Ajustes se abre
-  con `Navigator.push` desde Inicio.
+- **Celular (< 900 px):** barra inferior flotante (`BarraInferior`, en
+  `barra_inferior.dart`): una píldora separada de los lados y del fondo de
+  la pantalla, con la sección elegida sobre un fondo tenue del color de
+  marca y la insignia de recordatorios pendientes. La última sección se
+  rotula "Avisos" (es Recordatorios; el nombre completo no cabe). No usa
+  `extendBody`: va como `bottomNavigationBar` sobre el color del fondo y
+  dibuja un degradado encima de sí misma para que el contenido se
+  desvanezca al llegar a ella en vez de cortarse en seco. Ajustes se abre
+  como página aparte tocando la foto de perfil de Inicio. El número de
+  pendientes sale de un solo `StreamBuilder` en `ShellScreen`, que sirve
+  al menú de PC y a la barra del celular.
 
 El contenido lleva clave (`ValueKey('contenido')`) para que las pestañas no
 pierdan su estado si la ventana cruza ese límite.
@@ -901,7 +910,7 @@ main() abre `AppDatabase` → carga SharedPreferences (tema, acento) →
 sin `await`, fire-and-forget) → carga `bloqueoInicial`
 (`AppLockService.bloqueoActivo()`) → `runApp` con `MaterialApp.builder`
 envolviendo todo en `AppLockOverlay` → `home: SplashScreen` → tras
-500ms, `ShellScreen` (menú lateral en PC, `BottomNavigationBar` en
+500ms, `ShellScreen` (menú lateral en PC, `BarraInferior` en
 celular; ahí sí avisa con
 SnackBar/diálogo si `claveFueRegenerada` o `ingresosUnicosDesactivados`
 tienen algo pendiente) → pantallas acceden a `AppDatabase` vía

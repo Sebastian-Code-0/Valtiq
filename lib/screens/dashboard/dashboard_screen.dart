@@ -241,16 +241,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Image.asset(
               'assets/logo_icono.png',
-              height: 32,
+              height: 28,
               color: Theme.of(context).colorScheme.primary,
               colorBlendMode: BlendMode.srcIn,
             ),
+            const SizedBox(width: 10),
+            Text(
+              'Valtiq',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.4,
+              ),
+            ),
             const Spacer(),
             _botonOcultar(ocultos, conTexto: false),
-            IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              tooltip: 'Configuración',
-              onPressed: _abrirAjustes,
+            const SizedBox(width: AppSpacing.xs),
+            // A Ajustes se entra por la foto, igual que en el menú de PC.
+            Tooltip(
+              message: 'Ajustes',
+              child: InkWell(
+                key: const ValueKey('inicio-ajustes'),
+                onTap: _abrirAjustes,
+                customBorder: const CircleBorder(),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: ValueListenableBuilder<Perfil>(
+                    valueListenable: PerfilService.perfil,
+                    builder: (context, perfil, _) =>
+                        FotoPerfil(perfil: perfil, radio: 19),
+                  ),
+                ),
+              ),
             ),
           ],
         ),

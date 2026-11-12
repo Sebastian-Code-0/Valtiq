@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/main.dart' as app;
+import 'package:valtiq/screens/barra_inferior.dart';
 import 'package:valtiq/screens/barra_lateral.dart';
 import 'package:valtiq/screens/config/perfil_screen.dart';
 import 'package:valtiq/screens/config/settings_screen.dart';
@@ -70,7 +71,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(BarraSuperior), findsOneWidget);
     expect(find.byType(BarraLateral), findsNothing);
-    expect(find.byType(BottomNavigationBar), findsNothing);
+    expect(find.byType(BarraInferior), findsNothing);
 
     await tester.tap(
       find.descendant(
@@ -104,7 +105,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byType(BarraLateral), findsOneWidget);
-    expect(find.byType(BottomNavigationBar), findsNothing);
+    expect(find.byType(BarraInferior), findsNothing);
     final barra = find.byType(BarraLateral);
     for (final texto in [
       'Valtiq',
@@ -131,7 +132,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byType(BarraLateral), findsNothing);
-    expect(find.byType(BottomNavigationBar), findsOneWidget);
+    expect(find.byType(BarraInferior), findsOneWidget);
     await _cerrar(tester);
   });
 

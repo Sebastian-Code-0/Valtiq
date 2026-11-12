@@ -1,5 +1,20 @@
 # Changelog
 
+## Celular: barra de secciones flotante (2026-11-12)
+
+- **Barra inferior nueva** (`BarraInferior`): píldora flotante separada de
+  los bordes, con sombra; la sección elegida lleva fondo tenue del color de
+  marca e ícono relleno; insignia con los recordatorios pendientes (antes
+  solo la tenía el menú de PC). Reemplaza al `BottomNavigationBar` de
+  Material. "Recordatorios" se rotula "Avisos" en la barra.
+- **Inicio en celular:** cabecera con logo + "Valtiq", el ojo de ocultar
+  montos y la foto de perfil, que abre Ajustes (antes un engranaje).
+- `ShellScreen`: un solo `StreamBuilder` de recordatorios para el menú de
+  PC y la barra del celular.
+- Las demás pantallas ya compartían el estilo nuevo en celular; no cambió
+  ninguna lógica.
+- Tests: 367 (5 nuevos en `test/screens/celular_test.dart`).
+
 ## Ajustes por dentro con el estilo nuevo (2026-11-12)
 
 - Piezas comunes en `lib/screens/config/ajustes_widgets.dart`:
