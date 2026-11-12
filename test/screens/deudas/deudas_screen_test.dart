@@ -15,6 +15,7 @@ import 'package:valtiq/screens/deudas/deudas_screen.dart';
 import 'package:valtiq/screens/deudas/plan_pago_tab.dart';
 import 'package:valtiq/theme/theme.dart';
 import 'package:valtiq/utils/fecha_civil.dart';
+import 'package:valtiq/utils/form_widgets.dart';
 import 'package:valtiq/utils/format.dart';
 
 // Los StreamBuilder de drift dejan un Timer de limpieza pendiente al
@@ -404,7 +405,22 @@ void main() {
     await tester.tap(find.text('Poner pago mínimo a Sin cuota'));
     await tester.pumpAndSettle();
     expect(find.byType(DeudaForm), findsOneWidget);
-    expect(find.text('Editar deuda'), findsOneWidget);
+    // El formulario baja solo hasta "Pago mínimo", lo resalta un momento y
+    // deja el cursor ahí.
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    final campo = find.widgetWithText(
+      CampoEtiquetado,
+      'Pago mínimo al mes (opcional)',
+    );
+    expect(campo.hitTestable(), findsOneWidget);
+    final editable = tester.widget<EditableText>(
+      find.descendant(of: campo, matching: find.byType(EditableText)),
+    );
+    expect(editable.focusNode.hasFocus, isTrue);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
     await _cerrar(tester);
   });
 

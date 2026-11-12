@@ -14,6 +14,7 @@ import '../../utils/selector_pildoras.dart';
 import '../deudas/deuda_widgets.dart' show fechaCorta;
 import 'prestamo_detalle.dart';
 import 'prestamo_form.dart';
+import 'prestamo_widgets.dart';
 import 'registrar_abono.dart';
 
 /// Pantalla de Préstamos (plata que el usuario le prestó a alguien), con
@@ -70,16 +71,6 @@ class _Resumen {
       ).isBefore(normalizarFechaCivil(DateTime.now()));
 }
 
-String _numeroTasa(double t) =>
-    (t == t.truncateToDouble() ? t.toStringAsFixed(0) : t.toStringAsFixed(2))
-        .replaceAll('.', ',');
-
-/// Iniciales para el círculo: "Pedro Gómez" → "PG".
-String _iniciales(String nombre) {
-  final partes = nombre.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
-  return partes.take(2).map((p) => p.substring(0, 1).toUpperCase()).join();
-}
-
 class _PrestamosScreenState extends State<PrestamosScreen> {
   static const _pestanas = [
     OpcionPildora('Por cobrar'),
@@ -88,6 +79,13 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
 
   late final Stream<List<_Resumen>> _stream = _observar();
   int _pestana = 0;
+
+  /// Préstamo abierto en el panel de detalle (solo PC).
+  int? _seleccionado;
+
+  /// Ancho mínimo para abrir el detalle como panel al lado de las tarjetas.
+  static const _anchoMinimoPanel = 800.0;
+  static const _anchoPanel = 440.0;
 
   // Join sin agregar (en vez de groupBy + sum): el modo de amortización
   // 'saldo_insoluto' necesita la fecha de cada abono, no solo la suma — ver
@@ -125,12 +123,18 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
     MaterialPageRoute(builder: (_) => PrestamoForm(db: widget.db)),
   );
 
-  Future<void> _abrirDetalle(int prestamoId) => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => PrestamoDetalle(db: widget.db, prestamoId: prestamoId),
-    ),
-  );
+  void _abrir(int prestamoId, {required bool enPanel}) {
+    if (enPanel) {
+      setState(() => _seleccionado = prestamoId);
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PrestamoDetalle(db: widget.db, prestamoId: prestamoId),
+      ),
+    );
+  }
 
   Future<void> _marcarPagado(Prestamo prestamo) async {
     final ok = await confirmar(
@@ -194,6 +198,7 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
     try {
       final n = await widget.db.prestamosDao.deletePrestamosPagados();
       if (!mounted) return;
+      setState(() => _seleccionado = null);
       mostrarExito(
         context,
         n == 1
@@ -229,9 +234,17 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
             ];
             return LayoutBuilder(
               builder: (context, constraints) {
-                final ancho = constraints.maxWidth >= 800;
-                final margen = ancho ? AppSpacing.xl : AppSpacing.md;
-                return Align(
+                final conPanel = constraints.maxWidth >= _anchoMinimoPanel;
+                final margen = conPanel ? AppSpacing.xl : AppSpacing.md;
+                final lista = _pestana == 0 ? activos : cobrados;
+                // El panel solo se muestra si el préstamo elegido sigue en
+                // la pestaña que se está viendo.
+                final panelAbierto =
+                    conPanel &&
+                    lista.any((r) => r.prestamo.id == _seleccionado);
+                final elegido = panelAbierto ? _seleccionado : null;
+
+                final principal = Align(
                   alignment: Alignment.topLeft,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
@@ -260,20 +273,43 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
                             ),
                           ),
                         ),
-                        SelectorPildoras(
-                          opciones: _pestanas,
-                          seleccionada: _pestana,
-                          margen: margen,
-                          repartirEnCelular: true,
-                          onElegir: (i) => setState(() => _pestana = i),
+                        // Pestañas a la izquierda y, en "Cobrados", el botón
+                        // de limpiar el historial a la derecha.
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SelectorPildoras(
+                                opciones: _pestanas,
+                                seleccionada: _pestana,
+                                margen: margen,
+                                repartirEnCelular: true,
+                                onElegir: (i) => setState(() {
+                                  _pestana = i;
+                                  _seleccionado = null;
+                                }),
+                              ),
+                            ),
+                            if (_pestana == 1 && cobrados.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.only(right: margen),
+                                child: BotonLimpiarHistorial(
+                                  onPressed: () =>
+                                      _limpiarHistorial(cobrados.length),
+                                ),
+                              ),
+                          ],
                         ),
-                        SizedBox(height: ancho ? AppSpacing.md : AppSpacing.sm),
+                        SizedBox(
+                          height: conPanel ? AppSpacing.md : AppSpacing.sm,
+                        ),
                         Expanded(
                           child: _pestana == 0
                               ? _PorCobrar(
                                   activos: activos,
                                   margen: margen,
-                                  onAbrir: _abrirDetalle,
+                                  seleccionado: elegido,
+                                  onAbrir: (id) =>
+                                      _abrir(id, enPanel: conPanel),
                                   onAbonar: (r) => registrarAbonoPrestamo(
                                     context,
                                     widget.db,
@@ -286,16 +322,46 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
                               : _Cobrados(
                                   cobrados: cobrados,
                                   margen: margen,
-                                  onAbrir: _abrirDetalle,
+                                  seleccionado: elegido,
+                                  onAbrir: (id) =>
+                                      _abrir(id, enPanel: conPanel),
                                   onReactivar: _reactivar,
                                   onEliminar: _eliminar,
-                                  onLimpiar: () =>
-                                      _limpiarHistorial(cobrados.length),
                                 ),
                         ),
                       ],
                     ),
                   ),
+                );
+
+                if (!panelAbierto) return principal;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: principal),
+                    Container(
+                      key: const ValueKey('panel-prestamo'),
+                      width: _anchoPanel,
+                      decoration: BoxDecoration(
+                        color: context.colores.superficie,
+                        border: Border(
+                          left: BorderSide(
+                            color: context.colores.divisor,
+                            width: AppSpacing.borde,
+                          ),
+                        ),
+                      ),
+                      child: PrestamoDetalleContenido(
+                        // Clave por préstamo: al elegir otro, el panel
+                        // arranca limpio con sus propios datos.
+                        key: ValueKey(_seleccionado),
+                        db: widget.db,
+                        prestamoId: _seleccionado!,
+                        onSalir: () => setState(() => _seleccionado = null),
+                        onCerrar: () => setState(() => _seleccionado = null),
+                      ),
+                    ),
+                  ],
                 );
               },
             );
@@ -329,41 +395,11 @@ class _Vacio extends StatelessWidget {
   }
 }
 
-/// Círculo con las iniciales de la persona.
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.nombre, this.lado = 40});
-
-  final String nombre;
-  final double lado;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colores;
-    final iniciales = _iniciales(nombre);
-    return Container(
-      width: lado,
-      height: lado,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(color: c.relieve, shape: BoxShape.circle),
-      child: iniciales.isEmpty
-          ? Icon(Icons.person_outline, size: lado * 0.5, color: c.texto)
-          : Text(
-              iniciales,
-              style: TextStyle(
-                fontFamily: fuenteTexto,
-                fontSize: lado * 0.32,
-                fontWeight: FontWeight.w700,
-                color: c.texto,
-              ),
-            ),
-    );
-  }
-}
-
 class _PorCobrar extends StatelessWidget {
   const _PorCobrar({
     required this.activos,
     required this.margen,
+    required this.seleccionado,
     required this.onAbrir,
     required this.onAbonar,
     required this.onMarcarPagado,
@@ -372,6 +408,7 @@ class _PorCobrar extends StatelessWidget {
 
   final List<_Resumen> activos;
   final double margen;
+  final int? seleccionado;
   final ValueChanged<int> onAbrir;
   final ValueChanged<_Resumen> onAbonar;
   final ValueChanged<Prestamo> onMarcarPagado;
@@ -430,6 +467,7 @@ class _PorCobrar extends StatelessWidget {
                   return _TarjetaPrestamo(
                     key: ValueKey(r.prestamo.id),
                     resumen: r,
+                    elegida: r.prestamo.id == seleccionado,
                     onTap: () => onAbrir(r.prestamo.id),
                     onAbonar: () => onAbonar(r),
                     onMarcarPagado: () => onMarcarPagado(r.prestamo),
@@ -531,6 +569,7 @@ class _TarjetaPrestamo extends StatelessWidget {
   const _TarjetaPrestamo({
     super.key,
     required this.resumen,
+    required this.elegida,
     required this.onTap,
     required this.onAbonar,
     required this.onMarcarPagado,
@@ -538,6 +577,7 @@ class _TarjetaPrestamo extends StatelessWidget {
   });
 
   final _Resumen resumen;
+  final bool elegida;
   final VoidCallback onTap;
   final VoidCallback onAbonar;
   final VoidCallback onMarcarPagado;
@@ -557,13 +597,18 @@ class _TarjetaPrestamo extends StatelessWidget {
     final pactada = p.fechaPactadaPago == null
         ? null
         : fechaCivilGuardada(p.fechaPactadaPago!);
-    final tasa = p.tasaInteres > 0 && p.tipoInteres != 'ninguno'
-        ? '${_numeroTasa(p.tasaInteres)}% ${p.tipoInteres}'
-        : 'Sin interés';
+    final tasa = etiquetaTasaPrestamo(p);
 
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusTarjeta),
+        side: BorderSide(
+          color: elegida ? c.acento : c.divisor,
+          width: elegida ? 1.5 : AppSpacing.borde,
+        ),
+      ),
       child: InkWell(
         onTap: onTap,
         onLongPress: onEliminar,
@@ -574,7 +619,7 @@ class _TarjetaPrestamo extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  _Avatar(nombre: p.deudorNombre),
+                  AvatarPersona(nombre: p.deudorNombre),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -724,20 +769,18 @@ class _Cobrados extends StatelessWidget {
   const _Cobrados({
     required this.cobrados,
     required this.margen,
+    required this.seleccionado,
     required this.onAbrir,
     required this.onReactivar,
     required this.onEliminar,
-    required this.onLimpiar,
   });
 
   final List<_Resumen> cobrados;
   final double margen;
+  final int? seleccionado;
   final ValueChanged<int> onAbrir;
   final ValueChanged<Prestamo> onReactivar;
   final ValueChanged<Prestamo> onEliminar;
-
-  /// "Limpiar historial": borra todos los cobrados.
-  final VoidCallback onLimpiar;
 
   @override
   Widget build(BuildContext context) {
@@ -774,66 +817,69 @@ class _Cobrados extends StatelessWidget {
                       endIndent: 22,
                       color: c.divisor,
                     ),
-                  InkWell(
+                  Material(
                     key: ValueKey(r.prestamo.id),
-                    onTap: () => onAbrir(r.prestamo.id),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 12, 10, 12),
-                      child: Row(
-                        children: [
-                          _Avatar(nombre: r.prestamo.deudorNombre, lado: 34),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  r.prestamo.deudorNombre,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                Text(
-                                  r.prestamo.fechaPagoReal == null
-                                      ? 'Cobrado'
-                                      : 'Cobrado ${fechaCorta(fechaCivilGuardada(r.prestamo.fechaPagoReal!), hoy)}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: c.textoSecundario,
-                                  ),
-                                ),
-                              ],
+                    color: r.prestamo.id == seleccionado
+                        ? c.relieve
+                        : Colors.transparent,
+                    child: InkWell(
+                      onTap: () => onAbrir(r.prestamo.id),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 12, 10, 12),
+                        child: Row(
+                          children: [
+                            AvatarPersona(
+                              nombre: r.prestamo.deudorNombre,
+                              lado: 34,
                             ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Text(
-                            formatCOP(r.abonado),
-                            style: monoStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: c.textoSecundario,
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    r.prestamo.deudorNombre,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    r.prestamo.fechaPagoReal == null
+                                        ? 'Cobrado'
+                                        : 'Cobrado ${fechaCorta(fechaCivilGuardada(r.prestamo.fechaPagoReal!), hoy)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: c.textoSecundario,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          _MenuPrestamo(
-                            onReactivar: () => onReactivar(r.prestamo),
-                            onEliminar: () => onEliminar(r.prestamo),
-                          ),
-                        ],
+                            const SizedBox(width: AppSpacing.md),
+                            Text(
+                              formatCOP(r.abonado),
+                              style: monoStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: c.textoSecundario,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            _MenuPrestamo(
+                              onReactivar: () => onReactivar(r.prestamo),
+                              onEliminar: () => onEliminar(r.prestamo),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ],
               ],
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: Alignment.centerRight,
-            child: BotonLimpiarHistorial(onPressed: onLimpiar),
           ),
         ],
       ),

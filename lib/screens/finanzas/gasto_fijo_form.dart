@@ -8,6 +8,7 @@ import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
+import '../../utils/selector_pildoras.dart';
 
 class GastoFijoForm extends StatefulWidget {
   const GastoFijoForm({super.key, required this.db, this.gasto});
@@ -97,120 +98,117 @@ class _GastoFijoFormState extends State<GastoFijoForm>
   @override
   Widget build(BuildContext context) {
     final esEdicion = widget.gasto != null;
+    const espacio = SizedBox(height: AppSpacing.md);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(esEdicion ? 'Editar gasto fijo' : 'Nuevo gasto fijo'),
-      ),
-      body: Form(
-        key: formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+    return PaginaFormulario(
+      formKey: formKey,
+      kicker: 'Gasto fijo',
+      titulo: esEdicion ? 'Editar gasto fijo' : 'Nuevo gasto fijo',
+      children: [
+        FormSection(
+          title: 'Datos del gasto',
+          icon: Icons.trending_down,
           children: [
-            FormSection(
-              title: 'Datos del gasto',
-              icon: Icons.trending_down,
+            FilaCampos(
               children: [
-                TextFormField(
-                  controller: _conceptoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Concepto',
-                    hintText: 'Netflix, arriendo, luz...',
-                    prefixIcon: Icon(Icons.label_outline),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _montoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Monto',
-                    prefixIcon: Icon(Icons.attach_money),
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CopInputFormatter(),
-                  ],
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Requerido';
-                    final n = parseCOP(v);
-                    if (n == null || n <= 0) return 'Debe ser mayor a 0';
-                    return null;
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Frecuencia',
-              icon: Icons.event_repeat,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: _frecuencia,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  decoration: const InputDecoration(
-                    labelText: 'Frecuencia',
-                    prefixIcon: Icon(Icons.repeat),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'mensual', child: Text('Mensual')),
-                    DropdownMenuItem(
-                      value: 'quincenal',
-                      child: Text('Quincenal'),
+                CampoEtiquetado(
+                  etiqueta: 'Concepto',
+                  child: TextFormField(
+                    controller: _conceptoCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Netflix, arriendo, luz...',
                     ),
-                    DropdownMenuItem(value: 'semanal', child: Text('Semanal')),
-                  ],
-                  onChanged: (v) =>
-                      setState(() => _frecuencia = v ?? 'mensual'),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _diaCobroCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Día de cobro',
-                    hintText: '¿Qué día del mes se cobra? (opcional)',
-                    prefixIcon: Icon(Icons.event),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                   ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(2),
-                  ],
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return null;
-                    final n = int.tryParse(v.trim());
-                    if (n == null || n < 1 || n > 31) return 'Entre 1 y 31';
-                    return null;
-                  },
+                ),
+                CampoEtiquetado(
+                  etiqueta: 'Monto',
+                  child: TextFormField(
+                    controller: _montoCtrl,
+                    style: monoStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(
+                      hintText: '0',
+                      prefixText: r'$ ',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      CopInputFormatter(),
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Requerido';
+                      final n = parseCOP(v);
+                      if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                      return null;
+                    },
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Notas',
-              icon: Icons.notes,
-              children: [
-                TextFormField(
-                  controller: _notasCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Notas',
-                    hintText: 'Opcional',
-                    prefixIcon: Icon(Icons.notes),
-                    alignLabelWithHint: true,
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: guardando),
-            const SizedBox(height: AppSpacing.md),
           ],
         ),
-      ),
+        espacio,
+        FormSection(
+          title: 'Frecuencia',
+          icon: Icons.event_repeat,
+          children: [
+            FilaCampos(
+              children: [
+                CampoEtiquetado(
+                  etiqueta: '¿Cada cuánto se paga?',
+                  child: GrupoPildoras<String>(
+                    opciones: const {
+                      'mensual': 'Mensual',
+                      'quincenal': 'Quincenal',
+                      'semanal': 'Semanal',
+                    },
+                    valor: _frecuencia,
+                    onElegir: (v) => setState(() => _frecuencia = v),
+                  ),
+                ),
+                CampoEtiquetado(
+                  etiqueta: 'Día de cobro (opcional)',
+                  child: TextFormField(
+                    controller: _diaCobroCtrl,
+                    decoration: const InputDecoration(
+                      hintText: '¿Qué día del mes se cobra?',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(2),
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return null;
+                      final n = int.tryParse(v.trim());
+                      if (n == null || n < 1 || n > 31) return 'Entre 1 y 31';
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        espacio,
+        FormSection(
+          title: 'Notas',
+          icon: Icons.notes,
+          children: [
+            CampoEtiquetado(
+              etiqueta: 'Notas (opcional)',
+              child: TextFormField(controller: _notasCtrl, maxLines: 3),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FormSaveButton(
+          onPressed: _guardar,
+          loading: guardando,
+          label: esEdicion ? 'Guardar cambios' : 'Guardar gasto fijo',
+        ),
+      ],
     );
   }
 }

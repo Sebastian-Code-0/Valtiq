@@ -115,20 +115,32 @@ class BotonCrear extends StatelessWidget {
 }
 
 /// Botón discreto, en rojo, para vaciar un historial (deudas pagadas,
-/// préstamos cobrados). Quien lo usa pide la confirmación.
+/// préstamos cobrados). Va en la misma fila de las pestañas, a la derecha.
+/// En celular es solo el ícono (el texto no cabe junto a las pestañas).
+/// Quien lo usa pide la confirmación.
 class BotonLimpiarHistorial extends StatelessWidget {
   const BotonLimpiarHistorial({super.key, required this.onPressed});
 
   final VoidCallback onPressed;
 
+  static const _texto = 'Limpiar historial';
+
   @override
   Widget build(BuildContext context) {
     final c = context.colores;
+    if (MediaQuery.sizeOf(context).width < 600) {
+      return IconButton(
+        onPressed: onPressed,
+        tooltip: _texto,
+        color: c.alerta,
+        icon: const Icon(Icons.delete_sweep_outlined),
+      );
+    }
     return TextButton.icon(
       onPressed: onPressed,
       style: TextButton.styleFrom(foregroundColor: c.alerta),
       icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-      label: const Text('Limpiar historial'),
+      label: const Text(_texto),
     );
   }
 }

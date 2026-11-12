@@ -105,135 +105,139 @@ class _GastoVariableFormState extends State<GastoVariableForm>
 
     final dao = widget.db.gastosVariablesDao;
     final fecha = normalizarFechaCivil(_fecha);
-    await ejecutarGuardado(() async {
-      if (widget.gasto == null) {
-        await dao.insertGastoVariable(
-          GastosVariablesCompanion.insert(
-            descripcion: descripcion,
-            monto: monto,
-            categoria: _categoria!,
-            fecha: fecha,
-            notas: Value(notas.isEmpty ? null : notas),
-          ),
-        );
-      } else {
-        await dao.updateGastoVariable(
-          widget.gasto!.copyWith(
-            descripcion: descripcion,
-            monto: monto,
-            categoria: _categoria!,
-            fecha: fecha,
-            notas: Value(notas.isEmpty ? null : notas),
-          ),
-        );
-      }
-    }, resultadoExtra: () => categoriaExcedida == null
-        ? null
-        : (categoria: categoriaExcedida, mes: mesExcedido));
+    await ejecutarGuardado(
+      () async {
+        if (widget.gasto == null) {
+          await dao.insertGastoVariable(
+            GastosVariablesCompanion.insert(
+              descripcion: descripcion,
+              monto: monto,
+              categoria: _categoria!,
+              fecha: fecha,
+              notas: Value(notas.isEmpty ? null : notas),
+            ),
+          );
+        } else {
+          await dao.updateGastoVariable(
+            widget.gasto!.copyWith(
+              descripcion: descripcion,
+              monto: monto,
+              categoria: _categoria!,
+              fecha: fecha,
+              notas: Value(notas.isEmpty ? null : notas),
+            ),
+          );
+        }
+      },
+      resultadoExtra: () => categoriaExcedida == null
+          ? null
+          : (categoria: categoriaExcedida, mes: mesExcedido),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final esEdicion = widget.gasto != null;
+    const espacio = SizedBox(height: AppSpacing.md);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          esEdicion ? 'Editar gasto del día a día' : 'Nuevo gasto del día a día',
-        ),
-      ),
-      body: Form(
-        key: formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+    return PaginaFormulario(
+      formKey: formKey,
+      kicker: 'Gasto del día a día',
+      titulo: esEdicion ? 'Editar gasto' : 'Nuevo gasto',
+      children: [
+        FormSection(
+          title: 'Datos del gasto',
+          icon: Icons.receipt_long_outlined,
           children: [
-            FormSection(
-              title: 'Datos del gasto',
-              icon: Icons.receipt_long_outlined,
+            FilaCampos(
               children: [
-                TextFormField(
-                  controller: _descripcionCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Descripción',
-                    hintText: 'Mercado, ropa, taxi...',
-                    prefixIcon: Icon(Icons.label_outline),
+                CampoEtiquetado(
+                  etiqueta: 'Descripción',
+                  child: TextFormField(
+                    controller: _descripcionCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Mercado, ropa, taxi...',
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                 ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _montoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Monto',
-                    prefixIcon: Icon(Icons.attach_money),
+                CampoEtiquetado(
+                  etiqueta: 'Monto',
+                  child: TextFormField(
+                    controller: _montoCtrl,
+                    style: monoStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(
+                      hintText: '0',
+                      prefixText: r'$ ',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      CopInputFormatter(),
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Requerido';
+                      final n = parseCOP(v);
+                      if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                      return null;
+                    },
                   ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CopInputFormatter(),
-                  ],
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Requerido';
-                    final n = parseCOP(v);
-                    if (n == null || n <= 0) return 'Debe ser mayor a 0';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<String>(
-                  value: _categoria,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  decoration: const InputDecoration(
-                    labelText: 'Categoría',
-                    prefixIcon: Icon(Icons.category_outlined),
-                  ),
-                  items: CategoriaGasto.nombres
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _categoria = v),
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Requerido' : null,
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Fecha',
-              icon: Icons.calendar_today,
+            espacio,
+            FilaCampos(
               children: [
-                DatePickerField(
-                  label: 'Fecha',
-                  icon: Icons.calendar_today,
-                  value: _fecha,
-                  onTap: _seleccionarFecha,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Notas',
-              icon: Icons.notes,
-              children: [
-                TextFormField(
-                  controller: _notasCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Notas',
-                    hintText: 'Opcional',
-                    prefixIcon: Icon(Icons.notes),
-                    alignLabelWithHint: true,
+                CampoEtiquetado(
+                  etiqueta: 'Categoría',
+                  child: DropdownButtonFormField<String>(
+                    value: _categoria,
+                    isExpanded: true,
+                    borderRadius: BorderRadius.circular(
+                      AppSpacing.radiusRecuadro,
+                    ),
+                    hint: const Text('Elige una categoría'),
+                    items: CategoriaGasto.nombres
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _categoria = v),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Requerido' : null,
                   ),
-                  maxLines: 3,
+                ),
+                CampoEtiquetado(
+                  etiqueta: 'Fecha',
+                  child: DatePickerField(
+                    label: 'Fecha',
+                    mostrarEtiqueta: false,
+                    icon: Icons.calendar_today,
+                    value: _fecha,
+                    onTap: _seleccionarFecha,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: guardando),
-            const SizedBox(height: AppSpacing.md),
           ],
         ),
-      ),
+        espacio,
+        FormSection(
+          title: 'Notas',
+          icon: Icons.notes,
+          children: [
+            CampoEtiquetado(
+              etiqueta: 'Notas (opcional)',
+              child: TextFormField(controller: _notasCtrl, maxLines: 3),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FormSaveButton(
+          onPressed: _guardar,
+          loading: guardando,
+          label: esEdicion ? 'Guardar cambios' : 'Guardar gasto',
+        ),
+      ],
     );
   }
 }

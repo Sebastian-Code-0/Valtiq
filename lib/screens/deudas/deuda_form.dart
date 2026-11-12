@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,10 +18,19 @@ import '../../utils/tasa_input.dart';
 import '../../utils/tipo_deuda.dart';
 
 class DeudaForm extends StatefulWidget {
-  const DeudaForm({super.key, required this.db, this.deuda});
+  const DeudaForm({
+    super.key,
+    required this.db,
+    this.deuda,
+    this.irAPagoMinimo = false,
+  });
 
   final AppDatabase db;
   final Deuda? deuda;
+
+  /// Al abrir, bajar hasta "Pago mínimo al mes", resaltarlo un momento y
+  /// dejar el cursor ahí. Lo usa el aviso del Plan de pago.
+  final bool irAPagoMinimo;
 
   @override
   State<DeudaForm> createState() => _DeudaFormState();
@@ -34,6 +45,11 @@ class _DeudaFormState extends State<DeudaForm>
   late final TextEditingController _tasaCtrl;
   late final TextEditingController _cuotaCtrl;
   late final TextEditingController _notasCtrl;
+
+  final _clavePagoMinimo = GlobalKey();
+  final _focoPagoMinimo = FocusNode();
+  bool _resaltarPagoMinimo = false;
+  final List<Timer> _timers = [];
 
   late String _tipo;
   late String _tipoInteres;
@@ -69,10 +85,37 @@ class _DeudaFormState extends State<DeudaForm>
     _fechaLimite = d?.fechaLimite == null
         ? null
         : fechaCivilGuardada(d!.fechaLimite!);
+    if (widget.irAPagoMinimo) {
+      // Espera a que termine la animación de entrada de la página.
+      _timers.add(Timer(const Duration(milliseconds: 350), _irAPagoMinimo));
+    }
+  }
+
+  Future<void> _irAPagoMinimo() async {
+    final destino = _clavePagoMinimo.currentContext;
+    if (!mounted || destino == null) return;
+    await Scrollable.ensureVisible(
+      destino,
+      alignment: 0.35,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeInOutCubic,
+    );
+    if (!mounted) return;
+    setState(() => _resaltarPagoMinimo = true);
+    _focoPagoMinimo.requestFocus();
+    _timers.add(
+      Timer(const Duration(milliseconds: 1600), () {
+        if (mounted) setState(() => _resaltarPagoMinimo = false);
+      }),
+    );
   }
 
   @override
   void dispose() {
+    for (final t in _timers) {
+      t.cancel();
+    }
+    _focoPagoMinimo.dispose();
     _acreedorCtrl.dispose();
     _descripcionCtrl.dispose();
     _diaPagoCtrl.dispose();
@@ -491,38 +534,61 @@ class _DeudaFormState extends State<DeudaForm>
           title: 'Pagos y notas',
           icon: Icons.payments_outlined,
           children: [
-            CampoEtiquetado(
-              etiqueta: 'Pago mínimo al mes (opcional)',
-              ayuda:
-                  'La cuota que pactaste. El botón de la calculadora te '
-                  'sugiere una según la tasa y los meses.',
-              child: TextFormField(
-                controller: _cuotaCtrl,
-                style: monoStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                decoration: InputDecoration(
-                  hintText: '0',
-                  prefixText: r'$ ',
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.calculate_outlined),
-                    tooltip: 'Calcular cuota sugerida',
-                    onPressed: _calcularCuotaSugerida,
+            // Brillo que se enciende y se apaga solo cuando se llega aquí
+            // desde el aviso del Plan de pago. Es una sombra (no relleno ni
+            // borde) para que no mueva nada de su sitio.
+            AnimatedContainer(
+              key: _clavePagoMinimo,
+              duration: const Duration(milliseconds: 450),
+              curve: Curves.easeInOut,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusCampo),
+                color: _resaltarPagoMinimo
+                    ? context.colores.acento.withValues(alpha: 0.16)
+                    : Colors.transparent,
+                boxShadow: [
+                  BoxShadow(
+                    color: _resaltarPagoMinimo
+                        ? context.colores.acento.withValues(alpha: 0.16)
+                        : Colors.transparent,
+                    spreadRadius: 10,
                   ),
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  CopInputFormatter(),
                 ],
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return null;
-                  final cuota = parseCOP(v);
-                  if (cuota == null) return 'Monto inválido';
-                  final monto = parseCOP(_montoCtrl.text) ?? 0;
-                  if (monto > 0 && cuota > monto) {
-                    return 'La cuota no puede superar el monto total';
-                  }
-                  return null;
-                },
+              ),
+              child: CampoEtiquetado(
+                etiqueta: 'Pago mínimo al mes (opcional)',
+                ayuda:
+                    'La cuota que pactaste. El botón de la calculadora te '
+                    'sugiere una según la tasa y los meses.',
+                child: TextFormField(
+                  controller: _cuotaCtrl,
+                  focusNode: _focoPagoMinimo,
+                  style: monoStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    hintText: '0',
+                    prefixText: r'$ ',
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.calculate_outlined),
+                      tooltip: 'Calcular cuota sugerida',
+                      onPressed: _calcularCuotaSugerida,
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    CopInputFormatter(),
+                  ],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return null;
+                    final cuota = parseCOP(v);
+                    if (cuota == null) return 'Monto inválido';
+                    final monto = parseCOP(_montoCtrl.text) ?? 0;
+                    if (monto > 0 && cuota > monto) {
+                      return 'La cuota no puede superar el monto total';
+                    }
+                    return null;
+                  },
+                ),
               ),
             ),
             espacio,

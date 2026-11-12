@@ -175,15 +175,31 @@ class _DeudasScreenState extends State<DeudasScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _encabezado(context, activas.length, margen),
-                    SelectorPildoras(
-                      opciones: _pestanas,
-                      seleccionada: _pestana,
-                      margen: margen,
-                      repartirEnCelular: true,
-                      onElegir: (i) => setState(() {
-                        _pestana = i;
-                        _seleccionada = null;
-                      }),
+                    // Pestañas a la izquierda y, en "Pagadas", el botón
+                    // de limpiar el historial a la derecha, en la misma fila.
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SelectorPildoras(
+                            opciones: _pestanas,
+                            seleccionada: _pestana,
+                            margen: margen,
+                            repartirEnCelular: true,
+                            onElegir: (i) => setState(() {
+                              _pestana = i;
+                              _seleccionada = null;
+                            }),
+                          ),
+                        ),
+                        if (_pestana == 2 && pagadas.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(right: margen),
+                            child: BotonLimpiarHistorial(
+                              onPressed: () =>
+                                  _limpiarHistorial(pagadas.length),
+                            ),
+                          ),
+                      ],
                     ),
                     SizedBox(height: conPanel ? AppSpacing.md : AppSpacing.sm),
                     Expanded(
@@ -200,15 +216,17 @@ class _DeudasScreenState extends State<DeudasScreen> {
                           onEditar: (deuda) => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  DeudaForm(db: widget.db, deuda: deuda),
+                              builder: (_) => DeudaForm(
+                                db: widget.db,
+                                deuda: deuda,
+                                irAPagoMinimo: true,
+                              ),
                             ),
                           ),
                         ),
                         _ => _Pagadas(
                           pagadas: pagadas,
                           margen: margen,
-                          onLimpiar: () => _limpiarHistorial(pagadas.length),
                           seleccionada: panelAbierto ? _seleccionada : null,
                           onAbrir: (id) => _abrir(id, enPanel: conPanel),
                         ),
@@ -571,16 +589,12 @@ class _Pagadas extends StatelessWidget {
     required this.margen,
     required this.seleccionada,
     required this.onAbrir,
-    required this.onLimpiar,
   });
 
   final List<ResumenDeuda> pagadas;
   final double margen;
   final int? seleccionada;
   final ValueChanged<int> onAbrir;
-
-  /// "Limpiar historial": borra todas las pagadas.
-  final VoidCallback onLimpiar;
 
   @override
   Widget build(BuildContext context) {
@@ -597,33 +611,18 @@ class _Pagadas extends StatelessWidget {
       });
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(margen, AppSpacing.sm, margen, margen),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(
-            margin: EdgeInsets.zero,
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                for (final (i, r) in ordenadas.indexed) ...[
-                  if (i > 0)
-                    Divider(
-                      height: 1,
-                      indent: 22,
-                      endIndent: 22,
-                      color: c.divisor,
-                    ),
-                  _fila(context, r),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: Alignment.centerRight,
-            child: BotonLimpiarHistorial(onPressed: onLimpiar),
-          ),
-        ],
+      child: Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (final (i, r) in ordenadas.indexed) ...[
+              if (i > 0)
+                Divider(height: 1, indent: 22, endIndent: 22, color: c.divisor),
+              _fila(context, r),
+            ],
+          ],
+        ),
       ),
     );
   }

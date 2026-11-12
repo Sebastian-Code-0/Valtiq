@@ -9,6 +9,7 @@ import '../../utils/form_widgets.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
+import '../../utils/selector_pildoras.dart';
 
 class IngresoForm extends StatefulWidget {
   const IngresoForm({super.key, required this.db, this.ingreso});
@@ -107,108 +108,109 @@ class _IngresoFormState extends State<IngresoForm>
   @override
   Widget build(BuildContext context) {
     final esEdicion = widget.ingreso != null;
+    const espacio = SizedBox(height: AppSpacing.md);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(esEdicion ? 'Editar ingreso' : 'Nuevo ingreso'),
-      ),
-      body: Form(
-        key: formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+    return PaginaFormulario(
+      formKey: formKey,
+      kicker: 'Ingreso',
+      titulo: esEdicion ? 'Editar ingreso' : 'Nuevo ingreso',
+      children: [
+        FormSection(
+          title: 'Datos del ingreso',
+          icon: Icons.trending_up,
           children: [
-            FormSection(
-              title: 'Datos del ingreso',
-              icon: Icons.trending_up,
+            FilaCampos(
               children: [
-                TextFormField(
-                  controller: _conceptoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Concepto',
-                    hintText: 'Sueldo, freelance, venta...',
-                    prefixIcon: Icon(Icons.label_outline),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _montoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Monto',
-                    prefixIcon: Icon(Icons.attach_money),
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CopInputFormatter(),
-                  ],
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Requerido';
-                    final n = parseCOP(v);
-                    if (n == null || n <= 0) return 'Debe ser mayor a 0';
-                    return null;
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Frecuencia y fecha',
-              icon: Icons.event_repeat,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: _frecuencia,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  decoration: const InputDecoration(
-                    labelText: 'Frecuencia',
-                    prefixIcon: Icon(Icons.repeat),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'mensual', child: Text('Mensual')),
-                    DropdownMenuItem(
-                      value: 'quincenal',
-                      child: Text('Quincenal'),
+                CampoEtiquetado(
+                  etiqueta: 'Concepto',
+                  child: TextFormField(
+                    controller: _conceptoCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Sueldo, freelance, venta...',
                     ),
-                    DropdownMenuItem(value: 'semanal', child: Text('Semanal')),
-                    DropdownMenuItem(value: 'unico', child: Text('Único')),
-                  ],
-                  onChanged: (v) =>
-                      setState(() => _frecuencia = v ?? 'mensual'),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DatePickerField(
-                  label: 'Fecha',
-                  icon: Icons.calendar_today,
-                  value: _fecha,
-                  onTap: _seleccionarFecha,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Notas',
-              icon: Icons.notes,
-              children: [
-                TextFormField(
-                  controller: _notasCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Notas',
-                    hintText: 'Opcional',
-                    prefixIcon: Icon(Icons.notes),
-                    alignLabelWithHint: true,
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                   ),
-                  maxLines: 3,
+                ),
+                CampoEtiquetado(
+                  etiqueta: 'Monto',
+                  child: TextFormField(
+                    controller: _montoCtrl,
+                    style: monoStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(
+                      hintText: '0',
+                      prefixText: r'$ ',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      CopInputFormatter(),
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Requerido';
+                      final n = parseCOP(v);
+                      if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                      return null;
+                    },
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: guardando),
-            const SizedBox(height: AppSpacing.md),
           ],
         ),
-      ),
+        espacio,
+        FormSection(
+          title: 'Frecuencia y fecha',
+          icon: Icons.event_repeat,
+          children: [
+            CampoEtiquetado(
+              etiqueta: '¿Cada cuánto llega?',
+              ayuda: _frecuencia == 'unico'
+                  ? 'Un pago de una sola vez: solo cuenta en el mes de su '
+                        'fecha.'
+                  : null,
+              child: GrupoPildoras<String>(
+                opciones: const {
+                  'mensual': 'Mensual',
+                  'quincenal': 'Quincenal',
+                  'semanal': 'Semanal',
+                  'unico': 'Único',
+                },
+                valor: _frecuencia,
+                onElegir: (v) => setState(() => _frecuencia = v),
+              ),
+            ),
+            espacio,
+            CampoEtiquetado(
+              etiqueta: 'Fecha',
+              child: DatePickerField(
+                label: 'Fecha',
+                mostrarEtiqueta: false,
+                icon: Icons.calendar_today,
+                value: _fecha,
+                onTap: _seleccionarFecha,
+              ),
+            ),
+          ],
+        ),
+        espacio,
+        FormSection(
+          title: 'Notas',
+          icon: Icons.notes,
+          children: [
+            CampoEtiquetado(
+              etiqueta: 'Notas (opcional)',
+              child: TextFormField(controller: _notasCtrl, maxLines: 3),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FormSaveButton(
+          onPressed: _guardar,
+          loading: guardando,
+          label: esEdicion ? 'Guardar cambios' : 'Guardar ingreso',
+        ),
+      ],
     );
   }
 }

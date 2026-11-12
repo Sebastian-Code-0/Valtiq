@@ -343,10 +343,10 @@ nube y de la transferencia entre dispositivos.
 
 | Pantalla      | Archivo                   | Descripción                           |
 |---------------|---------------------------|---------------------------------------|
-| Dashboard     | dashboard_screen.dart     | Resumen financiero con saldos reales  |
+| Inicio        | dashboard_screen.dart     | Fecha + saludo, cuatro totales y tarjetas de balance, posición, presupuestos y comparativo |
 | Deudas        | deudas_screen.dart        | Pestañas Activas (totales + cuadrícula de tarjetas), Plan de pago y Pagadas — ver "Pantalla de Deudas" |
-| Préstamos     | prestamos_screen.dart     | Lista con saldo pendiente y % cobrado por préstamo |
-| Finanzas      | finanzas_screen.dart      | Ingresos, gastos fijos y variables    |
+| Préstamos     | prestamos_screen.dart     | Pestañas Por cobrar (totales + cuadrícula con "Registrar abono") y Cobrados — ver "Pantalla de Préstamos" |
+| Finanzas      | finanzas_screen.dart      | Pestañas Ingresos, Gastos fijos y Día a día — ver "Pantalla de Finanzas" |
 | Recordatorios | recordatorios_screen.dart | Lista y gestión de recordatorios      |
 | Ajustes       | settings_screen.dart      | Una sola pantalla con selector de secciones; cada sección es una de las pantallas de abajo |
 | Perfil        | perfil_screen.dart        | Foto, nombre y apellido (el nombre saluda en Inicio) |
@@ -404,8 +404,16 @@ pantallas no deberían fijar radios ni bordes a mano.
   una tarjeta:** `GrupoPildoras<T>`.
 - **Formularios:** `PaginaFormulario` (columna centrada de 760 px máx.) →
   `FormSection` → `FilaCampos` → `CampoEtiquetado` (nombre encima del
-  campo). Hoy lo usa completo `DeudaForm`; los demás usan aún `labelText`
-  dentro del campo.
+  campo). Lo usan los formularios de deuda, préstamo, ingreso, gasto fijo
+  y gasto del día a día. Falta el de recordatorio (usa aún `labelText`
+  dentro del campo).
+- **Confirmaciones:** `confirmar(context, titulo, mensaje, accion,
+  peligro)` (`utils/confirmar.dart`) en vez de `AlertDialog` a mano.
+- **Listas de filas:** una sola `Card` con filas separadas por `Divider`
+  fino (Pagadas, Cobrados, las tres listas de Finanzas), no una tarjeta
+  por fila.
+- **Limpiar historial:** `BotonLimpiarHistorial` va en la MISMA fila de las
+  pestañas, a la derecha (solo ícono en celular).
 - Colores y letras NO cambiaron (vino/negro/beige/morado, verde y rojo con
   su significado, Manrope + JetBrains Mono).
 
@@ -435,6 +443,41 @@ posición —o cruzar el ancho de 900 px— no desmonta las pestañas.
 su valor de fábrica los notifiers en memoria (perfil, tema, ocultar montos,
 menú, desbloqueo) y replanifica los avisos (queda todo cancelado). La clave
 de cifrado del correo se conserva a propósito.
+
+### Pantalla de Préstamos (2026-11-11)
+
+Misma forma que Deudas. `PrestamosScreen` usa UN stream (join de préstamos
+y pagos) y separa en Dart "Por cobrar" y "Cobrados".
+
+- **Por cobrar:** totales "Te deben" y "Personas"; cuadrícula de tarjetas
+  (iniciales, vencimiento, saldo, barra, botón "Registrar abono").
+- **Cobrados:** una tarjeta con filas; "Limpiar historial" en la fila de
+  pestañas (`PrestamosDao.deletePrestamosPagados`).
+- **Detalle:** `PrestamoDetalleContenido` (en `prestamo_detalle.dart`). En
+  ancho ≥ 800 va como panel de 440 px a la derecha (clave
+  `panel-prestamo`); por debajo, `PrestamoDetalle` lo envuelve como página.
+  `onSalir` cierra el panel / vuelve atrás cuando el préstamo deja la
+  lista (cobrado, reactivado, eliminado).
+- **Abonos:** `registrarAbonoPrestamo` + `RegistrarAbonoDialog`
+  (`registrar_abono.dart`), compartido por la tarjeta y el detalle. Marca
+  el préstamo como pagado si el abono lo deja en cero.
+- `prestamo_widgets.dart`: `AvatarPersona`, `etiquetaTasaPrestamo`.
+
+### Pantalla de Finanzas (2026-11-11)
+
+Tres pestañas con la lógica de siempre (ingresos, gastos fijos y gastos
+del día a día siguen separados, cada uno con su tabla, su DAO y su
+formulario). Cada pestaña: totales sueltos arriba y una tarjeta con filas
+(`_Fila`: ícono, nombre, detalle, monto y menú). El botón de crear del
+encabezado cambia con la pestaña. Día a día sigue siendo UNA sola lista
+desplazable (totales + selector de mes + "Por categoría" + gastos).
+
+### Plan de pago: aviso de pago mínimo (2026-11-11)
+
+Si alguna deuda activa no tiene `cuotaMensual`, `PlanPagoTab` muestra un
+aviso (clave `plan-sin-minimo`) con un botón por deuda. El botón abre
+`DeudaForm(irAPagoMinimo: true)`, que baja hasta el campo, lo resalta
+1,6 s y le pone el cursor.
 
 ### Pantalla de Deudas (2026-11-11)
 

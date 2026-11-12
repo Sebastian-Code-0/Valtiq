@@ -1,5 +1,29 @@
 # Changelog
 
+## Finanzas con el estilo nuevo, detalle de préstamo en panel y ajustes (2026-11-11)
+
+- **Finanzas:** encabezado con el mes y botón de crear que cambia con la
+  pestaña (ya no hay botón flotante); pestañas en píldora; totales sueltos
+  arriba; cada lista en una sola tarjeta con filas (ícono, nombre, detalle,
+  monto, menú). Día a día: selector de mes en píldora y tarjeta "Por
+  categoría". La lógica no cambió: ingresos, gastos fijos y día a día
+  siguen separados.
+- **Formularios de ingreso, gasto fijo y gasto del día a día:** mismo
+  diseño que deuda y préstamo (`PaginaFormulario`, nombre encima del campo,
+  frecuencia con píldoras).
+- **Préstamos:** el detalle ahora es un panel a la derecha en PC, igual que
+  en Deudas (`PrestamoDetalleContenido`); en celular sigue siendo página.
+  Lo que eran las tarjetas "Resumen" e "Información" va plegado en "Más
+  información". Nuevo `prestamo_widgets.dart`.
+- **Limpiar historial:** pasa a la fila de las pestañas, a la derecha (en
+  Deudas → Pagadas y Préstamos → Cobrados); en celular es solo el ícono.
+- **Plan de pago:** "Poner pago mínimo a …" abre el formulario, baja hasta
+  el campo, lo resalta un momento y deja el cursor ahí
+  (`DeudaForm.irAPagoMinimo`).
+- Docs: README al día (tema, menú, plan de pago, borrar todo); PRIVACY con
+  "Borrar todo" y "Limpiar historial".
+- Tests: 352 (6 nuevos).
+
 ## Préstamos con el estilo nuevo, "Limpiar historial" y aviso en el Plan de pago (2026-11-11)
 
 - **Préstamos:** pantalla nueva con pestañas "Por cobrar" / "Cobrados"

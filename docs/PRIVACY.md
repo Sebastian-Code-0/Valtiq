@@ -103,9 +103,18 @@ de ningún usuario.
 ## Eliminación de datos
 
 Como todos los datos viven únicamente en tu dispositivo, puedes eliminarlos
-en cualquier momento desinstalando la aplicación o borrando sus datos desde
-la configuración del sistema operativo. Valtiq no conserva copias en ningún
-otro lugar.
+en cualquier momento:
+
+- **Desde la app:** Ajustes → Copia de seguridad → "Borrar todo" elimina
+  todos tus datos, tu perfil y tu foto, el PIN, el correo configurado y
+  todos los ajustes, y cancela los avisos programados. La app queda como
+  recién instalada. Pide confirmación (y el PIN, si lo tienes activo).
+- **Por partes:** "Limpiar historial" (en Deudas → Pagadas y en Préstamos →
+  Cobrados) elimina solo lo ya pagado, con sus pagos.
+- **Desde el sistema:** desinstalando la aplicación o borrando sus datos
+  desde la configuración del sistema operativo.
+
+Valtiq no conserva copias en ningún otro lugar.
 
 ## Copias automáticas de Android
 

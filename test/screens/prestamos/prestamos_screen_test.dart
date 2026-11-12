@@ -126,7 +126,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.text('Luis'), findsOneWidget);
-      expect(find.text('Limpiar historial'), findsOneWidget);
+      // En la fila de las pestañas, a la derecha: con texto en PC, solo el
+      // ícono en celular.
+      expect(
+        tamano.width < 600
+            ? find.byTooltip('Limpiar historial')
+            : find.text('Limpiar historial'),
+        findsOneWidget,
+      );
       await captura(tester, 'prestamos-cobrados-${tamano.width.round()}');
       await _cerrar(tester);
     });
@@ -155,6 +162,42 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('1 POR COBRAR'), findsOneWidget);
+    await _cerrar(tester);
+  });
+
+  testWidgets('en PC, tocar una tarjeta abre el detalle en un panel a la '
+      'derecha; en celular, como página', (tester) async {
+    await sembrar();
+    await montar(tester, const Size(1366, 768));
+    await tester.tap(find.text('Pedro'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    final panel = find.byKey(const ValueKey('panel-prestamo'));
+    expect(panel, findsOneWidget);
+    expect(find.byType(PrestamoDetalle), findsNothing);
+    for (final texto in [
+      'Falta por cobrar',
+      'Tasa',
+      'Abonado',
+      'Prestado el',
+    ]) {
+      expect(
+        find.descendant(of: panel, matching: find.text(texto)),
+        findsOneWidget,
+      );
+    }
+    await captura(tester, 'prestamos-panel');
+    await tester.tap(find.byTooltip('Cerrar'));
+    await tester.pumpAndSettle();
+    expect(panel, findsNothing);
+    await _cerrar(tester);
+
+    await montar(tester, const Size(360, 640));
+    await tester.tap(find.text('Ana María Rojas'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(PrestamoDetalle), findsOneWidget);
+    expect(find.byKey(const ValueKey('panel-prestamo')), findsNothing);
     await _cerrar(tester);
   });
 

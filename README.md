@@ -9,16 +9,19 @@ sin servidores, sin nube, sin cuentas de usuario.
 ## Qué hace
 
 - Registro de préstamos otorgados, con interés simple y compuesto
-  (convención bancaria colombiana para días 29-31)
-- Registro de deudas propias con seguimiento de abonos
+  (convención bancaria colombiana para días 29-31) y abonos rápidos
+- Registro de deudas propias con seguimiento de abonos y plan de pago
+  (avalancha o bola de nieve) que estima cuándo se queda libre de deudas
 - Desglose auditable del interés ("¿Cómo se calculó?") y guía integrada
   ("Cómo funciona Valtiq") que explica cada cálculo en lenguaje simple
-- Ingresos, gastos fijos y gastos variables por categoría
-- Dashboard con balance real: Ingresos − Gastos Fijos − Gastos Variables
-- Comparativo mensual de gastos variables por categoría
+- Ingresos, gastos fijos y gastos del día a día por categoría, con
+  presupuestos mensuales
+- Inicio con balance real: Ingresos − Gastos fijos − Gastos del día a día
+- Comparativo mensual de gastos del día a día por categoría
 - Recordatorios de pago con notificación del sistema (en Android llegan a su hora aunque la app esté cerrada) y/o correo SMTP
 - Bloqueo de la app con PIN o biometría (opcional, desactivado por defecto)
-- Tema claro/oscuro con color de acento personalizable
+- Tema claro/oscuro; en pantallas grandes, menú a la izquierda o arriba
+- Copia de seguridad en un archivo y opción de borrar todo
 - Credenciales SMTP cifradas localmente con AES-256
 
 ## Stack
@@ -37,8 +40,8 @@ sin servidores, sin nube, sin cuentas de usuario.
 ```
 lib/
   db/            # tablas drift, migraciones, DAOs
-  screens/       # dashboard, deudas, préstamos, finanzas, recordatorios, ajustes
-  services/      # NotificationService, SmtpService, InteresCalculator, CryptoService, AppLockService
+  screens/       # inicio (dashboard), deudas, préstamos, finanzas, recordatorios, ajustes
+  services/      # NotificationService, SmtpService, InteresCalculator, CryptoService, AppLockService, BackupService, BorradoService
   theme/         # AppColors, AppTheme, AppSpacing, AppTypography
   utils/         # formateo COP, fechas, widgets de formulario
 docs/
