@@ -527,7 +527,10 @@ class _PrestamoDetalleContenidoState extends State<PrestamoDetalleContenido> {
   ) {
     final theme = Theme.of(context);
     final colorSec = theme.colorSecundario;
-    final tieneInteres = prestamo.tasaInteres > 0;
+    // Las filas de interés solo salen si el préstamo tiene interés: en uno
+    // sin interés valen cero o repiten el monto, y confunden.
+    final tieneInteres =
+        prestamo.tasaInteres > 0 && prestamo.tipoInteres != 'ninguno';
     final sinInteres = prestamo.montoPrestado - totalAbonado;
     InfoRow fila(String label, String valor) =>
         InfoRow(label: label, valor: valor, colorSec: colorSec, theme: theme);
@@ -553,18 +556,26 @@ class _PrestamoDetalleContenidoState extends State<PrestamoDetalleContenido> {
           expandedCrossAxisAlignment: CrossAxisAlignment.start,
           children: [
             fila('Monto prestado:', formatCOP(resumen['montoPrestado']!)),
-            fila('Interés acumulado:', formatCOP(resumen['interesAcumulado']!)),
-            fila('Total con interés:', formatCOP(resumen['totalConInteres']!)),
-            fila('Total abonado:', formatCOP(totalAbonado)),
-            fila(
-              'Sin interés debería:',
-              formatCOP(sinInteres < 0 ? 0 : sinInteres),
-            ),
-            fila(
-              'Diferencia por interés:',
-              formatCOP(resumen['gananciaInteres']!),
-            ),
             if (tieneInteres) ...[
+              fila(
+                'Interés acumulado:',
+                formatCOP(resumen['interesAcumulado']!),
+              ),
+              fila(
+                'Total con interés:',
+                formatCOP(resumen['totalConInteres']!),
+              ),
+            ],
+            fila('Total abonado:', formatCOP(totalAbonado)),
+            if (tieneInteres) ...[
+              fila(
+                'Sin interés debería:',
+                formatCOP(sinInteres < 0 ? 0 : sinInteres),
+              ),
+              fila(
+                'Diferencia por interés:',
+                formatCOP(resumen['gananciaInteres']!),
+              ),
               fila('Modalidad:', prestamo.modalidadCalculo),
               fila(
                 'Interés sobre:',

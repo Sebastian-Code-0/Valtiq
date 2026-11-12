@@ -633,11 +633,14 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
           expandedCrossAxisAlignment: CrossAxisAlignment.start,
           children: [
             fila('Monto original:', formatCOP(deuda.montoOriginal)),
-            fila(
-              'Interés acumulado:',
-              formatCOP(r.total - deuda.montoOriginal),
-            ),
-            fila('Total con interés:', formatCOP(r.total)),
+            // Solo con interés: sin él valen cero o repiten el monto.
+            if (r.tieneInteres) ...[
+              fila(
+                'Interés acumulado:',
+                formatCOP(r.total - deuda.montoOriginal),
+              ),
+              fila('Total con interés:', formatCOP(r.total)),
+            ],
             fila('Total pagado:', formatCOP(r.abonado)),
             if (r.tieneInteres) ...[
               fila('Modalidad:', deuda.modalidadCalculo),

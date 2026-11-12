@@ -1,5 +1,18 @@
 # Changelog
 
+## Retoques tras la revisión completa (2026-11-12)
+
+- **Detalle de préstamo y de deuda → "Más información":** las filas de
+  interés ("Interés acumulado", "Total con interés" y, en préstamos, "Sin
+  interés debería" y "Diferencia por interés") solo salen si el registro
+  tiene interés. Sin interés valían cero o repetían el monto y confundían.
+- **Finanzas:** el menú de tres puntos de cada fila (ingresos, gastos fijos
+  y día a día) es más ancho (mínimo 180 px).
+- **Plan de pago:** el aviso de deudas sin pago mínimo ya no va en rojo; se
+  ve como una tarjeta más, con el ícono en el color de marca.
+- La lógica no cambió.
+- Tests: 356 (1 nuevo en `test/screens/prestamos/`).
+
 ## Recordatorios con el estilo nuevo (2026-11-11)
 
 - **Recordatorios:** encabezado con "N pendientes" (misma cuenta que la

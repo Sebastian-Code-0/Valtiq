@@ -181,16 +181,18 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
       key: const ValueKey('plan-sin-minimo'),
       padding: EdgeInsets.all(_relleno(context) - 6),
       decoration: BoxDecoration(
-        color: c.alerta.withValues(alpha: 0.08),
+        // Aviso discreto: se ve como una tarjeta más (sin rojo), solo el
+        // ícono lleva el color de marca.
+        color: c.superficie,
         borderRadius: BorderRadius.circular(AppSpacing.radiusTarjeta),
-        border: Border.all(color: c.alerta.withValues(alpha: 0.35)),
+        border: Border.all(color: c.divisor, width: AppSpacing.borde),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, size: 18, color: c.alerta),
+              Icon(Icons.info_outline, size: 18, color: c.acento),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
@@ -198,7 +200,7 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
                       ? 'A 1 deuda le falta el pago mínimo'
                       : 'A ${faltan.length} deudas les falta el pago mínimo',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),

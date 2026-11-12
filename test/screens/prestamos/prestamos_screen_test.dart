@@ -201,6 +201,48 @@ void main() {
     await _cerrar(tester);
   });
 
+  testWidgets('"Más información": las filas de interés solo salen si el '
+      'préstamo tiene interés', (tester) async {
+    final sin = await db.prestamosDao.insertPrestamo(
+      PrestamosCompanion.insert(
+        deudorNombre: 'Sin interés',
+        montoPrestado: 100000,
+        fechaPrestamo: haceMeses(2),
+      ),
+    );
+    final con = await db.prestamosDao.insertPrestamo(
+      PrestamosCompanion.insert(
+        deudorNombre: 'Con interés',
+        montoPrestado: 100000,
+        fechaPrestamo: haceMeses(2),
+        tasaInteres: const Value(2),
+        tipoInteres: const Value('mensual'),
+      ),
+    );
+    const filasInteres = [
+      'Interés acumulado:',
+      'Total con interés:',
+      'Sin interés debería:',
+      'Diferencia por interés:',
+    ];
+    for (final (id, esperado) in [(sin, findsNothing), (con, findsOneWidget)]) {
+      await montar(
+        tester,
+        const Size(360, 1400),
+        home: PrestamoDetalle(db: db, prestamoId: id),
+      );
+      await tester.tap(find.text('Más información'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Monto prestado:'), findsOneWidget);
+      expect(find.text('Total abonado:'), findsOneWidget);
+      for (final fila in filasInteres) {
+        expect(find.text(fila), esperado, reason: fila);
+      }
+      await _cerrar(tester);
+    }
+  });
+
   testWidgets('"Limpiar historial" pide confirmación y borra solo los '
       'cobrados', (tester) async {
     final ids = await sembrar();

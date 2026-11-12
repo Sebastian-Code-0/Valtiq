@@ -711,6 +711,8 @@ class _Fila extends StatelessWidget {
                 icon: Icon(Icons.more_vert, color: c.textoSecundario, size: 20),
                 padding: EdgeInsets.zero,
                 tooltip: 'Acciones',
+                // Con textos tan cortos el menú salía muy angosto.
+                constraints: const BoxConstraints(minWidth: 180, maxWidth: 280),
                 onSelected: (v) => switch (v) {
                   'editar' => onTap(),
                   'toggle' => onToggleActivo?.call(),
