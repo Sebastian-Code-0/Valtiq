@@ -1,5 +1,6 @@
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../utils/currency_input.dart';
 import '../db/database.dart';
 
 class BackupService {
@@ -70,7 +71,11 @@ class BackupService {
     final copia = Map<String, dynamic>.from(row);
     for (final clave in claves) {
       final valor = copia[clave];
-      if (valor is double) copia[clave] = valor.round();
+      if (valor is! num) continue;
+      // Un respaldo hecho antes del tope de montos puede traer un número
+      // que no cabe (p. ej. el entero máximo, de un monto escrito con 19
+      // ceros): se deja en el máximo permitido para que no desborde sumas.
+      copia[clave] = valor.clamp(-maxMonto, maxMonto).round();
     }
     return copia;
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../db/database.dart';
 import '../../services/deudas_calculos.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
@@ -16,10 +17,19 @@ import 'deuda_widgets.dart';
 /// qué orden pagar, cuándo queda libre de deudas y cuánto pagará de
 /// intereses. Las cuentas las hace [PlanPago.simular].
 class PlanPagoTab extends StatefulWidget {
-  const PlanPagoTab({super.key, required this.activas, required this.margen});
+  const PlanPagoTab({
+    super.key,
+    required this.activas,
+    required this.margen,
+    this.onEditar,
+  });
 
   final List<ResumenDeuda> activas;
   final double margen;
+
+  /// Abre el formulario de una deuda (para ponerle el pago mínimo que le
+  /// falta). Sin esto, el aviso se muestra con los botones apagados.
+  final ValueChanged<Deuda>? onEditar;
 
   /// Preferencias donde se recuerda lo elegido (solo en este dispositivo).
   static const claveEstrategia = 'valtiq_plan_estrategia';
@@ -128,8 +138,15 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
           // En PC: a la izquierda lo que se elige (estrategia, extra y el
           // orden que resulta) y a la derecha la respuesta (cuándo se queda
           // libre y cuánto cuesta). En celular, uno debajo del otro.
-          child: ancho >= 720
-              ? Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (plan.orden.any((p) => p.resumen.pagoMinimo == null)) ...[
+                _avisoSinMinimo(context, plan),
+                const SizedBox(height: 12),
+              ],
+              if (ancho >= 720)
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(flex: 3, child: controles),
@@ -137,12 +154,92 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
                     Expanded(flex: 2, child: resultado),
                   ],
                 )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [controles, const SizedBox(height: 12), resultado],
-                ),
+              else ...[
+                controles,
+                const SizedBox(height: 12),
+                resultado,
+              ],
+            ],
+          ),
         );
       },
+    );
+  }
+
+  /// Aviso de las deudas que no tienen pago mínimo. Sin ese dato el plan no
+  /// sabe cuánto se les paga cada mes: solo reciben "lo que sobra", y si
+  /// ninguna lo tiene, el plan no puede dar fecha.
+  Widget _avisoSinMinimo(BuildContext context, PlanPago plan) {
+    final theme = Theme.of(context);
+    final c = context.colores;
+    final faltan = [
+      for (final p in plan.orden)
+        if (p.resumen.pagoMinimo == null) p.resumen.deuda,
+    ];
+    final una = faltan.length == 1;
+    return Container(
+      key: const ValueKey('plan-sin-minimo'),
+      padding: EdgeInsets.all(_relleno(context) - 6),
+      decoration: BoxDecoration(
+        color: c.alerta.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusTarjeta),
+        border: Border.all(color: c.alerta.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 18, color: c.alerta),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  una
+                      ? 'A 1 deuda le falta el pago mínimo'
+                      : 'A ${faltan.length} deudas les falta el pago mínimo',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'El pago mínimo es lo que pagas cada mes por esa deuda. Sin ese '
+            'dato el plan no puede calcular bien cuándo terminas: '
+            '${una ? 'esa deuda' : 'esas deudas'} solo '
+            '${una ? 'recibe' : 'reciben'} lo que sobra de las demás.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 13,
+              height: 1.45,
+              color: c.textoSecundario,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              for (final d in faltan)
+                OutlinedButton.icon(
+                  onPressed: widget.onEditar == null
+                      ? null
+                      : () => widget.onEditar!(d),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 38),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                  ),
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  label: Text(
+                    'Poner pago mínimo a ${d.acreedorNombre}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

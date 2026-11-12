@@ -108,6 +108,7 @@ class SelectorPildoras extends StatelessWidget {
     required this.onElegir,
     this.margen = AppSpacing.md,
     this.repartirEnCelular = false,
+    this.centrado = false,
   });
 
   final List<OpcionPildora> opciones;
@@ -120,6 +121,10 @@ class SelectorPildoras extends StatelessWidget {
   /// En celular, repartir el ancho entre las píldoras (todas a la vista, sin
   /// deslizar). Solo para selectores de pocas opciones (2 o 3).
   final bool repartirEnCelular;
+
+  /// Centrar la pista en el ancho disponible (si no lo ocupa todo) en vez
+  /// de pegarla a la izquierda.
+  final bool centrado;
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +164,7 @@ class SelectorPildoras extends StatelessWidget {
         return Padding(
           padding: EdgeInsets.symmetric(horizontal: margen),
           child: Align(
-            alignment: Alignment.centerLeft,
+            alignment: centrado ? Alignment.center : Alignment.centerLeft,
             child: Container(
               height: _altoPildora + 2 * _aire,
               padding: const EdgeInsets.all(_aire),

@@ -11,6 +11,7 @@ import '../../utils/format.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/formulario_guardado_mixin.dart';
 import '../../utils/notificaciones.dart';
+import '../../utils/selector_pildoras.dart';
 import '../../utils/tasa_input.dart';
 
 class PrestamoForm extends StatefulWidget {
@@ -71,6 +72,13 @@ class _PrestamoFormState extends State<PrestamoForm>
   }
 
   bool get _tieneInteres => parseTasa(_tasaCtrl.text) > 0;
+
+  /// Hay tasa pero falta decir si es mensual o anual (sin eso el interés no
+  /// se calcula).
+  bool get _faltaTipoInteres => _tieneInteres && _tipoInteres == 'ninguno';
+
+  /// Se enciende al intentar guardar sin elegir el tipo de interés.
+  bool _avisarTipoInteres = false;
 
   Future<void> _seleccionarFechaPrestamo() async {
     final f = await showDatePicker(
@@ -147,7 +155,13 @@ class _PrestamoFormState extends State<PrestamoForm>
   }
 
   Future<void> _guardar() async {
-    if (!formKey.currentState!.validate()) return;
+    final camposOk = formKey.currentState!.validate();
+    if (_faltaTipoInteres) {
+      setState(() => _avisarTipoInteres = true);
+      mostrarAlerta(context, '$errorTipoInteres.');
+      return;
+    }
+    if (!camposOk) return;
     setState(() => guardando = true);
 
     final monto = parseCOP(_montoCtrl.text);
@@ -208,247 +222,228 @@ class _PrestamoFormState extends State<PrestamoForm>
   Widget build(BuildContext context) {
     final esEdicion = widget.prestamo != null;
     final tieneInteres = _tieneInteres;
+    const espacio = SizedBox(height: AppSpacing.md);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(esEdicion ? 'Editar préstamo' : 'Nuevo préstamo'),
-      ),
-      body: Form(
-        key: formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+    return PaginaFormulario(
+      formKey: formKey,
+      kicker: 'Préstamo',
+      titulo: esEdicion ? 'Editar préstamo' : 'Nuevo préstamo',
+      children: [
+        FormSection(
+          title: '¿A quién le prestaste?',
+          icon: Icons.person_outline,
           children: [
-            FormSection(
-              title: 'Deudor',
-              icon: Icons.person_outline,
+            FilaCampos(
               children: [
-                TextFormField(
-                  controller: _deudorCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del deudor',
-                    hintText: '¿A quién le prestaste?',
-                    prefixIcon: Icon(Icons.person_outline),
+                CampoEtiquetado(
+                  etiqueta: 'Nombre',
+                  child: TextFormField(
+                    controller: _deudorCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Ej.: Pedro, mi hermana',
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Requerido' : null,
                 ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _contactoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Contacto',
-                    hintText: 'Teléfono, correo... (opcional)',
-                    prefixIcon: Icon(Icons.phone_outlined),
+                CampoEtiquetado(
+                  etiqueta: 'Contacto (opcional)',
+                  child: TextFormField(
+                    controller: _contactoCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Teléfono, correo...',
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Monto e intereses',
-              icon: Icons.attach_money,
-              children: [
-                TextFormField(
-                  controller: _montoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Monto prestado',
-                    prefixIcon: Icon(Icons.attach_money),
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CopInputFormatter(),
-                  ],
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Requerido';
-                    final n = parseCOP(v);
-                    if (n == null || n <= 0) return 'Debe ser mayor a 0';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _tasaCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Tasa de interés (%)',
-                    hintText: '0',
-                    prefixIcon: Icon(Icons.percent),
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  onChanged: (_) => setState(() {
-                    if (!_tieneInteres) {
-                      _tipoInteres = 'ninguno';
-                      _modalidadCalculo = 'simple';
-                      _tipoAmortizacion = 'saldo_original';
-                    }
-                  }),
-                  validator: validarTasa,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                // Con tasa, es obligatorio decir si es mensual o anual: sin
-                // eso el interés no se calcula. "Ninguno" solo existe
-                // mientras no hay tasa (y ahí el campo está apagado).
-                DropdownButtonFormField<String>(
-                  key: ValueKey('tipo-interes-$tieneInteres'),
-                  value: tieneInteres && _tipoInteres == 'ninguno'
-                      ? null
-                      : _tipoInteres,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  decoration: const InputDecoration(
-                    labelText: 'La tasa es',
-                    prefixIcon: Icon(Icons.swap_horiz),
-                  ),
-                  hint: const Text('Elige mensual o anual'),
-                  items: [
-                    if (!tieneInteres)
-                      const DropdownMenuItem(
-                        value: 'ninguno',
-                        child: Text('Sin interés'),
-                      ),
-                    const DropdownMenuItem(
-                      value: 'mensual',
-                      child: Text('Mensual'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'anual',
-                      child: Text('Anual'),
-                    ),
-                  ],
-                  validator: (v) =>
-                      tieneInteres && (v == null || v == 'ninguno')
-                      ? errorTipoInteres
-                      : null,
-                  onChanged: tieneInteres
-                      ? (v) => setState(() => _tipoInteres = v ?? 'ninguno')
-                      : null,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<String>(
-                  value: _modalidadCalculo,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  decoration: const InputDecoration(
-                    labelText: 'Modalidad de cálculo',
-                    prefixIcon: Icon(Icons.calculate_outlined),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'simple', child: Text('Simple')),
-                    DropdownMenuItem(
-                      value: 'compuesto',
-                      child: Text('Compuesto'),
-                    ),
-                  ],
-                  onChanged: tieneInteres
-                      ? (v) => setState(() => _modalidadCalculo = v ?? 'simple')
-                      : null,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<String>(
-                  value: _tipoAmortizacion,
-                  isExpanded: true,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  decoration: const InputDecoration(
-                    labelText: 'Interés sobre',
-                    prefixIcon: Icon(Icons.account_balance_outlined),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'saldo_original',
-                      child: Text('Lo prestado al inicio (no baja)'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'saldo_insoluto',
-                      child: Text(
-                        'Lo que falta por pagar (baja con cada abono)',
-                      ),
-                    ),
-                  ],
-                  onChanged: tieneInteres
-                      ? (v) => setState(
-                          () => _tipoAmortizacion = v ?? 'saldo_original',
-                        )
-                      : null,
-                ),
-                if (tieneInteres) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                    ),
-                    child: Text(
-                      _tipoAmortizacion == 'saldo_insoluto'
-                          ? 'El interés de cada mes se calcula sobre lo que '
-                                'aún te deben, no sobre el monto original — '
-                                'así funciona un crédito bancario.'
-                          : 'El interés siempre se calcula sobre el monto '
-                                'original completo, sin importar los pagos '
-                                'que reciban — pensado para préstamos '
-                                'informales sin pagos periódicos garantizados.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorSecundario,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: _calcularCuotaSugerida,
-                      icon: const Icon(Icons.calculate_outlined),
-                      label: const Text('Calcular cuota fija sugerida'),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Fechas',
-              icon: Icons.event,
-              children: [
-                DatePickerField(
-                  label: 'Fecha del préstamo',
-                  icon: Icons.calendar_today,
-                  value: _fechaPrestamo,
-                  onTap: _seleccionarFechaPrestamo,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                DatePickerField(
-                  label: 'Fecha pactada de pago',
-                  icon: Icons.event_available,
-                  value: _fechaPactada,
-                  onTap: _seleccionarFechaPactada,
-                  onClear: () => setState(() => _fechaPactada = null),
-                  placeholder: 'Sin fecha pactada',
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Notas',
-              icon: Icons.notes,
-              children: [
-                TextFormField(
-                  controller: _notasCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Notas',
-                    hintText: 'Opcional',
-                    prefixIcon: Icon(Icons.notes),
-                    alignLabelWithHint: true,
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            FormSaveButton(onPressed: _guardar, loading: guardando),
-            const SizedBox(height: AppSpacing.md),
           ],
         ),
-      ),
+        espacio,
+        FormSection(
+          title: 'Monto e intereses',
+          icon: Icons.attach_money,
+          children: [
+            FilaCampos(
+              children: [
+                CampoEtiquetado(
+                  etiqueta: 'Monto prestado',
+                  child: TextFormField(
+                    controller: _montoCtrl,
+                    style: monoStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(
+                      hintText: '0',
+                      prefixText: r'$ ',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      CopInputFormatter(),
+                    ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Requerido';
+                      final n = parseCOP(v);
+                      if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                      return null;
+                    },
+                  ),
+                ),
+                CampoEtiquetado(
+                  etiqueta: 'Tasa de interés',
+                  child: TextFormField(
+                    controller: _tasaCtrl,
+                    style: monoStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(
+                      hintText: '0',
+                      suffixText: '%',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (_) => setState(() {
+                      if (!_tieneInteres) {
+                        _tipoInteres = 'ninguno';
+                        _modalidadCalculo = 'simple';
+                        _tipoAmortizacion = 'saldo_original';
+                      }
+                    }),
+                    validator: validarTasa,
+                  ),
+                ),
+              ],
+            ),
+            espacio,
+            FilaCampos(
+              children: [
+                CampoEtiquetado(
+                  etiqueta: 'La tasa es',
+                  // Obligatorio cuando hay tasa: sin esto no se sabe cuánto
+                  // interés cobrar.
+                  error: _avisarTipoInteres && _faltaTipoInteres
+                      ? errorTipoInteres
+                      : null,
+                  child: GrupoPildoras<String>(
+                    opciones: const {'mensual': 'Mensual', 'anual': 'Anual'},
+                    valor: _tipoInteres,
+                    onElegir: tieneInteres
+                        ? (v) => setState(() => _tipoInteres = v)
+                        : null,
+                  ),
+                ),
+                CampoEtiquetado(
+                  etiqueta: 'Modalidad de cálculo',
+                  child: GrupoPildoras<String>(
+                    opciones: const {
+                      'simple': 'Simple',
+                      'compuesto': 'Compuesto',
+                    },
+                    valor: _modalidadCalculo,
+                    onElegir: tieneInteres
+                        ? (v) => setState(() => _modalidadCalculo = v)
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+            espacio,
+            CampoEtiquetado(
+              etiqueta: 'Interés sobre',
+              ayuda: !tieneInteres
+                  ? 'Escribe una tasa mayor a 0 para elegir cómo se calcula '
+                        'el interés.'
+                  : _tipoAmortizacion == 'saldo_insoluto'
+                  ? 'El interés de cada mes se calcula sobre lo que '
+                        'aún te deben, no sobre el monto original — '
+                        'así funciona un crédito bancario.'
+                  : 'El interés siempre se calcula sobre el monto '
+                        'original completo, sin importar los pagos '
+                        'que reciban — pensado para préstamos '
+                        'informales sin pagos periódicos garantizados.',
+              child: DropdownButtonFormField<String>(
+                value: _tipoAmortizacion,
+                isExpanded: true,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusRecuadro),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'saldo_original',
+                    child: Text('Lo prestado al inicio (no baja)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'saldo_insoluto',
+                    child: Text('Lo que falta por pagar (baja con cada abono)'),
+                  ),
+                ],
+                onChanged: tieneInteres
+                    ? (v) => setState(
+                        () => _tipoAmortizacion = v ?? 'saldo_original',
+                      )
+                    : null,
+              ),
+            ),
+            if (tieneInteres) ...[
+              espacio,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _calcularCuotaSugerida,
+                  icon: const Icon(Icons.calculate_outlined, size: 18),
+                  label: const Text('Calcular cuota fija sugerida'),
+                ),
+              ),
+            ],
+          ],
+        ),
+        espacio,
+        FormSection(
+          title: 'Fechas',
+          icon: Icons.event,
+          children: [
+            FilaCampos(
+              children: [
+                CampoEtiquetado(
+                  etiqueta: 'Fecha del préstamo',
+                  child: DatePickerField(
+                    label: 'Fecha del préstamo',
+                    mostrarEtiqueta: false,
+                    icon: Icons.calendar_today,
+                    value: _fechaPrestamo,
+                    onTap: _seleccionarFechaPrestamo,
+                  ),
+                ),
+                CampoEtiquetado(
+                  etiqueta: 'Fecha pactada de pago (opcional)',
+                  child: DatePickerField(
+                    label: 'Fecha pactada de pago',
+                    mostrarEtiqueta: false,
+                    icon: Icons.event_available,
+                    value: _fechaPactada,
+                    onTap: _seleccionarFechaPactada,
+                    onClear: () => setState(() => _fechaPactada = null),
+                    placeholder: 'Sin fecha pactada',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        espacio,
+        FormSection(
+          title: 'Notas',
+          icon: Icons.notes,
+          children: [
+            CampoEtiquetado(
+              etiqueta: 'Notas (opcional)',
+              child: TextFormField(controller: _notasCtrl, maxLines: 3),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FormSaveButton(
+          onPressed: _guardar,
+          loading: guardando,
+          label: esEdicion ? 'Guardar cambios' : 'Guardar préstamo',
+        ),
+      ],
     );
   }
 }

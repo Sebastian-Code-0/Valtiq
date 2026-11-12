@@ -269,28 +269,26 @@ class BarraSuperior extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              IconButton(
-                tooltip: 'Ajustes',
-                isSelected: enAjustes,
-                onPressed: () => onElegir(indiceAjustes),
-                style: IconButton.styleFrom(
-                  backgroundColor: enAjustes ? c.superficie : null,
-                  foregroundColor: enAjustes ? c.texto : c.textoSecundario,
-                  side: BorderSide(color: c.divisor),
-                ),
-                icon: const Icon(Icons.settings_outlined, size: 20),
-              ),
-              const SizedBox(width: AppSpacing.sm),
+              // La foto lleva a Ajustes (abre en Perfil). Estando en
+              // Ajustes, se marca con un aro.
               ValueListenableBuilder<Perfil>(
                 valueListenable: PerfilService.perfil,
                 builder: (context, perfil, _) => Tooltip(
-                  message: perfil.nombre.isEmpty
-                      ? 'Tu perfil'
-                      : perfil.nombreCompleto,
+                  message: 'Ajustes y perfil',
                   child: InkWell(
                     onTap: onPerfil,
                     customBorder: const CircleBorder(),
-                    child: FotoPerfil(perfil: perfil, radio: 18),
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: enAjustes ? c.texto : Colors.transparent,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: FotoPerfil(perfil: perfil, radio: 17),
+                    ),
                   ),
                 ),
               ),

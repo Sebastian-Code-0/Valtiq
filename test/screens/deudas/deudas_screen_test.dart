@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/screens/deudas/deuda_detalle.dart';
+import 'package:valtiq/screens/deudas/deuda_form.dart';
 import 'package:valtiq/screens/deudas/deudas_screen.dart';
 import 'package:valtiq/screens/deudas/plan_pago_tab.dart';
 import 'package:valtiq/theme/theme.dart';
@@ -351,6 +352,59 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString(PlanPagoTab.claveEstrategia), 'bola_de_nieve');
     expect(prefs.getInt(PlanPagoTab.claveExtra), 5000000);
+    await _cerrar(tester);
+  });
+
+  testWidgets('Pagadas: "Limpiar historial" pide confirmación y borra solo '
+      'las pagadas, con sus pagos', (tester) async {
+    final ids = await sembrar();
+    await montar(tester, const Size(1366, 768));
+    await tester.tap(find.text('Pagadas'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Limpiar historial'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(await db.deudasDao.getDeudaById(ids.celular), isNotNull);
+
+    await tester.tap(find.text('Limpiar historial'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Limpiar historial'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(tester.takeException(), isNull);
+    expect(await db.deudasDao.getDeudaById(ids.celular), isNull);
+    expect(await db.deudasDao.getDeudaById(ids.juan), isNotNull);
+    expect(await db.deudasDao.getDeudasActivas(), hasLength(3));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Todavía no has terminado'), findsOneWidget);
+    await _cerrar(tester);
+  });
+
+  testWidgets('Plan de pago: avisa de las deudas sin pago mínimo y ofrece '
+      'ponérselo', (tester) async {
+    await sembrar();
+    await db.deudasDao.insertDeuda(
+      DeudasCompanion.insert(
+        acreedorNombre: 'Sin cuota',
+        montoOriginal: 90000,
+        fechaPrestamo: normalizarFechaCivil(hoy),
+      ),
+    );
+    await montar(tester, const Size(1366, 768));
+    await tester.tap(find.text('Plan de pago'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('plan-sin-minimo')), findsOneWidget);
+    expect(find.text('A 1 deuda le falta el pago mínimo'), findsOneWidget);
+    await captura(tester, 'plan-sin-minimo');
+    await tester.tap(find.text('Poner pago mínimo a Sin cuota'));
+    await tester.pumpAndSettle();
+    expect(find.byType(DeudaForm), findsOneWidget);
+    expect(find.text('Editar deuda'), findsOneWidget);
     await _cerrar(tester);
   });
 

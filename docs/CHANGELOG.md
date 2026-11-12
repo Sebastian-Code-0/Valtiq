@@ -1,5 +1,32 @@
 # Changelog
 
+## Préstamos con el estilo nuevo, "Limpiar historial" y aviso en el Plan de pago (2026-11-11)
+
+- **Préstamos:** pantalla nueva con pestañas "Por cobrar" / "Cobrados"
+  (antes un botón "Ver pagados"), encabezado con "N por cobrar", totales
+  "Te deben" y "Personas", tarjetas en cuadrícula (iniciales, vencimiento,
+  saldo grande, barra, botón "Registrar abono") y Cobrados en una sola
+  tarjeta con filas. Un solo stream para ambas pestañas.
+- **Registrar abono** ahora es compartido (`prestamos/registrar_abono.dart`:
+  `registrarAbonoPrestamo` + `RegistrarAbonoDialog`): se usa desde la
+  tarjeta y desde el detalle, con atajos "Mitad" y "Todo". La lógica es la
+  misma de antes (tope en el saldo, pasa solo a cobrados al quedar en cero).
+- **Detalle de préstamo:** columna centrada, saldo grande con barra y botón,
+  resumen, "¿Cómo se calculó?", pagos e información.
+- **Formulario de préstamo:** mismo diseño que el de deuda
+  (`PaginaFormulario`, nombre del campo encima, píldoras).
+- **Limpiar historial:** en Deudas → Pagadas y en Préstamos → Cobrados.
+  Pide confirmación y elimina todas las pagadas/cobrados con sus pagos
+  (`DeudasDao.deleteDeudasPagadas`, `PrestamosDao.deletePrestamosPagados`).
+- **Plan de pago:** aviso arriba cuando hay deudas sin pago mínimo, con un
+  botón por deuda que abre su formulario.
+- **Menú de arriba:** sin engranaje; a Ajustes se entra tocando la foto (se
+  marca con un aro estando en Ajustes). El selector de Ajustes va centrado.
+- **Respaldo:** al importar, un monto fuera de rango se deja en el máximo
+  permitido (respaldos hechos antes del tope de 12 dígitos).
+- `utils/confirmar.dart`: ventana de confirmación con el estilo nuevo.
+- Tests: 346 (9 nuevos).
+
 ## Inicio con el estilo nuevo, topes de montos y tasas, "Borrar todo", menú arriba (2026-11-11)
 
 - **Fix — montos gigantes:** un monto de más de 18 dígitos no cabe en un

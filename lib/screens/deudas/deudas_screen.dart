@@ -5,11 +5,13 @@ import '../../db/database.dart';
 import '../../services/deudas_calculos.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
+import '../../utils/confirmar.dart';
 import '../../utils/date_format.dart';
 import '../../utils/encabezado_pantalla.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
+import '../../utils/notificaciones.dart';
 import '../../utils/selector_pildoras.dart';
 import 'deuda_detalle.dart';
 import 'deuda_form.dart';
@@ -93,6 +95,34 @@ class _DeudasScreenState extends State<DeudasScreen> {
     MaterialPageRoute(builder: (_) => DeudaForm(db: widget.db)),
   );
 
+  /// Elimina todas las deudas pagadas (con sus pagos), tras confirmar.
+  Future<void> _limpiarHistorial(int cuantas) async {
+    final ok = await confirmar(
+      context,
+      titulo: 'Limpiar historial',
+      mensaje:
+          'Se ${cuantas == 1 ? 'eliminará la deuda pagada' : 'eliminarán las $cuantas deudas pagadas'} '
+          'y todos sus pagos registrados. Tus deudas activas no se tocan. '
+          'No se puede deshacer.',
+      accion: 'Limpiar historial',
+      peligro: true,
+    );
+    if (!ok || !mounted) return;
+    try {
+      final n = await widget.db.deudasDao.deleteDeudasPagadas();
+      if (!mounted) return;
+      setState(() => _seleccionada = null);
+      mostrarExito(
+        context,
+        n == 1
+            ? 'Se eliminó 1 deuda pagada.'
+            : 'Se eliminaron $n deudas pagadas.',
+      );
+    } catch (_) {
+      if (mounted) mostrarAlerta(context, 'No se pudo limpiar el historial.');
+    }
+  }
+
   void _abrir(int deudaId, {required bool enPanel}) {
     if (enPanel) {
       setState(() => _seleccionada = deudaId);
@@ -164,10 +194,21 @@ class _DeudasScreenState extends State<DeudasScreen> {
                           seleccionada: panelAbierto ? _seleccionada : null,
                           onAbrir: (id) => _abrir(id, enPanel: conPanel),
                         ),
-                        1 => PlanPagoTab(activas: activas, margen: margen),
+                        1 => PlanPagoTab(
+                          activas: activas,
+                          margen: margen,
+                          onEditar: (deuda) => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  DeudaForm(db: widget.db, deuda: deuda),
+                            ),
+                          ),
+                        ),
                         _ => _Pagadas(
                           pagadas: pagadas,
                           margen: margen,
+                          onLimpiar: () => _limpiarHistorial(pagadas.length),
                           seleccionada: panelAbierto ? _seleccionada : null,
                           onAbrir: (id) => _abrir(id, enPanel: conPanel),
                         ),
@@ -530,12 +571,16 @@ class _Pagadas extends StatelessWidget {
     required this.margen,
     required this.seleccionada,
     required this.onAbrir,
+    required this.onLimpiar,
   });
 
   final List<ResumenDeuda> pagadas;
   final double margen;
   final int? seleccionada;
   final ValueChanged<int> onAbrir;
+
+  /// "Limpiar historial": borra todas las pagadas.
+  final VoidCallback onLimpiar;
 
   @override
   Widget build(BuildContext context) {
@@ -552,18 +597,33 @@ class _Pagadas extends StatelessWidget {
       });
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(margen, AppSpacing.sm, margen, margen),
-      child: Card(
-        margin: EdgeInsets.zero,
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            for (final (i, r) in ordenadas.indexed) ...[
-              if (i > 0)
-                Divider(height: 1, indent: 22, endIndent: 22, color: c.divisor),
-              _fila(context, r),
-            ],
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Card(
+            margin: EdgeInsets.zero,
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (final (i, r) in ordenadas.indexed) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      indent: 22,
+                      endIndent: 22,
+                      color: c.divisor,
+                    ),
+                  _fila(context, r),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Align(
+            alignment: Alignment.centerRight,
+            child: BotonLimpiarHistorial(onPressed: onLimpiar),
+          ),
+        ],
       ),
     );
   }

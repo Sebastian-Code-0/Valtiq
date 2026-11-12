@@ -1,29 +1,17 @@
-import 'package:drift/drift.dart' show OrderingTerm, Value;
+import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
-import '../../utils/currency_input.dart';
+import '../../utils/confirmar.dart';
 import '../../utils/date_format.dart';
+import '../../utils/encabezado_pantalla.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
-import '../../utils/formulario_guardado_mixin.dart';
-import '../../utils/notificaciones.dart';
 import 'prestamo_form.dart';
-
-/// Congela el cálculo de interés en la fecha real de pago para un préstamo
-/// ya pagado — sin esto, `InteresCalculator` sigue calculando hasta HOY por
-/// defecto (ver `fechaFin` en `interes_calculator.dart`), y un préstamo
-/// cerrado hace meses mostraría interés creciendo para siempre.
-DateTime? _fechaFinCongelada(Prestamo prestamo) {
-  if (prestamo.estado != 'pagado' || prestamo.fechaPagoReal == null) {
-    return null;
-  }
-  return fechaCivilGuardada(prestamo.fechaPagoReal!);
-}
+import 'registrar_abono.dart';
 
 class PrestamoDetalle extends StatefulWidget {
   const PrestamoDetalle({
@@ -66,26 +54,13 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
   }
 
   Future<void> _marcarComoPagado() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Marcar como pagado'),
-        content: const Text(
-          '¿Confirmas que este préstamo ya fue pagado por completo?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
+    final ok = await confirmar(
+      context,
+      titulo: 'Marcar como pagado',
+      mensaje: '¿Confirmas que este préstamo ya fue pagado por completo?',
+      accion: 'Confirmar',
     );
-    if (ok != true) return;
+    if (!ok) return;
     await widget.db.prestamosDao.marcarComoPagado(
       widget.prestamoId,
       normalizarFechaCivil(DateTime.now()),
@@ -95,99 +70,27 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
 
   Future<void> _registrarPago(
     Prestamo prestamo,
-    int totalAbonado,
     List<AbonoInteres> abonos,
   ) async {
-    final resumen = InteresCalculator.resumenPrestamo(
-      montoPrestado: prestamo.montoPrestado,
-      tasaInteres: prestamo.tasaInteres,
-      tipoInteres: prestamo.tipoInteres,
-      modalidadCalculo: prestamo.modalidadCalculo,
-      fechaPrestamo: prestamo.fechaPrestamo,
-      totalAbonado: totalAbonado,
-      tipoAmortizacion: prestamo.tipoAmortizacion,
-      abonos: abonos,
-      fechaFin: _fechaFinCongelada(prestamo),
+    final pagado = await registrarAbonoPrestamo(
+      context,
+      widget.db,
+      prestamo,
+      abonos,
     );
-    // Sin recortar a 0: resumen['saldoPendiente'] sí lo recorta (para no
-    // mostrar saldo negativo en la UI), pero eso permitiría abonar de a $1
-    // indefinidamente una vez saldado el préstamo, ya que el recorte nunca
-    // deja ver que ya se sobrepasó.
-    final saldoPendiente =
-        resumen['totalConInteres']! - resumen['totalAbonado']!;
-    final guardado = await showDialog<bool>(
-      context: context,
-      builder: (_) => _RegistrarPagoDialog(
-        db: widget.db,
-        prestamoId: widget.prestamoId,
-        saldoPendiente: saldoPendiente,
-      ),
-    );
-    if (guardado == true && mounted) {
-      final pagosActuales = await widget.db.prestamosDao.getPagosDelPrestamo(
-        widget.prestamoId,
-      );
-      final totalAbonadoActual = pagosActuales.fold<int>(
-        0,
-        (sum, p) => sum + p.montoAbonado,
-      );
-      final resumenActual = InteresCalculator.resumenPrestamo(
-        montoPrestado: prestamo.montoPrestado,
-        tasaInteres: prestamo.tasaInteres,
-        tipoInteres: prestamo.tipoInteres,
-        modalidadCalculo: prestamo.modalidadCalculo,
-        fechaPrestamo: prestamo.fechaPrestamo,
-        totalAbonado: totalAbonadoActual,
-        tipoAmortizacion: prestamo.tipoAmortizacion,
-        abonos: pagosActuales
-            .map((p) => AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado))
-            .toList(),
-      );
-      final saldoPendienteActual =
-          resumenActual['totalConInteres']! - resumenActual['totalAbonado']!;
-      if (saldoPendienteActual <= 0) {
-        await widget.db.prestamosDao.marcarComoPagado(
-          widget.prestamoId,
-          normalizarFechaCivil(DateTime.now()),
-        );
-        if (mounted) {
-          mostrarExito(
-            context,
-            'Préstamo "${prestamo.deudorNombre}" ha sido pagado por completo '
-            'y se movió a pagados.',
-          );
-          Navigator.pop(context);
-        }
-      }
-    }
+    // Quedó en cero: ya pasó a "Cobrados", se vuelve a la lista.
+    if (pagado && mounted) Navigator.pop(context);
   }
 
   Future<void> _confirmarEliminarPago(PagosRecibido pago) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar pago'),
-        content: Text(
-          '¿Eliminar este pago de ${formatCOP(pago.montoAbonado)}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Eliminar',
-              style: TextStyle(color: context.colores.alerta),
-            ),
-          ),
-        ],
-      ),
+    final ok = await confirmar(
+      context,
+      titulo: 'Eliminar pago',
+      mensaje: '¿Eliminar este pago de ${formatCOP(pago.montoAbonado)}?',
+      accion: 'Eliminar',
+      peligro: true,
     );
-    if (ok == true) {
-      await widget.db.prestamosDao.deletePago(pago.id);
-    }
+    if (ok) await widget.db.prestamosDao.deletePago(pago.id);
   }
 
   @override
@@ -218,26 +121,30 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
             body: const Center(child: Text('Préstamo no encontrado')),
           );
         }
+        final activo = prestamo.estado == 'activo';
         return Scaffold(
           appBar: AppBar(
-            title: Text(prestamo.deudorNombre),
+            toolbarHeight: 48,
             actions: [
               IconButton(
-                icon: const Icon(Icons.edit),
+                icon: const Icon(Icons.edit_outlined, size: 20),
                 tooltip: 'Editar',
                 onPressed: () => _editar(prestamo),
               ),
-              PopupMenuButton<String>(
-                onSelected: (v) {
-                  if (v == 'pagado') _marcarComoPagado();
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: 'pagado',
-                    child: Text('Marcar como pagado'),
-                  ),
-                ],
-              ),
+              if (activo)
+                PopupMenuButton<String>(
+                  tooltip: 'Más acciones',
+                  onSelected: (v) {
+                    if (v == 'pagado') _marcarComoPagado();
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'pagado',
+                      child: Text('Marcar como pagado'),
+                    ),
+                  ],
+                ),
+              const SizedBox(width: AppSpacing.sm),
             ],
           ),
           body: StreamBuilder<List<PagosRecibido>>(
@@ -258,45 +165,67 @@ class _PrestamoDetalleState extends State<PrestamoDetalle> {
               );
               final abonosInteres = pagos
                   .map(
-                    (p) => AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
+                    (p) =>
+                        AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
                   )
                   .toList();
+              final ancho = MediaQuery.sizeOf(context).width >= 600;
               return SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _ResumenCard(
-                      prestamo: prestamo,
-                      totalAbonado: totalAbonado,
-                      abonos: abonosInteres,
+                padding: EdgeInsets.fromLTRB(
+                  ancho ? AppSpacing.lg : AppSpacing.md,
+                  AppSpacing.sm,
+                  ancho ? AppSpacing.lg : AppSpacing.md,
+                  AppSpacing.xl,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: PaginaFormulario.anchoMaximo,
                     ),
-                    if (prestamo.tasaInteres > 0) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      InteresDesgloseCard(
-                        tramos: InteresCalculator.desglosePrestamo(
-                          montoPrestado: prestamo.montoPrestado,
-                          tasaInteres: prestamo.tasaInteres,
-                          tipoInteres: prestamo.tipoInteres,
-                          modalidadCalculo: prestamo.modalidadCalculo,
-                          fechaPrestamo: prestamo.fechaPrestamo,
-                          tipoAmortizacion: prestamo.tipoAmortizacion,
-                          abonos: abonosInteres,
-                          fechaFin: _fechaFinCongelada(prestamo),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        EncabezadoPantalla(
+                          kicker: activo
+                              ? 'Préstamo por cobrar'
+                              : 'Préstamo cobrado',
+                          titulo: prestamo.deudorNombre,
                         ),
-                        modalidadCalculo: prestamo.modalidadCalculo,
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.md),
-                    _InfoCard(prestamo: prestamo),
-                    const SizedBox(height: AppSpacing.md),
-                    _PagosSection(
-                      pagos: pagos,
-                      onRegistrar: () =>
-                          _registrarPago(prestamo, totalAbonado, abonosInteres),
-                      onEliminar: _confirmarEliminarPago,
+                        SizedBox(height: ancho ? AppSpacing.lg : AppSpacing.md),
+                        _ResumenCard(
+                          prestamo: prestamo,
+                          totalAbonado: totalAbonado,
+                          abonos: abonosInteres,
+                          onRegistrar: activo
+                              ? () => _registrarPago(prestamo, abonosInteres)
+                              : null,
+                        ),
+                        if (prestamo.tasaInteres > 0) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          InteresDesgloseCard(
+                            tramos: InteresCalculator.desglosePrestamo(
+                              montoPrestado: prestamo.montoPrestado,
+                              tasaInteres: prestamo.tasaInteres,
+                              tipoInteres: prestamo.tipoInteres,
+                              modalidadCalculo: prestamo.modalidadCalculo,
+                              fechaPrestamo: prestamo.fechaPrestamo,
+                              tipoAmortizacion: prestamo.tipoAmortizacion,
+                              abonos: abonosInteres,
+                              fechaFin: fechaFinCongeladaPrestamo(prestamo),
+                            ),
+                            modalidadCalculo: prestamo.modalidadCalculo,
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.md),
+                        _PagosSection(
+                          pagos: pagos,
+                          onEliminar: _confirmarEliminarPago,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _InfoCard(prestamo: prestamo),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               );
             },
@@ -312,16 +241,21 @@ class _ResumenCard extends StatelessWidget {
     required this.prestamo,
     required this.totalAbonado,
     required this.abonos,
+    required this.onRegistrar,
   });
 
   final Prestamo prestamo;
   final int totalAbonado;
   final List<AbonoInteres> abonos;
 
+  /// `null` si el préstamo ya está cobrado (no se muestra el botón).
+  final VoidCallback? onRegistrar;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorSec = theme.colorSecundario;
+    final c = context.colores;
+    final colorSec = c.textoSecundario;
 
     final resumen = InteresCalculator.resumenPrestamo(
       montoPrestado: prestamo.montoPrestado,
@@ -332,79 +266,100 @@ class _ResumenCard extends StatelessWidget {
       totalAbonado: totalAbonado,
       tipoAmortizacion: prestamo.tipoAmortizacion,
       abonos: abonos,
-      fechaFin: _fechaFinCongelada(prestamo),
+      fechaFin: fechaFinCongeladaPrestamo(prestamo),
     );
 
     final saldo = resumen['saldoPendiente']!;
-    final colorSaldo = saldo > 0 ? context.colores.alerta : context.colores.positivo;
+    final total = resumen['totalConInteres']!;
+    final fraccion = total > 0 ? totalAbonado / total : 0.0;
     final sinInteres = prestamo.montoPrestado - totalAbonado;
+    final ancho = MediaQuery.sizeOf(context).width >= 600;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: EdgeInsets.all(ancho ? 26 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Text(
+              saldo > 0 ? 'Saldo pendiente' : 'Total cobrado',
+              style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+            ),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                formatCOP(saldo > 0 ? saldo : totalAbonado),
+                style: monoStyle(
+                  fontSize: 38,
+                  fontWeight: FontWeight.w600,
+                  color: saldo > 0 ? c.texto : c.positivo,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            BarraProgreso(fraccion: fraccion, color: c.positivo),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '${(fraccion * 100).round()}% cobrado de ${formatCOP(total)}',
+              style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+            ),
+            if (onRegistrar != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton(
+                  onPressed: onRegistrar,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(200, 48),
+                  ),
+                  child: const Text('Registrar abono'),
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            Divider(height: 1, color: c.divisor),
+            const SizedBox(height: AppSpacing.md),
             _filaResumen(
-              label: 'Monto prestado:',
+              label: 'Monto prestado',
               valor: resumen['montoPrestado']!,
               colorSec: colorSec,
             ),
             const SizedBox(height: AppSpacing.sm),
             _filaResumen(
-              label: 'Interés acumulado:',
+              label: 'Interés acumulado',
               valor: resumen['interesAcumulado']!,
-              colorValor: theme.colorScheme.primary,
               colorSec: colorSec,
             ),
             const SizedBox(height: AppSpacing.sm),
             _filaResumen(
-              label: 'Total con interés:',
-              valor: resumen['totalConInteres']!,
+              label: 'Total con interés',
+              valor: total,
               negrita: true,
               colorSec: colorSec,
             ),
             const SizedBox(height: AppSpacing.sm),
             _filaResumen(
-              label: 'Total abonado:',
+              label: 'Total abonado',
               valor: resumen['totalAbonado']!,
-              colorValor: context.colores.positivo,
+              colorValor: c.positivo,
               colorSec: colorSec,
             ),
             const SizedBox(height: AppSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Saldo pendiente:',
-                  style: theme.textTheme.titleSmall?.copyWith(color: colorSec),
-                ),
-                Flexible(
-                  child: Text(
-                    formatCOP(saldo),
-                    style: monoStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: colorSaldo,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.end,
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: AppSpacing.lg),
+            Divider(height: 1, color: c.divisor),
+            const SizedBox(height: AppSpacing.md),
             _filaResumen(
-              label: 'Sin interés debería:',
+              label: 'Sin interés debería',
               valor: sinInteres < 0 ? 0 : sinInteres,
               colorSec: colorSec,
               chico: true,
             ),
             const SizedBox(height: AppSpacing.xs),
             _filaResumen(
-              label: 'Diferencia por interés:',
+              label: 'Diferencia por interés',
               valor: resumen['gananciaInteres']!,
-              colorValor: theme.colorScheme.primary,
               colorSec: colorSec,
               chico: true,
             ),
@@ -473,15 +428,17 @@ class _InfoCard extends StatelessWidget {
     final tieneInteres = prestamo.tasaInteres > 0;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Información',
               style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -552,245 +509,95 @@ class _InfoCard extends StatelessWidget {
 }
 
 class _PagosSection extends StatelessWidget {
-  const _PagosSection({
-    required this.pagos,
-    required this.onRegistrar,
-    required this.onEliminar,
-  });
+  const _PagosSection({required this.pagos, required this.onEliminar});
 
   final List<PagosRecibido> pagos;
-  final VoidCallback onRegistrar;
   final Future<void> Function(PagosRecibido) onEliminar;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorSec = theme.colorSecundario;
+    final c = context.colores;
+    final colorSec = c.textoSecundario;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Text(
-                  'Pagos recibidos',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: onRegistrar,
-                  icon: const Icon(Icons.add_circle_outline),
-                  tooltip: 'Registrar pago',
-                ),
-              ],
+            Text(
+              'Pagos recibidos',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xs),
             if (pagos.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                child: Center(
-                  child: Text(
-                    'Sin pagos registrados',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorSec,
-                    ),
-                  ),
+                child: Text(
+                  'Aún no has registrado pagos.',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: colorSec),
                 ),
               )
-            else
-              ...pagos.map(
-                (p) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: InkWell(
-                    onLongPress: () => onEliminar(p),
-                    onSecondaryTap: () => onEliminar(p),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.sm,
-                        horizontal: AppSpacing.sm,
+            else ...[
+              for (final p in pagos)
+                InkWell(
+                  onLongPress: () => onEliminar(p),
+                  onSecondaryTap: () => onEliminar(p),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: c.divisor, width: 0.5),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.payments,
-                            size: 18,
-                            color: context.colores.positivo,
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  formatFecha(fechaCivilGuardada(p.fechaPago)),
-                                  style: theme.textTheme.bodyMedium,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                formatFecha(fechaCivilGuardada(p.fechaPago)),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorSec,
                                 ),
-                                if (p.notas.isNotEmpty)
-                                  Text(
-                                    p.notas,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colorSec,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Flexible(
-                            child: Text(
-                              formatCOP(p.montoAbonado),
-                              style: monoStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: context.colores.positivo,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.end,
-                            ),
+                              if (p.notas.isNotEmpty)
+                                Text(
+                                  p.notas,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorSec,
+                                  ),
+                                ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Text(
+                          formatCOP(p.montoAbonado),
+                          style: monoStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Para eliminar un pago, mantenlo presionado (o clic derecho).',
+                style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
               ),
+            ],
           ],
         ),
       ),
-    );
-  }
-}
-
-class _RegistrarPagoDialog extends StatefulWidget {
-  const _RegistrarPagoDialog({
-    required this.db,
-    required this.prestamoId,
-    required this.saldoPendiente,
-  });
-
-  final AppDatabase db;
-  final int prestamoId;
-  final int saldoPendiente;
-
-  @override
-  State<_RegistrarPagoDialog> createState() => _RegistrarPagoDialogState();
-}
-
-class _RegistrarPagoDialogState extends State<_RegistrarPagoDialog>
-    with FormularioGuardadoMixin<_RegistrarPagoDialog> {
-  final _montoCtrl = TextEditingController();
-  final _notasCtrl = TextEditingController();
-  DateTime _fecha = DateTime.now();
-
-  @override
-  void dispose() {
-    _montoCtrl.dispose();
-    _notasCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickFecha() async {
-    final f = await showDatePicker(
-      context: context,
-      initialDate: _fecha,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-      locale: const Locale('es', 'CO'),
-    );
-    if (f != null) setState(() => _fecha = f);
-  }
-
-  Future<void> _guardar() async {
-    if (!formKey.currentState!.validate()) return;
-    setState(() => guardando = true);
-    final monto = parseCOP(_montoCtrl.text);
-    if (monto == null) {
-      setState(() => guardando = false);
-      if (mounted) {
-        mostrarAlerta(context, 'Monto inválido. Verifica el valor ingresado.');
-      }
-      return;
-    }
-    await ejecutarGuardado(() async {
-      await widget.db.prestamosDao.insertPago(
-        PagosRecibidosCompanion.insert(
-          prestamoId: widget.prestamoId,
-          montoAbonado: monto,
-          fechaPago: normalizarFechaCivil(_fecha),
-          notas: Value(_notasCtrl.text.trim()),
-        ),
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Registrar pago'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _montoCtrl,
-                decoration: const InputDecoration(labelText: 'Monto'),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  CopInputFormatter(),
-                ],
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Requerido';
-                  final n = parseCOP(v);
-                  if (n == null || n <= 0) return 'Debe ser > 0';
-                  if (n - widget.saldoPendiente > 1) {
-                    return 'No puede superar el saldo pendiente '
-                        '(${formatCOP(widget.saldoPendiente)})';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-              InkWell(
-                onTap: _pickFecha,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Fecha',
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(formatFecha(_fecha)),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _notasCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Notas (opcional)',
-                ),
-                maxLines: 2,
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: guardando ? null : () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: guardando ? null : _guardar,
-          child: Text(guardando ? 'Guardando...' : 'Guardar'),
-        ),
-      ],
     );
   }
 }

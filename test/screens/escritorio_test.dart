@@ -82,7 +82,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Nueva deuda'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Ajustes'));
+    // Sin engranaje: a Ajustes se entra tocando la foto.
+    expect(find.byTooltip('Ajustes'), findsNothing);
+    await tester.tap(find.byTooltip('Ajustes y perfil'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(SettingsScreen), findsOneWidget);

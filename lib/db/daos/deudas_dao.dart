@@ -84,4 +84,16 @@ class DeudasDao extends DatabaseAccessor<AppDatabase> with _$DeudasDaoMixin {
           .desactivarRecordatoriosPorReferencia('deuda', id);
     });
   }
+
+  /// "Limpiar historial": elimina TODAS las deudas ya pagadas, con sus
+  /// pagos. Devuelve cuántas se eliminaron.
+  Future<int> deleteDeudasPagadas() {
+    return transaction(() async {
+      final pagadas = await getDeudasPagadas();
+      for (final d in pagadas) {
+        await deleteDeudaConPagos(d.id);
+      }
+      return pagadas.length;
+    });
+  }
 }

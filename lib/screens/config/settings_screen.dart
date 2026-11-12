@@ -123,6 +123,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
               seleccionada: _seccion,
               onElegir: (i) => setState(() => _seccion = i),
+              centrado: widget.embebido,
               margen: widget.embebido ? AppSpacing.xl : AppSpacing.md,
             ),
             const SizedBox(height: AppSpacing.sm),

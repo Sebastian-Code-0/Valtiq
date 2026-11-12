@@ -52,6 +52,20 @@ class PrestamosDao extends DatabaseAccessor<AppDatabase>
     });
   }
 
+  /// "Limpiar historial": elimina TODOS los préstamos ya cobrados, con sus
+  /// pagos. Devuelve cuántos se eliminaron.
+  Future<int> deletePrestamosPagados() {
+    return transaction(() async {
+      final pagados = await (select(
+        prestamos,
+      )..where((t) => t.estado.equals('pagado'))).get();
+      for (final p in pagados) {
+        await deletePrestamoConPagos(p.id);
+      }
+      return pagados.length;
+    });
+  }
+
   Future<bool> marcarComoPagado(int id, DateTime fechaPago) {
     return transaction(() async {
       final count = await (update(prestamos)..where((t) => t.id.equals(id)))

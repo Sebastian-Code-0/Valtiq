@@ -4,14 +4,23 @@ import 'package:flutter/material.dart';
 import '../../db/database.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
-import '../../utils/date_format.dart';
+import '../../utils/confirmar.dart';
+import '../../utils/encabezado_pantalla.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/notificaciones.dart';
+import '../../utils/selector_pildoras.dart';
+import '../deudas/deuda_widgets.dart' show fechaCorta;
 import 'prestamo_detalle.dart';
 import 'prestamo_form.dart';
+import 'registrar_abono.dart';
 
+/// Pantalla de Préstamos (plata que el usuario le prestó a alguien), con
+/// dos pestañas:
+/// - **Por cobrar**: totales arriba y una cuadrícula de tarjetas, cada una
+///   con su botón "Registrar abono".
+/// - **Cobrados**: los préstamos ya pagados, con "Limpiar historial".
 class PrestamosScreen extends StatefulWidget {
   const PrestamosScreen({super.key, required this.db});
 
@@ -21,38 +30,74 @@ class PrestamosScreen extends StatefulWidget {
   State<PrestamosScreen> createState() => _PrestamosScreenState();
 }
 
-/// Congela el cálculo de interés en la fecha real de pago para un préstamo
-/// ya pagado — ver la misma función en `prestamo_detalle.dart`.
-DateTime? _fechaFinCongelada(Prestamo prestamo) {
-  if (prestamo.estado != 'pagado' || prestamo.fechaPagoReal == null) {
-    return null;
+/// Un préstamo con sus abonos y las cuentas ya hechas.
+class _Resumen {
+  _Resumen(this.prestamo, this.abonos)
+    : abonado = abonos.fold<int>(0, (sum, a) => sum + a.monto) {
+    saldo = InteresCalculator.calcularDeudaTotal(
+      montoPrestado: prestamo.montoPrestado,
+      tasaInteres: prestamo.tasaInteres,
+      tipoInteres: prestamo.tipoInteres,
+      modalidadCalculo: prestamo.modalidadCalculo,
+      fechaPrestamo: prestamo.fechaPrestamo,
+      totalAbonado: abonado,
+      tipoAmortizacion: prestamo.tipoAmortizacion,
+      abonos: abonos,
+      fechaFin: fechaFinCongeladaPrestamo(prestamo),
+    );
   }
-  return fechaCivilGuardada(prestamo.fechaPagoReal!);
-}
 
-class _PrestamoConAbonos {
-  _PrestamoConAbonos(this.prestamo, this.abonos);
   final Prestamo prestamo;
   final List<AbonoInteres> abonos;
+  final int abonado;
 
-  int get abonado => abonos.fold<int>(0, (sum, a) => sum + a.monto);
+  /// Lo que falta por cobrar hoy (con interés).
+  late final int saldo;
+
+  /// Lo prestado más el interés: lo ya cobrado más lo que falta.
+  int get total => abonado + saldo;
+
+  double get fraccionCobrada => total > 0 ? abonado / total : 0.0;
+
+  bool get activo => prestamo.estado == 'activo';
+
+  /// Pasó la fecha pactada y sigue sin pagarse.
+  bool get vencido =>
+      activo &&
+      prestamo.fechaPactadaPago != null &&
+      fechaCivilGuardada(
+        prestamo.fechaPactadaPago!,
+      ).isBefore(normalizarFechaCivil(DateTime.now()));
+}
+
+String _numeroTasa(double t) =>
+    (t == t.truncateToDouble() ? t.toStringAsFixed(0) : t.toStringAsFixed(2))
+        .replaceAll('.', ',');
+
+/// Iniciales para el círculo: "Pedro Gómez" → "PG".
+String _iniciales(String nombre) {
+  final partes = nombre.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+  return partes.take(2).map((p) => p.substring(0, 1).toUpperCase()).join();
 }
 
 class _PrestamosScreenState extends State<PrestamosScreen> {
-  bool _mostrarPagados = false;
+  static const _pestanas = [
+    OpcionPildora('Por cobrar'),
+    OpcionPildora('Cobrados'),
+  ];
+
+  late final Stream<List<_Resumen>> _stream = _observar();
+  int _pestana = 0;
 
   // Join sin agregar (en vez de groupBy + sum): el modo de amortización
   // 'saldo_insoluto' necesita la fecha de cada abono, no solo la suma — ver
   // InteresCalculator._resumenSaldoInsoluto. Se agrupa en Dart.
-  Stream<List<_PrestamoConAbonos>> _stream() {
-    final estado = _mostrarPagados ? 'pagado' : 'activo';
+  Stream<List<_Resumen>> _observar() {
     final p = widget.db.prestamos;
     final pr = widget.db.pagosRecibidos;
-
     final query = widget.db.select(p).join([
       leftOuterJoin(pr, pr.prestamoId.equalsExp(p.id)),
-    ])..where(p.estado.equals(estado));
-
+    ]);
     return query.watch().map((rows) {
       final prestamos = <int, Prestamo>{};
       final abonosPorPrestamo = <int, List<AbonoInteres>>{};
@@ -66,507 +111,732 @@ class _PrestamosScreenState extends State<PrestamosScreen> {
           );
         }
       }
-      final items = prestamos.values
-          .map(
-            (prestamo) => _PrestamoConAbonos(
-              prestamo,
-              abonosPorPrestamo[prestamo.id] ?? const [],
-            ),
-          )
-          .toList()
-        ..sort(
-          (a, b) => b.prestamo.fechaPrestamo.compareTo(a.prestamo.fechaPrestamo),
-        );
-      return items;
+      return [
+        for (final prestamo in prestamos.values)
+          _Resumen(prestamo, abonosPorPrestamo[prestamo.id] ?? const []),
+      ]..sort(
+        (a, b) => b.prestamo.fechaPrestamo.compareTo(a.prestamo.fechaPrestamo),
+      );
     });
   }
 
-  Future<void> _abrirForm({Prestamo? prestamo}) async {
-    await Navigator.push(
+  Future<void> _nuevo() => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => PrestamoForm(db: widget.db)),
+  );
+
+  Future<void> _abrirDetalle(int prestamoId) => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => PrestamoDetalle(db: widget.db, prestamoId: prestamoId),
+    ),
+  );
+
+  Future<void> _marcarPagado(Prestamo prestamo) async {
+    final ok = await confirmar(
       context,
-      MaterialPageRoute(
-        builder: (_) => PrestamoForm(db: widget.db, prestamo: prestamo),
-      ),
+      titulo: 'Marcar como pagado',
+      mensaje:
+          '¿Confirmas que el préstamo a ${prestamo.deudorNombre} ya fue '
+          'pagado por completo?',
+      accion: 'Confirmar',
+    );
+    if (!ok) return;
+    await widget.db.prestamosDao.marcarComoPagado(
+      prestamo.id,
+      normalizarFechaCivil(DateTime.now()),
     );
   }
 
-  Future<void> _abrirDetalle(int prestamoId) async {
-    await Navigator.push(
+  Future<void> _reactivar(Prestamo prestamo) async {
+    final ok = await confirmar(
       context,
-      MaterialPageRoute(
-        builder: (_) => PrestamoDetalle(db: widget.db, prestamoId: prestamoId),
-      ),
+      titulo: 'Reactivar préstamo',
+      mensaje:
+          '¿Volver a marcar como activo el préstamo a '
+          '${prestamo.deudorNombre}?',
+      accion: 'Confirmar',
     );
+    if (ok) await widget.db.prestamosDao.reactivarPrestamo(prestamo.id);
   }
 
-  Future<void> _confirmarMarcarPagado(Prestamo prestamo) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Marcar como pagado'),
-        content: Text(
-          '¿Confirmas que el préstamo a ${prestamo.deudorNombre} ya fue pagado por completo?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
+  Future<void> _eliminar(Prestamo prestamo) async {
+    final ok = await confirmar(
+      context,
+      titulo: 'Eliminar préstamo',
+      mensaje:
+          '¿Eliminar el préstamo a ${prestamo.deudorNombre}? También se '
+          'eliminarán sus pagos registrados.',
+      accion: 'Eliminar',
+      peligro: true,
     );
-    if (ok == true) {
-      await widget.db.prestamosDao.marcarComoPagado(
-        prestamo.id,
-        normalizarFechaCivil(DateTime.now()),
+    if (!ok) return;
+    try {
+      await widget.db.prestamosDao.deletePrestamoConPagos(prestamo.id);
+    } catch (_) {
+      if (mounted) mostrarAlerta(context, 'No se pudo eliminar el préstamo.');
+    }
+  }
+
+  /// Elimina todos los préstamos cobrados (con sus pagos), tras confirmar.
+  Future<void> _limpiarHistorial(int cuantos) async {
+    final ok = await confirmar(
+      context,
+      titulo: 'Limpiar historial',
+      mensaje:
+          'Se ${cuantos == 1 ? 'eliminará el préstamo cobrado' : 'eliminarán los $cuantos préstamos cobrados'} '
+          'y todos sus pagos registrados. Los préstamos por cobrar no se '
+          'tocan. No se puede deshacer.',
+      accion: 'Limpiar historial',
+      peligro: true,
+    );
+    if (!ok || !mounted) return;
+    try {
+      final n = await widget.db.prestamosDao.deletePrestamosPagados();
+      if (!mounted) return;
+      mostrarExito(
+        context,
+        n == 1
+            ? 'Se eliminó 1 préstamo cobrado.'
+            : 'Se eliminaron $n préstamos cobrados.',
       );
-    }
-  }
-
-  Future<void> _confirmarReactivar(Prestamo prestamo) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Reactivar préstamo'),
-        content: Text(
-          '¿Volver a marcar como activo el préstamo a ${prestamo.deudorNombre}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) {
-      await widget.db.prestamosDao.reactivarPrestamo(prestamo.id);
-    }
-  }
-
-  Future<void> _confirmarEliminar(Prestamo prestamo) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar préstamo'),
-        content: Text(
-          '¿Eliminar el préstamo a ${prestamo.deudorNombre}? '
-          'También se eliminarán sus pagos registrados.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Eliminar',
-              style: TextStyle(color: context.colores.alerta),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) {
-      try {
-        await widget.db.prestamosDao.deletePrestamoConPagos(prestamo.id);
-      } catch (_) {
-        if (mounted) {
-          mostrarAlerta(context, 'No se pudo eliminar el préstamo.');
-        }
-      }
+    } catch (_) {
+      if (mounted) mostrarAlerta(context, 'No se pudo limpiar el historial.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorSec = theme.colorSecundario;
-
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.sm,
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    'Préstamos',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+        child: StreamBuilder<List<_Resumen>>(
+          stream: _stream,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(child: Text('Error al cargar los datos.'));
+            }
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final todos = snapshot.data!;
+            final activos = [
+              for (final r in todos)
+                if (r.activo) r,
+            ];
+            final cobrados = [
+              for (final r in todos)
+                if (!r.activo) r,
+            ];
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final ancho = constraints.maxWidth >= 800;
+                final margen = ancho ? AppSpacing.xl : AppSpacing.md;
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: AppSpacing.anchoContenido + 2 * margen,
                     ),
-                  ),
-                  const Spacer(),
-                  if (!_mostrarPagados)
-                    FloatingActionButton.small(
-                      heroTag: 'fab_prestamos',
-                      onPressed: () => _abrirForm(),
-                      child: const Icon(Icons.add),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () =>
-                      setState(() => _mostrarPagados = !_mostrarPagados),
-                  icon: Icon(
-                    _mostrarPagados ? Icons.visibility : Icons.history,
-                  ),
-                  label: Text(_mostrarPagados ? 'Ver activos' : 'Ver pagados'),
-                ),
-              ),
-            ),
-            Expanded(
-              child: StreamBuilder<List<_PrestamoConAbonos>>(
-                stream: _stream(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Error al cargar los datos.',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    );
-                  }
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final items = snapshot.data!;
-                  if (items.isEmpty) {
-                    final mensaje = _mostrarPagados
-                        ? 'No tienes préstamos pagados'
-                        : 'No tienes préstamos registrados';
-                    return Center(
-                      child: Text(
-                        mensaje,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: colorSec,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            margen,
+                            margen,
+                            margen,
+                            AppSpacing.lg,
+                          ),
+                          child: EncabezadoPantalla(
+                            kicker: switch (activos.length) {
+                              0 => 'Nada por cobrar',
+                              _ => '${activos.length} por cobrar',
+                            },
+                            titulo: 'Préstamos',
+                            accion: BotonCrear(
+                              texto: 'Nuevo préstamo',
+                              heroTag: 'fab_prestamos',
+                              onPressed: _nuevo,
+                            ),
+                          ),
                         ),
-                      ),
-                    );
-                  }
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    itemCount: items.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (_, i) {
-                      final item = items[i];
-                      return _PrestamoCard(
-                        key: ValueKey(item.prestamo.id),
-                        prestamo: item.prestamo,
-                        abonado: item.abonado,
-                        abonos: item.abonos,
-                        atenuada: _mostrarPagados,
-                        colorSec: colorSec,
-                        onTap: () => _abrirDetalle(item.prestamo.id),
-                        onLongPress: () => _confirmarEliminar(item.prestamo),
-                        onMarcarPagado: _mostrarPagados
-                            ? null
-                            : () => _confirmarMarcarPagado(item.prestamo),
-                        onReactivar: _mostrarPagados
-                            ? () => _confirmarReactivar(item.prestamo)
-                            : null,
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+                        SelectorPildoras(
+                          opciones: _pestanas,
+                          seleccionada: _pestana,
+                          margen: margen,
+                          repartirEnCelular: true,
+                          onElegir: (i) => setState(() => _pestana = i),
+                        ),
+                        SizedBox(height: ancho ? AppSpacing.md : AppSpacing.sm),
+                        Expanded(
+                          child: _pestana == 0
+                              ? _PorCobrar(
+                                  activos: activos,
+                                  margen: margen,
+                                  onAbrir: _abrirDetalle,
+                                  onAbonar: (r) => registrarAbonoPrestamo(
+                                    context,
+                                    widget.db,
+                                    r.prestamo,
+                                    r.abonos,
+                                  ),
+                                  onMarcarPagado: _marcarPagado,
+                                  onEliminar: _eliminar,
+                                )
+                              : _Cobrados(
+                                  cobrados: cobrados,
+                                  margen: margen,
+                                  onAbrir: _abrirDetalle,
+                                  onReactivar: _reactivar,
+                                  onEliminar: _eliminar,
+                                  onLimpiar: () =>
+                                      _limpiarHistorial(cobrados.length),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _PrestamoCard extends StatelessWidget {
-  const _PrestamoCard({
-    super.key,
-    required this.prestamo,
-    required this.abonado,
-    required this.abonos,
-    required this.atenuada,
-    required this.colorSec,
-    required this.onTap,
-    required this.onLongPress,
-    this.onMarcarPagado,
-    this.onReactivar,
+/// Mensaje centrado para una pestaña sin nada que mostrar.
+class _Vacio extends StatelessWidget {
+  const _Vacio(this.mensaje);
+
+  final String mensaje;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Text(
+          mensaje,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: context.colores.textoSecundario,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Círculo con las iniciales de la persona.
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.nombre, this.lado = 40});
+
+  final String nombre;
+  final double lado;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colores;
+    final iniciales = _iniciales(nombre);
+    return Container(
+      width: lado,
+      height: lado,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: c.relieve, shape: BoxShape.circle),
+      child: iniciales.isEmpty
+          ? Icon(Icons.person_outline, size: lado * 0.5, color: c.texto)
+          : Text(
+              iniciales,
+              style: TextStyle(
+                fontFamily: fuenteTexto,
+                fontSize: lado * 0.32,
+                fontWeight: FontWeight.w700,
+                color: c.texto,
+              ),
+            ),
+    );
+  }
+}
+
+class _PorCobrar extends StatelessWidget {
+  const _PorCobrar({
+    required this.activos,
+    required this.margen,
+    required this.onAbrir,
+    required this.onAbonar,
+    required this.onMarcarPagado,
+    required this.onEliminar,
   });
 
-  final Prestamo prestamo;
-  final int abonado;
-  final List<AbonoInteres> abonos;
-  final bool atenuada;
-  final Color colorSec;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final List<_Resumen> activos;
+  final double margen;
+  final ValueChanged<int> onAbrir;
+  final ValueChanged<_Resumen> onAbonar;
+  final ValueChanged<Prestamo> onMarcarPagado;
+  final ValueChanged<Prestamo> onEliminar;
+
+  /// Alto fijo de cada tarjeta de la cuadrícula.
+  static const _altoTarjeta = 236.0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (activos.isEmpty) {
+      return const _Vacio(
+        'Nadie te debe dinero por ahora.\nToca + para registrar un préstamo.',
+      );
+    }
+    final teDeben = activos.fold<int>(0, (s, r) => s + r.saldo);
+    final personas = {
+      for (final r in activos) r.prestamo.deudorNombre.trim().toLowerCase(),
+    }.length;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final ancho = constraints.maxWidth - 2 * margen;
+        final columnas = ancho >= 900 ? 3 : (ancho >= 560 ? 2 : 1);
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(margen, AppSpacing.sm, margen, 0),
+              sliver: SliverToBoxAdapter(
+                child: Wrap(
+                  spacing: 40,
+                  runSpacing: AppSpacing.md,
+                  children: [
+                    _Total(titulo: 'Te deben', valor: formatCOP(teDeben)),
+                    _Total(titulo: 'Personas', valor: '$personas'),
+                  ],
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                margen,
+                AppSpacing.lg,
+                margen,
+                margen,
+              ),
+              sliver: SliverGrid.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columnas,
+                  mainAxisExtent: _altoTarjeta,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: activos.length,
+                itemBuilder: (context, i) {
+                  final r = activos[i];
+                  return _TarjetaPrestamo(
+                    key: ValueKey(r.prestamo.id),
+                    resumen: r,
+                    onTap: () => onAbrir(r.prestamo.id),
+                    onAbonar: () => onAbonar(r),
+                    onMarcarPagado: () => onMarcarPagado(r.prestamo),
+                    onEliminar: () => onEliminar(r.prestamo),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _Total extends StatelessWidget {
+  const _Total({required this.titulo, required this.valor});
+
+  final String titulo;
+  final String valor;
+
+  @override
+  Widget build(BuildContext context) {
+    final ancho = MediaQuery.sizeOf(context).width >= 600;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          titulo,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: context.colores.textoSecundario,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          valor,
+          style: monoStyle(
+            fontSize: ancho ? 28 : 22,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Menú de tres puntos de un préstamo.
+class _MenuPrestamo extends StatelessWidget {
+  const _MenuPrestamo({
+    this.onMarcarPagado,
+    this.onReactivar,
+    required this.onEliminar,
+  });
+
   final VoidCallback? onMarcarPagado;
   final VoidCallback? onReactivar;
+  final VoidCallback onEliminar;
 
-  String _fmtTasa(double t) {
-    if (t == t.truncateToDouble()) return t.toStringAsFixed(0);
-    return t.toStringAsFixed(2);
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colores;
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: PopupMenuButton<String>(
+        icon: Icon(Icons.more_vert, color: c.textoSecundario, size: 20),
+        padding: EdgeInsets.zero,
+        tooltip: 'Acciones',
+        onSelected: (v) => switch (v) {
+          'pagado' => onMarcarPagado?.call(),
+          'reactivar' => onReactivar?.call(),
+          _ => onEliminar(),
+        },
+        itemBuilder: (_) => [
+          if (onMarcarPagado != null)
+            const PopupMenuItem(
+              value: 'pagado',
+              child: Text('Marcar como pagado'),
+            ),
+          if (onReactivar != null)
+            const PopupMenuItem(
+              value: 'reactivar',
+              child: Text('Reactivar préstamo'),
+            ),
+          PopupMenuItem(
+            value: 'eliminar',
+            child: Text('Eliminar', style: TextStyle(color: c.alerta)),
+          ),
+        ],
+      ),
+    );
   }
+}
+
+/// Tarjeta de un préstamo por cobrar: a quién, cuándo vence, lo que falta,
+/// barra de avance y el botón para registrar un abono.
+class _TarjetaPrestamo extends StatelessWidget {
+  const _TarjetaPrestamo({
+    super.key,
+    required this.resumen,
+    required this.onTap,
+    required this.onAbonar,
+    required this.onMarcarPagado,
+    required this.onEliminar,
+  });
+
+  final _Resumen resumen;
+  final VoidCallback onTap;
+  final VoidCallback onAbonar;
+  final VoidCallback onMarcarPagado;
+  final VoidCallback onEliminar;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final saldo = InteresCalculator.calcularDeudaTotal(
-      montoPrestado: prestamo.montoPrestado,
-      tasaInteres: prestamo.tasaInteres,
-      tipoInteres: prestamo.tipoInteres,
-      modalidadCalculo: prestamo.modalidadCalculo,
-      fechaPrestamo: prestamo.fechaPrestamo,
-      totalAbonado: abonado,
-      tipoAmortizacion: prestamo.tipoAmortizacion,
-      abonos: abonos,
-      fechaFin: _fechaFinCongelada(prestamo),
+    final c = context.colores;
+    final p = resumen.prestamo;
+    final hoy = DateTime.now();
+    final pequeno = theme.textTheme.bodySmall?.copyWith(
+      color: c.textoSecundario,
     );
-    final totalConInteres = abonado + saldo;
-    final fraccionCobrada = totalConInteres > 0
-        ? abonado / totalConInteres
-        : 0.0;
-    final vencido =
-        prestamo.fechaPactadaPago != null &&
-        fechaCivilGuardada(
-          prestamo.fechaPactadaPago!,
-        ).isBefore(normalizarFechaCivil(DateTime.now())) &&
-        prestamo.estado == 'activo';
+    final prestadoEl =
+        'Prestado el ${fechaCorta(fechaCivilGuardada(p.fechaPrestamo), hoy)}';
+    final pactada = p.fechaPactadaPago == null
+        ? null
+        : fechaCivilGuardada(p.fechaPactadaPago!);
+    final tasa = p.tasaInteres > 0 && p.tipoInteres != 'ninguno'
+        ? '${_numeroTasa(p.tasaInteres)}% ${p.tipoInteres}'
+        : 'Sin interés';
 
-    final card = Card(
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        onLongPress: onEliminar,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-          ),
+          padding: const EdgeInsets.fromLTRB(22, 22, 14, 18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
+                  _Avatar(nombre: p.deudorNombre),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      prestamo.deudorNombre,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      formatCOP(prestamo.montoPrestado),
-                      style: monoStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert, color: colorSec, size: 20),
-                    padding: EdgeInsets.zero,
-                    tooltip: 'Acciones',
-                    onSelected: (v) {
-                      switch (v) {
-                        case 'pagado':
-                          onMarcarPagado?.call();
-                        case 'reactivar':
-                          onReactivar?.call();
-                        case 'eliminar':
-                          onLongPress();
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      if (onMarcarPagado != null)
-                        PopupMenuItem(
-                          value: 'pagado',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.check_circle_outline,
-                                size: 18,
-                                color: context.colores.positivo,
-                              ),
-                              SizedBox(width: AppSpacing.sm),
-                              Text('Marcar como pagado'),
-                            ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p.deudorNombre,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      if (onReactivar != null)
-                        PopupMenuItem(
-                          value: 'reactivar',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.undo,
-                                size: 18,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              const Text('Reactivar préstamo'),
-                            ],
-                          ),
+                        Text(
+                          p.deudorContacto.isEmpty
+                              ? prestadoEl
+                              : p.deudorContacto,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: pequeno,
                         ),
-                      PopupMenuItem(
-                        value: 'eliminar',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline,
-                              size: 18,
-                              color: context.colores.alerta,
-                            ),
-                            SizedBox(width: AppSpacing.sm),
-                            Text(
-                              'Eliminar',
-                              style: TextStyle(color: context.colores.alerta),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: 4,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.calendar_today, size: 14, color: colorSec),
-                      const SizedBox(width: 4),
-                      Text(
-                        formatFecha(fechaCivilGuardada(prestamo.fechaPrestamo)),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorSec,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (prestamo.tasaInteres > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.radiusSm,
-                        ),
-                      ),
-                      child: Text(
-                        '${_fmtTasa(prestamo.tasaInteres)}% '
-                        '${prestamo.tipoInteres} ${prestamo.modalidadCalculo}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  if (vencido)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: context.colores.alerta.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.radiusSm,
-                        ),
-                      ),
-                      child: Text(
-                        'Vencido',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: context.colores.alerta,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Saldo pendiente',
-                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
-                  ),
-                  Flexible(
-                    child: Text(
-                      formatCOP(saldo),
-                      style: monoStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: saldo > 0
-                            ? context.colores.alerta
-                            : context.colores.positivo,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Row(
-                children: [
-                  Expanded(
-                    child: BarraProgreso(
-                      fraccion: fraccionCobrada,
-                      color: context.colores.positivo,
+                      ],
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    '${(fraccionCobrada * 100).round()}% cobrado',
-                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
-                    overflow: TextOverflow.ellipsis,
+                  if (resumen.vencido)
+                    _Etiqueta(
+                      texto: 'Vencido ${fechaCorta(pactada!, hoy)}',
+                      alerta: true,
+                    )
+                  else if (pactada != null)
+                    _Etiqueta(texto: 'Vence ${fechaCorta(pactada, hoy)}'),
+                  _MenuPrestamo(
+                    onMarcarPagado: onMarcarPagado,
+                    onEliminar: onEliminar,
                   ),
                 ],
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          formatCOP(resumen.saldo),
+                          style: monoStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
+                      child: Text(
+                        'pendiente de ${formatCOP(resumen.total)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: pequeno,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: BarraProgreso(
+                  fraccion: resumen.fraccionCobrada,
+                  color: c.positivo,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        p.deudorContacto.isEmpty ? tasa : '$prestadoEl · $tasa',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: pequeno,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    FilledButton(
+                      onPressed: onAbonar,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 38),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        textStyle: const TextStyle(
+                          fontFamily: fuenteTexto,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      child: const Text('Registrar abono'),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
       ),
     );
+  }
+}
 
-    return AtenuableCard(atenuada: atenuada, child: card);
+/// Etiqueta en píldora: gris (un dato) o roja (algo vencido).
+class _Etiqueta extends StatelessWidget {
+  const _Etiqueta({required this.texto, this.alerta = false});
+
+  final String texto;
+  final bool alerta;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colores;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: ShapeDecoration(
+        color: alerta ? c.alerta.withValues(alpha: 0.14) : c.relieve,
+        shape: const StadiumBorder(),
+      ),
+      child: Text(
+        texto,
+        maxLines: 1,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: alerta ? c.alerta : c.textoSecundario,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _Cobrados extends StatelessWidget {
+  const _Cobrados({
+    required this.cobrados,
+    required this.margen,
+    required this.onAbrir,
+    required this.onReactivar,
+    required this.onEliminar,
+    required this.onLimpiar,
+  });
+
+  final List<_Resumen> cobrados;
+  final double margen;
+  final ValueChanged<int> onAbrir;
+  final ValueChanged<Prestamo> onReactivar;
+  final ValueChanged<Prestamo> onEliminar;
+
+  /// "Limpiar historial": borra todos los cobrados.
+  final VoidCallback onLimpiar;
+
+  @override
+  Widget build(BuildContext context) {
+    if (cobrados.isEmpty) {
+      return const _Vacio(
+        'Todavía no has terminado de cobrar ningún préstamo.',
+      );
+    }
+    final theme = Theme.of(context);
+    final c = context.colores;
+    // Los cobrados más recientemente, primero.
+    final ordenados = [...cobrados]
+      ..sort((a, b) {
+        final fa = a.prestamo.fechaPagoReal ?? a.prestamo.actualizadoEn;
+        final fb = b.prestamo.fechaPagoReal ?? b.prestamo.actualizadoEn;
+        return fb.compareTo(fa);
+      });
+    final hoy = DateTime.now();
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(margen, AppSpacing.sm, margen, margen),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Card(
+            margin: EdgeInsets.zero,
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (final (i, r) in ordenados.indexed) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      indent: 22,
+                      endIndent: 22,
+                      color: c.divisor,
+                    ),
+                  InkWell(
+                    key: ValueKey(r.prestamo.id),
+                    onTap: () => onAbrir(r.prestamo.id),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 12, 10, 12),
+                      child: Row(
+                        children: [
+                          _Avatar(nombre: r.prestamo.deudorNombre, lado: 34),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  r.prestamo.deudorNombre,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  r.prestamo.fechaPagoReal == null
+                                      ? 'Cobrado'
+                                      : 'Cobrado ${fechaCorta(fechaCivilGuardada(r.prestamo.fechaPagoReal!), hoy)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: c.textoSecundario,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Text(
+                            formatCOP(r.abonado),
+                            style: monoStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: c.textoSecundario,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          _MenuPrestamo(
+                            onReactivar: () => onReactivar(r.prestamo),
+                            onEliminar: () => onEliminar(r.prestamo),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Align(
+            alignment: Alignment.centerRight,
+            child: BotonLimpiarHistorial(onPressed: onLimpiar),
+          ),
+        ],
+      ),
+    );
   }
 }
