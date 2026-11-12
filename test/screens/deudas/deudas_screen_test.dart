@@ -142,7 +142,7 @@ void main() {
       await montar(tester, tamano);
       expect(tester.takeException(), isNull);
 
-      expect(find.text('3 activas'), findsOneWidget);
+      expect(find.text('3 ACTIVAS'), findsOneWidget);
       expect(find.text('Total de las deudas'), findsOneWidget);
       expect(find.text('Pagos mínimos al mes'), findsOneWidget);
       expect(find.text('Pagado del total'), findsOneWidget);
@@ -154,7 +154,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.text('Estrategia'), findsOneWidget);
-      expect(find.text('Libre de deudas en'), findsOneWidget);
+      expect(find.text('LIBRE DE DEUDAS EN'), findsOneWidget);
       await captura(tester, 'plan-${tamano.width.round()}');
 
       await tester.tap(find.text('Pagadas'));
@@ -232,6 +232,9 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
+    // Si la tarjeta ya estaba construida (debajo del borde de la pantalla),
+    // scrollUntilVisible la trae a la vista pero no redibuja.
+    await tester.pump();
     await tester.tap(find.text('Juan'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
@@ -318,7 +321,7 @@ void main() {
     expect((await db.deudasDao.getDeudaById(ids.juan))!.estado, 'pagada');
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('panel-deuda')), findsNothing);
-    expect(find.text('2 activas'), findsOneWidget);
+    expect(find.text('2 ACTIVAS'), findsOneWidget);
     await _cerrar(tester);
   });
 
@@ -355,7 +358,7 @@ void main() {
     tester,
   ) async {
     await montar(tester, const Size(360, 640));
-    expect(find.text('Sin deudas activas'), findsOneWidget);
+    expect(find.text('SIN DEUDAS ACTIVAS'), findsOneWidget);
     expect(find.textContaining('No tienes deudas activas'), findsOneWidget);
     await tester.tap(find.text('Plan de pago'));
     await tester.pumpAndSettle();

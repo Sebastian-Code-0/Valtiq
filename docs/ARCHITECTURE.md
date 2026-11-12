@@ -386,6 +386,29 @@ barra normal cuando se abren sueltas.
 `SharedPreferences`, se cargan en `main()` antes de `runApp` y se publican
 con `ValueNotifier`.
 
+### Estilo base (2026-11-11, plantilla de PC)
+
+El aspecto sale de `AppTheme` y de unos pocos componentes compartidos; las
+pantallas no deberían fijar radios ni bordes a mano.
+
+- **Formas** (`AppSpacing`): tarjetas `radiusTarjeta` 24, campos
+  `radiusCampo` 14, recuadros `radiusRecuadro` 16, ventanas `radiusDialogo`
+  28, borde `borde` 1 px. Botones y etiquetas: `StadiumBorder`.
+- **Tonos derivados** (`ValtiqColores`): `relieve` (campos, recuadros y
+  pistas dentro de una tarjeta) y `acentoSuave` (fondo del cuadro de ícono).
+  No son colores de la paleta: se calculan de `superficie`/`texto`/`acento`.
+- **Encabezado de pantalla:** `EncabezadoPantalla(kicker, titulo, accion)`;
+  el botón de crear es `BotonCrear` (píldora con texto en ancho ≥ 600,
+  redondo con "+" en celular).
+- **Pestañas:** `SelectorPildoras` (sobre el fondo). **Opciones dentro de
+  una tarjeta:** `GrupoPildoras<T>`.
+- **Formularios:** `PaginaFormulario` (columna centrada de 760 px máx.) →
+  `FormSection` → `FilaCampos` → `CampoEtiquetado` (nombre encima del
+  campo). Hoy lo usa completo `DeudaForm`; los demás usan aún `labelText`
+  dentro del campo.
+- Colores y letras NO cambiaron (vino/negro/beige/morado, verde y rojo con
+  su significado, Manrope + JetBrains Mono).
+
 ### Pantalla de Deudas (2026-11-11)
 
 `screens/deudas/`:

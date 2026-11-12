@@ -129,6 +129,17 @@ class ValtiqColores extends ThemeExtension<ValtiqColores> {
     alerta: AppColors.alertaOscuro,
   );
 
+  /// Tono apenas más marcado que [superficie], para lo que va DENTRO de una
+  /// tarjeta y debe distinguirse de ella: campos de texto, recuadros de
+  /// datos, la pista de las barras y de los selectores, etiquetas. No es un
+  /// color nuevo de la paleta: es [superficie] con un velo del color del
+  /// texto, así que sigue al tema solo.
+  Color get relieve =>
+      Color.alphaBlend(texto.withValues(alpha: 0.07), superficie);
+
+  /// Fondo tenue del color de marca (cuadro del ícono, número de paso).
+  Color get acentoSuave => acento.withValues(alpha: 0.14);
+
   @override
   ValtiqColores copyWith({
     Color? fondo,

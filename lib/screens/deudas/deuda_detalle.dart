@@ -47,10 +47,15 @@ class DeudaDetalleContenido extends StatefulWidget {
     required this.deudaId,
     required this.onSalir,
     this.onCerrar,
+    this.onVerPlan,
   });
 
   final AppDatabase db;
   final int deudaId;
+
+  /// Si no es `null`, junto a "Registrar pago" va "Ver en plan" (panel de
+  /// PC: lleva a la pestaña Plan de pago).
+  final VoidCallback? onVerPlan;
 
   /// La deuda dejó de estar en la lista que se estaba viendo (se pagó, se
   /// reactivó o se eliminó): la página vuelve atrás, el panel se cierra.
@@ -255,14 +260,18 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
     final vence = activa ? r.vencimiento(hoy) : null;
     final porcentaje = (r.fraccionPagada * 100).round();
 
+    final enPanel = widget.onCerrar != null;
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.symmetric(
+        horizontal: enPanel ? AppSpacing.lg : AppSpacing.md,
+        vertical: enPanel ? 28 : AppSpacing.md,
+      ),
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ImagenDeuda(tipo: deuda.tipo, lado: 56),
-            const SizedBox(width: AppSpacing.md),
+            ImagenDeuda(tipo: deuda.tipo, lado: 44),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,8 +280,9 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
                     deuda.acreedorNombre,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   if (deuda.descripcion.isNotEmpty)
@@ -280,7 +290,7 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
                       deuda.descripcion,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: c.textoSecundario,
                       ),
                     ),
@@ -288,7 +298,7 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.edit_outlined),
+              icon: const Icon(Icons.edit_outlined, size: 20),
               tooltip: 'Editar',
               onPressed: () => _editar(deuda),
             ),
@@ -316,12 +326,15 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
                 ),
               ],
             ),
-            if (widget.onCerrar != null)
+            if (widget.onCerrar != null) ...[
+              const SizedBox(width: AppSpacing.xs),
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close, size: 18),
                 tooltip: 'Cerrar',
+                style: IconButton.styleFrom(backgroundColor: c.relieve),
                 onPressed: widget.onCerrar,
               ),
+            ],
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -329,26 +342,27 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
           activa ? 'Saldo pendiente' : 'Total pagado',
           style: theme.textTheme.bodySmall?.copyWith(color: c.textoSecundario),
         ),
+        const SizedBox(height: 2),
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
           child: Text(
             formatCOP(activa ? r.saldo : r.abonado),
             style: monoStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+              fontSize: 38,
+              fontWeight: FontWeight.w600,
               color: activa ? c.texto : c.positivo,
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: 12),
         BarraProgreso(fraccion: r.fraccionPagada, color: c.positivo),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             Expanded(
               child: Text(
-                '$porcentaje% de ${formatCOP(r.total)}',
+                '$porcentaje% pagado de ${formatCOP(r.total)}',
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: c.textoSecundario,
@@ -366,24 +380,39 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
               ),
           ],
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.lg),
         ..._datos(context, r, hoy),
         if (activa) ...[
           const SizedBox(height: AppSpacing.md),
-          FilledButton.icon(
-            onPressed: () => _registrarPago(r),
-            icon: const Icon(Icons.add),
-            label: const Text('Registrar pago'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => _registrarPago(r),
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                  child: const Text('Registrar pago'),
+                ),
+              ),
+              if (widget.onVerPlan != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                OutlinedButton(
+                  onPressed: widget.onVerPlan,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                  ),
+                  child: const Text('Ver en plan'),
+                ),
+              ],
+            ],
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
         Text(
           'Pagos recientes',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: c.textoSecundario,
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -477,7 +506,7 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
           colorValor: estimada.noBaja ? c.alerta : null,
         ),
       ),
-      const SizedBox(height: AppSpacing.xs),
+      const SizedBox(height: AppSpacing.sm),
       Text(
         estimada.noBaja
             ? 'Pagando ${formatCOP(estimada.ritmo!)} al mes la deuda no baja: '
@@ -523,11 +552,10 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
         InkWell(
           onLongPress: () => _eliminarPago(p),
           onSecondaryTap: () => _eliminarPago(p),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.sm,
-              horizontal: AppSpacing.xs,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: c.divisor, width: 0.5)),
             ),
             child: Row(
               children: [
@@ -537,7 +565,9 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
                     children: [
                       Text(
                         fechaCorta(fechaCivilGuardada(p.fechaPago), hoy),
-                        style: theme.textTheme.bodyMedium,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: c.textoSecundario,
+                        ),
                       ),
                       if (p.notas.isNotEmpty)
                         Text(
@@ -551,11 +581,7 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
                 ),
                 Text(
                   formatCOP(p.montoAbonado),
-                  style: monoStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: c.positivo,
-                  ),
+                  style: monoStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -572,6 +598,7 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
             ),
           ),
         ),
+      const SizedBox(height: AppSpacing.sm),
       Text(
         'Para eliminar un pago, mantenlo presionado (o clic derecho).',
         style: theme.textTheme.bodySmall?.copyWith(color: c.textoSecundario),
@@ -663,11 +690,10 @@ class _Dato extends StatelessWidget {
     final theme = Theme.of(context);
     final c = context.colores;
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: c.superficie,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: c.divisor, width: 1.5),
+        color: c.relieve,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusRecuadro),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -678,14 +704,15 @@ class _Dato extends StatelessWidget {
               color: c.textoSecundario,
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: 2),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
               valor,
               style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
                 color: colorValor,
               ),
             ),

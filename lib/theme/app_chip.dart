@@ -1,28 +1,30 @@
 import 'package:flutter/material.dart';
 
-import 'app_spacing.dart';
+import 'app_colors.dart';
 
 class AppChip extends StatelessWidget {
-  const AppChip({super.key, required this.label});
+  const AppChip({super.key, required this.label, this.neutra = false});
 
   final String label;
+
+  /// Etiqueta gris (un dato, como la tasa) en vez de la del color de marca.
+  final bool neutra;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final c = context.colores;
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: ShapeDecoration(
+        color: neutra ? c.relieve : c.acentoSuave,
+        shape: const StadiumBorder(),
       ),
       child: Text(
         label,
+        maxLines: 1,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
+          color: neutra ? c.textoSecundario : c.acento,
           fontWeight: FontWeight.w600,
         ),
       ),

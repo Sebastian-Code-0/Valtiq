@@ -22,9 +22,8 @@ class ImagenDeuda extends StatelessWidget {
       width: lado,
       height: lado,
       decoration: BoxDecoration(
-        color: c.acento.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        border: Border.all(color: c.divisor),
+        color: c.acentoSuave,
+        borderRadius: BorderRadius.circular(lado * 0.32),
       ),
       child: Icon(
         TipoDeuda.desdeClave(tipo).icono,

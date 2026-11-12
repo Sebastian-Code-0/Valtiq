@@ -4,8 +4,65 @@ import '../services/interes_calculator.dart';
 import '../theme/theme.dart';
 import 'categoria_gasto.dart';
 import 'date_format.dart';
+import 'encabezado_pantalla.dart';
 import 'format.dart';
 
+/// Página de un formulario (crear o editar): flecha para volver, título
+/// grande y, debajo, las secciones en una columna centrada que no se estira
+/// de más en pantallas anchas.
+class PaginaFormulario extends StatelessWidget {
+  const PaginaFormulario({
+    super.key,
+    required this.formKey,
+    required this.titulo,
+    required this.children,
+    this.kicker,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final String titulo;
+  final String? kicker;
+  final List<Widget> children;
+
+  /// Ancho máximo de la columna del formulario.
+  static const anchoMaximo = 760.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final ancho = MediaQuery.sizeOf(context).width >= 600;
+    return Scaffold(
+      appBar: AppBar(toolbarHeight: 48),
+      body: SafeArea(
+        child: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              ancho ? AppSpacing.lg : AppSpacing.md,
+              AppSpacing.sm,
+              ancho ? AppSpacing.lg : AppSpacing.md,
+              AppSpacing.xl,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: anchoMaximo),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    EncabezadoPantalla(titulo: titulo, kicker: kicker),
+                    SizedBox(height: ancho ? AppSpacing.lg : AppSpacing.md),
+                    ...children,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Sección de un formulario: una tarjeta con su título y los campos.
 class FormSection extends StatelessWidget {
   const FormSection({
     super.key,
@@ -16,6 +73,9 @@ class FormSection extends StatelessWidget {
   });
 
   final String title;
+
+  /// Ya no se dibuja (el diseño nuevo lleva solo el título); se conserva
+  /// para no tocar cada formulario.
   final IconData icon;
   final List<Widget> children;
   final EdgeInsetsGeometry? padding;
@@ -23,36 +83,107 @@ class FormSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final ancho = MediaQuery.sizeOf(context).width >= 600;
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: padding ?? const EdgeInsets.all(AppSpacing.md),
+        padding:
+            padding ?? EdgeInsets.all(ancho ? AppSpacing.lg : AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  ),
-                  child: Icon(icon, size: 18, color: theme.colorScheme.primary),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             ...children,
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Un campo con su nombre ENCIMA (en vez de dentro del campo) y, si hace
+/// falta, una explicación corta debajo.
+class CampoEtiquetado extends StatelessWidget {
+  const CampoEtiquetado({
+    super.key,
+    required this.etiqueta,
+    required this.child,
+    this.ayuda,
+  });
+
+  final String etiqueta;
+  final Widget child;
+  final String? ayuda;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorSec = context.colores.textoSecundario;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          etiqueta,
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: colorSec,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        child,
+        if (ayuda != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            ayuda!,
+            style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Dos (o más) campos lado a lado si hay ancho; uno debajo del otro en
+/// celular.
+class FilaCampos extends StatelessWidget {
+  const FilaCampos({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 480) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (i, h) in children.indexed) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.md),
+                h,
+              ],
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final (i, h) in children.indexed) ...[
+              if (i > 0) const SizedBox(width: AppSpacing.md),
+              Expanded(child: h),
+            ],
+          ],
+        );
+      },
     );
   }
 }
@@ -66,6 +197,7 @@ class DatePickerField extends StatelessWidget {
     required this.onTap,
     this.onClear,
     this.placeholder = 'Sin fecha',
+    this.mostrarEtiqueta = true,
   });
 
   final String label;
@@ -75,56 +207,75 @@ class DatePickerField extends StatelessWidget {
   final VoidCallback? onClear;
   final String placeholder;
 
+  /// `false` cuando el nombre ya va encima (dentro de un [CampoEtiquetado]).
+  final bool mostrarEtiqueta;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorSec = context.colores.textoSecundario;
+    final c = context.colores;
+    final colorSec = c.textoSecundario;
     final tieneFecha = value != null;
+    final forma = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusCampo),
+      side: BorderSide(color: c.divisor, width: AppSpacing.borde),
+    );
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        decoration: BoxDecoration(
-          border: Border.all(color: theme.dividerColor, width: 1),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: colorSec),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.bodySmall?.copyWith(color: colorSec),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    tieneFecha ? formatFechaLegible(value!) : placeholder,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: tieneFecha
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                      color: tieneFecha ? null : colorSec,
-                    ),
-                  ),
-                ],
-              ),
+    return Material(
+      color: c.relieve,
+      shape: forma,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 50),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 6,
             ),
-            if (tieneFecha && onClear != null)
-              IconButton(
-                icon: const Icon(Icons.clear, size: 18),
-                onPressed: onClear,
-                tooltip: 'Quitar fecha',
-                visualDensity: VisualDensity.compact,
-              )
-            else
-              Icon(Icons.chevron_right, color: colorSec),
-          ],
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: colorSec),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (mostrarEtiqueta) ...[
+                        Text(
+                          label,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorSec,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                      ],
+                      Text(
+                        tieneFecha ? formatFechaLegible(value!) : placeholder,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: tieneFecha
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: tieneFecha ? null : colorSec,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (tieneFecha && onClear != null)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: onClear,
+                    tooltip: 'Quitar fecha',
+                    visualDensity: VisualDensity.compact,
+                  )
+                else
+                  Icon(Icons.chevron_right, color: colorSec),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -147,31 +298,41 @@ class FormSaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton.icon(
-        onPressed: loading ? null : onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: context.colores.acentoRelleno,
-          foregroundColor: context.colores.sobreAcento,
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          ),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    final boton = FilledButton(
+      onPressed: loading ? null : onPressed,
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(180, 48),
+        textStyle: const TextStyle(
+          fontFamily: fuenteTexto,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
         ),
-        icon: loading
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation(context.colores.sobreAcento),
-                ),
-              )
-            : Icon(icon, size: 20),
-        label: Text(loading ? 'Guardando...' : label),
       ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (loading) ...[
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(context.colores.texto),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+          ],
+          Text(loading ? 'Guardando...' : label),
+        ],
+      ),
+    );
+    // En celular ocupa todo el ancho; en pantallas anchas es una píldora a
+    // la izquierda, del tamaño de su texto.
+    return LayoutBuilder(
+      builder: (context, constraints) => constraints.maxWidth < 480
+          ? SizedBox(width: double.infinity, child: boton)
+          : Align(alignment: Alignment.centerLeft, child: boton),
     );
   }
 }
@@ -529,10 +690,10 @@ class _PistaBarra extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorRelleno = alpha == 1.0 ? color : color.withValues(alpha: alpha);
     return ClipRRect(
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(3),
       child: Container(
-        height: 8,
-        color: color.withValues(alpha: 0.15),
+        height: 6,
+        color: context.colores.relieve,
         alignment: Alignment.centerLeft,
         child: TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0, end: fraccion),
@@ -540,7 +701,13 @@ class _PistaBarra extends StatelessWidget {
           curve: Curves.easeOutCubic,
           builder: (context, valor, child) => FractionallySizedBox(
             widthFactor: valor,
-            child: Container(color: colorRelleno),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: colorRelleno,
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: const SizedBox.expand(),
+            ),
           ),
         ),
       ),

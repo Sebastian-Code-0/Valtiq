@@ -6,7 +6,9 @@ import '../../services/deudas_calculos.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/date_format.dart';
+import '../../utils/encabezado_pantalla.dart';
 import '../../utils/format.dart';
+import '../../utils/selector_pildoras.dart';
 import 'deuda_widgets.dart';
 
 /// Pestaña "Plan de pago": el usuario elige una estrategia (avalancha o
@@ -106,97 +108,219 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final ancho = constraints.maxWidth - 2 * widget.margen;
-        Widget par(Widget a, Widget b) => ancho >= 640
-            ? IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(child: a),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(child: b),
-                  ],
-                ),
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  a,
-                  const SizedBox(height: AppSpacing.md),
-                  b,
-                ],
-              );
-
-        return ListView(
+        final controles = _tarjetaControles(context, plan, hoy);
+        final resultado = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _tarjetaLibre(context, plan),
+            const SizedBox(height: 12),
+            _tarjetaIntereses(context, plan, planOtra),
+          ],
+        );
+        return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             widget.margen,
             AppSpacing.sm,
             widget.margen,
             widget.margen,
           ),
-          children: [
-            par(_tarjetaEstrategia(context), _tarjetaLibre(context, plan)),
-            const SizedBox(height: AppSpacing.md),
-            par(
-              _tarjetaIntereses(context, plan, planOtra),
-              _tarjetaExtra(context, plan),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _tarjetaOrden(context, plan, hoy),
-          ],
+          // En PC: a la izquierda lo que se elige (estrategia, extra y el
+          // orden que resulta) y a la derecha la respuesta (cuándo se queda
+          // libre y cuánto cuesta). En celular, uno debajo del otro.
+          child: ancho >= 720
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: controles),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(flex: 2, child: resultado),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [controles, const SizedBox(height: 12), resultado],
+                ),
         );
       },
     );
   }
 
-  Widget _tarjeta(BuildContext context, String titulo, List<Widget> hijos) {
+  double _relleno(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= 600 ? 26 : 20;
+
+  Widget _rotulo(BuildContext context, String texto) => Text(
+    texto,
+    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: context.colores.textoSecundario,
+    ),
+  );
+
+  /// Tarjeta grande: estrategia, extra al mes y el orden de pago.
+  Widget _tarjetaControles(BuildContext context, PlanPago plan, DateTime hoy) {
+    final theme = Theme.of(context);
+    final c = context.colores;
+    final sinMinimo = plan.orden
+        .where((p) => p.resumen.pagoMinimo == null)
+        .length;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: EdgeInsets.all(_relleno(context)),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _rotulo(context, 'Estrategia'),
+            const SizedBox(height: 10),
+            GrupoPildoras<EstrategiaPago>(
+              opciones: {for (final e in EstrategiaPago.values) e: e.nombre},
+              valor: _estrategia,
+              onElegir: _elegirEstrategia,
+            ),
+            const SizedBox(height: 10),
             Text(
-              titulo,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              _estrategia.resumen,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 13,
+                height: 1.5,
+                color: c.textoSecundario,
+              ),
+            ),
+            const SizedBox(height: 26),
+            _rotulo(context, 'Extra al mes'),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 280),
+                child: TextField(
+                  key: const ValueKey('plan-extra'),
+                  controller: _extraCtrl,
+                  style: monoStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    hintText: '0',
+                    prefixText: r'$ ',
+                    prefixStyle: monoStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: c.textoSecundario,
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    CopInputFormatter(),
+                  ],
+                  onChanged: _cambiarExtra,
+                ),
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            ...hijos,
+            Text(
+              'Lo que puedes pagar además de los pagos mínimos. Entre más '
+              'pongas, antes terminas y menos intereses pagas.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: c.textoSecundario,
+              ),
+            ),
+            const SizedBox(height: 26),
+            _rotulo(context, 'Orden de pago'),
+            const SizedBox(height: AppSpacing.xs),
+            for (final (i, paso) in plan.orden.indexed)
+              _filaOrden(context, i, paso),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Cada mes pagas el mínimo de todas y lo que sobra va completo a '
+              'la primera de la lista. Cuando terminas una, lo que le pagabas '
+              'pasa a la siguiente. Las fechas son un estimado con las tasas '
+              'de hoy.'
+              '${sinMinimo > 0 ? ' $sinMinimo ${sinMinimo == 1 ? 'deuda no tiene' : 'deudas no tienen'} pago mínimo: solo ${sinMinimo == 1 ? 'recibe' : 'reciben'} lo que sobra.' : ''}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: c.textoSecundario,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _tarjetaEstrategia(BuildContext context) {
+  Widget _filaOrden(BuildContext context, int i, PasoPlan paso) {
     final theme = Theme.of(context);
     final c = context.colores;
-    return _tarjeta(context, 'Estrategia', [
-      SegmentedButton<EstrategiaPago>(
-        showSelectedIcon: false,
-        segments: [
-          for (final e in EstrategiaPago.values)
-            ButtonSegment(value: e, label: Text(e.nombre)),
+    final pequeno = theme.textTheme.bodySmall?.copyWith(
+      color: c.textoSecundario,
+    );
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: c.divisor, width: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: c.acentoSuave,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '${i + 1}',
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                fontFamily: fuenteTexto,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: c.acento,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  paso.resumen.deuda.acreedorNombre,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  '${formatCOP(paso.resumen.saldo)} · '
+                  '${etiquetaTasa(paso.resumen.deuda)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: pequeno,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                paso.fecha == null ? '—' : formatMesAnioCorto(paso.fecha!),
+                style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13),
+              ),
+              if (paso.fecha != null)
+                Text('liquidada', style: pequeno?.copyWith(fontSize: 11)),
+            ],
+          ),
         ],
-        selected: {_estrategia},
-        onSelectionChanged: (s) => _elegirEstrategia(s.first),
-        style: SegmentedButton.styleFrom(
-          selectedBackgroundColor: c.acentoRelleno,
-          selectedForegroundColor: c.sobreAcento,
-          foregroundColor: c.texto,
-          side: BorderSide(color: c.divisor, width: 1.5),
-        ),
       ),
-      const SizedBox(height: AppSpacing.sm),
-      Text(
-        _estrategia.resumen,
-        style: theme.textTheme.bodyMedium?.copyWith(color: c.textoSecundario),
-      ),
-    ]);
+    );
   }
 
+  /// Tarjeta destacada: cuándo se queda libre de deudas.
   Widget _tarjetaLibre(BuildContext context, PlanPago plan) {
     final theme = Theme.of(context);
     final c = context.colores;
@@ -220,162 +344,166 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
           'intereses crecen más rápido que los pagos. Prueba con un extra '
           'al mes.';
     }
-    return _tarjeta(context, 'Libre de deudas en', [
-      FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: Text(
-          // "abril de 2028" → "Abril de 2028"
-          grande[0].toUpperCase() + grande.substring(1),
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: plan.alcanza ? c.positivo : c.alerta,
+    final radio = BorderRadius.circular(AppSpacing.radiusTarjeta);
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: c.superficie,
+        borderRadius: radio,
+        border: Border.all(color: c.divisor, width: AppSpacing.borde),
+      ),
+      // Dos brillos tenues con los colores de la marca: vino arriba a la
+      // derecha y morado abajo a la izquierda.
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.topRight,
+            radius: 1.3,
+            colors: [
+              c.acento.withValues(alpha: 0.22),
+              c.acento.withValues(alpha: 0),
+            ],
+            stops: const [0, 0.6],
+          ),
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.bottomLeft,
+              radius: 1.3,
+              colors: [
+                c.secundario.withValues(alpha: 0.16),
+                c.secundario.withValues(alpha: 0),
+              ],
+              stops: const [0, 0.6],
+            ),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(_relleno(context)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextoKicker('Libre de deudas en', color: c.acento),
+                const SizedBox(height: AppSpacing.sm),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    // "abril de 2028" → "Abril de 2028"
+                    grande[0].toUpperCase() + grande.substring(1),
+                    style: TextStyle(
+                      fontFamily: fuenteTexto,
+                      fontSize: 32,
+                      height: 1.1,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.6,
+                      color: plan.alcanza ? c.texto : c.alerta,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  detalle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: c.textoSecundario,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-      const SizedBox(height: AppSpacing.xs),
-      Text(
-        detalle,
-        style: theme.textTheme.bodyMedium?.copyWith(color: c.textoSecundario),
-      ),
-    ]);
+    );
   }
 
+  /// Tarjeta de intereses: lo que cuesta este plan, lo que costaría con la
+  /// otra estrategia y la diferencia.
   Widget _tarjetaIntereses(BuildContext context, PlanPago plan, PlanPago otra) {
     final theme = Theme.of(context);
     final c = context.colores;
-    final String comparacion;
-    if (!plan.alcanza || !otra.alcanza) {
-      comparacion = 'Se calcula cuando el plan alcanza para pagar todo.';
-    } else {
-      final diferencia = otra.interesesTotales - plan.interesesTotales;
-      final nombreOtra = otra.estrategia.nombre.toLowerCase();
-      if (diferencia > 0) {
-        comparacion = 'Ahorras ${formatCOP(diferencia)} frente a $nombreOtra.';
-      } else if (diferencia < 0) {
-        comparacion =
-            'Pagas ${formatCOP(-diferencia)} más que con $nombreOtra.';
-      } else {
-        comparacion =
-            'Con tus deudas de hoy, $nombreOtra cuesta lo mismo en '
-            'intereses.';
-      }
-    }
-    return _tarjeta(context, 'Intereses totales', [
-      FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: Text(
-          plan.alcanza ? formatCOP(plan.interesesTotales) : '—',
-          style: monoStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-      ),
-      const SizedBox(height: AppSpacing.xs),
-      Text(
-        plan.alcanza
-            ? 'Lo que pagarás de intereses de hoy hasta terminar. '
-                  '$comparacion'
-            : comparacion,
-        style: theme.textTheme.bodyMedium?.copyWith(color: c.textoSecundario),
-      ),
-    ]);
-  }
+    final comparable = plan.alcanza && otra.alcanza;
+    final diferencia = comparable
+        ? otra.interesesTotales - plan.interesesTotales
+        : 0;
+    final nombreOtra = otra.estrategia.nombre.toLowerCase();
 
-  Widget _tarjetaExtra(BuildContext context, PlanPago plan) {
-    final theme = Theme.of(context);
-    final c = context.colores;
-    return _tarjeta(context, 'Extra al mes', [
-      TextField(
-        key: const ValueKey('plan-extra'),
-        controller: _extraCtrl,
-        decoration: const InputDecoration(
-          hintText: '0',
-          prefixText: r'$ ',
-          isDense: true,
+    Widget fila(
+      String nombre,
+      String valor, {
+      bool fuerte = false,
+      Color? color,
+    }) => Row(
+      children: [
+        Expanded(
+          child: Text(
+            nombre,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontSize: fuerte ? 14.5 : 13.5,
+              fontWeight: fuerte ? FontWeight.w700 : null,
+              color: fuerte ? null : c.textoSecundario,
+            ),
+          ),
         ),
-        keyboardType: TextInputType.number,
-        inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          CopInputFormatter(),
-        ],
-        onChanged: _cambiarExtra,
-      ),
-      const SizedBox(height: AppSpacing.sm),
-      Text(
-        'Lo que puedes pagar además de los pagos mínimos. Entre más pongas, '
-        'antes terminas y menos intereses pagas.',
-        style: theme.textTheme.bodyMedium?.copyWith(color: c.textoSecundario),
-      ),
-    ]);
-  }
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          valor,
+          style: monoStyle(
+            fontSize: fuerte ? 14.5 : 13.5,
+            fontWeight: fuerte ? FontWeight.w700 : FontWeight.w500,
+            color: color,
+          ),
+        ),
+      ],
+    );
 
-  Widget _tarjetaOrden(BuildContext context, PlanPago plan, DateTime hoy) {
-    final theme = Theme.of(context);
-    final c = context.colores;
-    final sinMinimo = plan.orden
-        .where((p) => p.resumen.pagoMinimo == null)
-        .length;
-    return _tarjeta(context, 'Orden de pago', [
-      for (final (i, paso) in plan.orden.indexed) ...[
-        if (i > 0) const Divider(height: AppSpacing.md),
-        Row(
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: EdgeInsets.all(_relleno(context)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(
-              width: 32,
-              child: Text(
-                '${i + 1}.',
-                maxLines: 1,
-                softWrap: false,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: c.acento,
-                ),
-              ),
+            fila(
+              'Intereses totales',
+              plan.alcanza ? formatCOP(plan.interesesTotales) : '—',
             ),
-            ImagenDeuda(tipo: paso.resumen.deuda.tipo, lado: 36),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    paso.resumen.deuda.acreedorNombre,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    '${etiquetaTasa(paso.resumen.deuda)} · '
-                    '${formatCOP(paso.resumen.saldo)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: c.textoSecundario,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
+            if (comparable) ...[
+              const SizedBox(height: 12),
+              fila('Con $nombreOtra', formatCOP(otra.interesesTotales)),
+              const SizedBox(height: 12),
+              Divider(height: 1, color: c.divisor),
+              const SizedBox(height: 12),
+              if (diferencia > 0)
+                fila(
+                  'Ahorro en intereses',
+                  formatCOP(diferencia),
+                  fuerte: true,
+                  color: c.positivo,
+                )
+              else if (diferencia < 0)
+                fila(
+                  'Pagas de más',
+                  formatCOP(-diferencia),
+                  fuerte: true,
+                  color: c.alerta,
+                )
+              else
+                fila('Diferencia', 'Ninguna', fuerte: true),
+            ],
+            const SizedBox(height: 12),
             Text(
-              paso.fecha == null ? '—' : formatMesAnioCorto(paso.fecha!),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+              plan.alcanza
+                  ? 'Intereses de hoy hasta terminar de pagar todo.'
+                  : 'Se calcula cuando el plan alcanza para pagar todo.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: c.textoSecundario,
               ),
             ),
           ],
         ),
-      ],
-      const SizedBox(height: AppSpacing.md),
-      Text(
-        'Cada mes pagas el mínimo de todas y lo que sobra va completo a la '
-        'primera de la lista. Cuando terminas una, lo que le pagabas pasa a '
-        'la siguiente. Las fechas son un estimado con las tasas de hoy.'
-        '${sinMinimo > 0 ? ' $sinMinimo ${sinMinimo == 1 ? 'deuda no tiene' : 'deudas no tienen'} pago mínimo: solo ${sinMinimo == 1 ? 'recibe' : 'reciben'} lo que sobra.' : ''}',
-        style: theme.textTheme.bodySmall?.copyWith(color: c.textoSecundario),
       ),
-    ]);
+    );
   }
 }

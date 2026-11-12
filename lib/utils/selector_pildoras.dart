@@ -10,8 +10,89 @@ class OpcionPildora {
   final IconData? icono;
 }
 
-/// Fila de botones tipo píldora para cambiar de sección dentro de una
-/// pantalla (Ajustes, Deudas). La elegida va rellena con el color de marca.
+/// Una píldora de un selector. La elegida va rellena con el color del texto
+/// (clara en tema oscuro, negra en tema claro); las demás, sin fondo.
+class _Pildora extends StatelessWidget {
+  const _Pildora({
+    required this.nombre,
+    required this.elegida,
+    required this.onTap,
+    this.icono,
+  });
+
+  final String nombre;
+  final IconData? icono;
+  final bool elegida;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colores;
+    final color = elegida ? c.fondo : c.textoSecundario;
+    return Semantics(
+      button: true,
+      selected: elegida,
+      enabled: onTap != null,
+      child: Material(
+        color: elegida ? c.texto : Colors.transparent,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icono != null) ...[
+                  Icon(icono, size: 17, color: color),
+                  const SizedBox(width: 6),
+                ],
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      nombre,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontFamily: fuenteTexto,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pista redondeada que contiene las píldoras.
+BoxDecoration _pista(BuildContext context, {required bool enTarjeta}) {
+  final c = context.colores;
+  return BoxDecoration(
+    // Dentro de una tarjeta, la pista se marca con el tono de relieve; sobre
+    // el fondo de la pantalla, con el color de tarjeta y un borde fino.
+    color: enTarjeta ? c.relieve : c.superficie,
+    borderRadius: BorderRadius.circular(_altoPildora / 2 + _aire),
+    border: enTarjeta
+        ? null
+        : Border.all(color: c.divisor, width: AppSpacing.borde),
+  );
+}
+
+const _altoPildora = 38.0;
+const _aire = 4.0;
+
+/// Pestañas en forma de píldora para cambiar de sección dentro de una
+/// pantalla (Ajustes, Deudas): una pista redondeada con las opciones dentro
+/// y la elegida rellena.
 ///
 /// Con ratón no se puede arrastrar una fila para deslizarla, así que en
 /// pantallas anchas (PC, tablet) las píldoras se acomodan en las líneas que
@@ -40,82 +121,48 @@ class SelectorPildoras extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colores;
-    final theme = Theme.of(context);
-    Widget pildora(int i) {
-      final elegida = i == seleccionada;
-      final color = elegida ? c.sobreAcento : c.texto;
-      final icono = opciones[i].icono;
-      return Semantics(
-        button: true,
-        selected: elegida,
-        child: Material(
-          color: elegida ? c.acentoRelleno : Colors.transparent,
-          shape: StadiumBorder(
-            side: BorderSide(
-              color: elegida ? c.acentoRelleno : c.divisor,
-              width: 1.5,
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => onElegir(i),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icono != null) ...[
-                    Icon(icono, size: 18, color: color),
-                    const SizedBox(width: AppSpacing.sm),
-                  ],
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        opciones[i].nombre,
-                        maxLines: 1,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+    Widget pildora(int i) => _Pildora(
+      nombre: opciones[i].nombre,
+      icono: opciones[i].icono,
+      elegida: i == seleccionada,
+      onTap: () => onElegir(i),
+    );
+    final pista = _pista(context, enTarjeta: false);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth >= 600) {
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: margen),
-            child: Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                for (var i = 0; i < opciones.length; i++)
-                  SizedBox(height: 44, child: pildora(i)),
-              ],
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.all(_aire),
+                decoration: pista,
+                child: Wrap(
+                  spacing: 2,
+                  runSpacing: 2,
+                  children: [
+                    for (var i = 0; i < opciones.length; i++)
+                      SizedBox(height: _altoPildora, child: pildora(i)),
+                  ],
+                ),
+              ),
             ),
           );
         }
         if (repartirEnCelular) {
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: margen),
-            child: SizedBox(
-              height: 44,
+            child: Container(
+              height: _altoPildora + 2 * _aire,
+              padding: const EdgeInsets.all(_aire),
+              decoration: pista,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (var i = 0; i < opciones.length; i++) ...[
-                    if (i > 0) const SizedBox(width: AppSpacing.sm),
+                    if (i > 0) const SizedBox(width: 2),
                     Expanded(child: pildora(i)),
                   ],
                 ],
@@ -123,17 +170,71 @@ class SelectorPildoras extends StatelessWidget {
             ),
           );
         }
-        return SizedBox(
-          height: 44,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: margen),
-            itemCount: opciones.length,
-            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-            itemBuilder: (context, i) => pildora(i),
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: margen),
+          child: Container(
+            height: _altoPildora + 2 * _aire,
+            padding: const EdgeInsets.all(_aire),
+            decoration: pista,
+            clipBehavior: Clip.antiAlias,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: opciones.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 2),
+              itemBuilder: (context, i) => pildora(i),
+            ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Selector de una opción entre pocas, para usar DENTRO de una tarjeta o de
+/// un formulario (estrategia del plan, tipo de interés…). Hace lo mismo que
+/// una lista desplegable, pero con todas las opciones a la vista.
+class GrupoPildoras<T> extends StatelessWidget {
+  const GrupoPildoras({
+    super.key,
+    required this.opciones,
+    required this.valor,
+    required this.onElegir,
+  });
+
+  /// Valor → texto que se muestra.
+  final Map<T, String> opciones;
+  final T valor;
+
+  /// `null` deja el grupo apagado (no se puede cambiar).
+  final ValueChanged<T>? onElegir;
+
+  @override
+  Widget build(BuildContext context) {
+    final activo = onElegir != null;
+    return Opacity(
+      opacity: activo ? 1 : 0.5,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.all(_aire),
+          decoration: _pista(context, enTarjeta: true),
+          child: Wrap(
+            spacing: 2,
+            runSpacing: 2,
+            children: [
+              for (final o in opciones.entries)
+                SizedBox(
+                  height: _altoPildora,
+                  child: _Pildora(
+                    nombre: o.value,
+                    elegida: o.key == valor,
+                    onTap: activo ? () => onElegir!(o.key) : null,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

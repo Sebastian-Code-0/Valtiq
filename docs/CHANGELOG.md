@@ -1,6 +1,38 @@
 # Changelog
 
-## Deudas rediseñada: pestañas, tarjetas, plan de pago — schemaVersion 14 (2026-11-11)
+## Estilo nuevo (base) + Deudas y su formulario con ese estilo (2026-11-11)
+
+Primer paso de aplicar el diseño de la plantilla de PC. Solo cambia el
+aspecto: colores, letras y lógica quedan igual.
+
+- **Base (toda la app, vía `AppTheme`):** tarjetas con esquinas de 24 px y
+  borde de 1 px (antes 12 px y 1,5 px); botones, etiquetas y avisos en forma
+  de píldora; campos de texto con fondo propio, borde fino y esquinas de
+  14 px; ventanas con esquinas de 28 px. Medidas en `AppSpacing`
+  (`radiusTarjeta`, `radiusCampo`, `radiusRecuadro`, `radiusDialogo`,
+  `borde`, `anchoContenido`).
+- **`ValtiqColores.relieve` y `.acentoSuave`:** tonos derivados (no colores
+  nuevos) para lo que va dentro de una tarjeta: campos, recuadros, pistas.
+- **Componentes nuevos:** `EncabezadoPantalla`, `TextoKicker`, `BotonCrear`
+  (`utils/encabezado_pantalla.dart`); `GrupoPildoras` (opciones a la vista
+  en vez de lista desplegable); `PaginaFormulario`, `CampoEtiquetado`,
+  `FilaCampos` (`utils/form_widgets.dart`).
+- **`SelectorPildoras`:** ahora es una pista redondeada con las pestañas
+  dentro; la elegida va rellena con el color del texto.
+- **Barras de avance:** 6 px, pista gris en vez de teñida.
+- **Deudas:** encabezado con rótulo + título grande y botón "Nueva deuda";
+  los tres totales van sueltos (sin tarjeta); tarjetas más amplias con el
+  saldo grande; Pagadas en una sola tarjeta con filas; panel de detalle de
+  440 px con recuadros sin borde y botón "Ver en plan"; Plan de pago en dos
+  columnas (lo que se elige a la izquierda, la respuesta a la derecha);
+  "Registrar pago" con título a la izquierda y botones a la derecha.
+- **Formulario de deuda:** título grande, nombre de cada campo encima, dos
+  campos por fila en PC, tipo de interés y modalidad con píldoras.
+- Los demás formularios heredan tarjetas, campos, fechas y botón de guardar
+  nuevos; su reorganización completa llega con cada pantalla.
+- Tests: 329 (3 nuevos en `test/screens/deudas/deuda_form_test.dart`).
+
+## Deudas rediseñada: pestañas, tarjetas, plan de pago (2026-11-11) — v1.9.0+10, schemaVersion 14
 
 - **schemaVersion 13 → 14:** `Deudas` gana `descripcion`, `tipo` y `diaPago`.
   Test `test/db/migration_v14_test.dart`; los respaldos anteriores se siguen

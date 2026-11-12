@@ -6,6 +6,7 @@ import '../../services/deudas_calculos.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
+import '../../utils/encabezado_pantalla.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
@@ -31,7 +32,7 @@ class DeudasScreen extends StatefulWidget {
   static const anchoMinimoPanel = 800.0;
 
   /// Ancho del panel de detalle.
-  static const anchoPanel = 400.0;
+  static const anchoPanel = 440.0;
 
   @override
   State<DeudasScreen> createState() => _DeudasScreenState();
@@ -138,7 +139,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                     conPanel &&
                     _pestana != 1 &&
                     lista.any((r) => r.deuda.id == _seleccionada);
-                final margen = conPanel ? AppSpacing.lg : AppSpacing.md;
+                final margen = conPanel ? AppSpacing.xl : AppSpacing.md;
 
                 final principal = Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -154,7 +155,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                         _seleccionada = null;
                       }),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(height: conPanel ? AppSpacing.md : AppSpacing.sm),
                     Expanded(
                       child: switch (_pestana) {
                         0 => _Activas(
@@ -175,11 +176,22 @@ class _DeudasScreenState extends State<DeudasScreen> {
                   ],
                 );
 
-                if (!panelAbierto) return principal;
+                // En pantallas muy anchas el contenido no se estira más
+                // allá de un ancho cómodo de leer.
+                final acotado = Align(
+                  alignment: Alignment.topLeft,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: AppSpacing.anchoContenido + 2 * margen,
+                    ),
+                    child: principal,
+                  ),
+                );
+                if (!panelAbierto) return acotado;
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(child: principal),
+                    Expanded(child: acotado),
                     Container(
                       key: const ValueKey('panel-deuda'),
                       width: DeudasScreen.anchoPanel,
@@ -188,7 +200,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                         border: Border(
                           left: BorderSide(
                             color: context.colores.divisor,
-                            width: 1.5,
+                            width: AppSpacing.borde,
                           ),
                         ),
                       ),
@@ -200,6 +212,10 @@ class _DeudasScreenState extends State<DeudasScreen> {
                         deudaId: _seleccionada!,
                         onSalir: () => setState(() => _seleccionada = null),
                         onCerrar: () => setState(() => _seleccionada = null),
+                        onVerPlan: () => setState(() {
+                          _pestana = 1;
+                          _seleccionada = null;
+                        }),
                       ),
                     ),
                   ],
@@ -213,41 +229,20 @@ class _DeudasScreenState extends State<DeudasScreen> {
   }
 
   Widget _encabezado(BuildContext context, int activas, double margen) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.fromLTRB(margen, margen, margen, AppSpacing.md),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Deudas',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  switch (activas) {
-                    0 => 'Sin deudas activas',
-                    1 => '1 activa',
-                    _ => '$activas activas',
-                  },
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: context.colores.textoSecundario,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          FloatingActionButton.small(
-            heroTag: 'fab_deudas',
-            tooltip: 'Nueva deuda',
-            onPressed: _nuevaDeuda,
-            child: const Icon(Icons.add),
-          ),
-        ],
+      padding: EdgeInsets.fromLTRB(margen, margen, margen, AppSpacing.lg),
+      child: EncabezadoPantalla(
+        kicker: switch (activas) {
+          0 => 'Sin deudas activas',
+          1 => '1 activa',
+          _ => '$activas activas',
+        },
+        titulo: 'Deudas',
+        accion: BotonCrear(
+          texto: 'Nueva deuda',
+          heroTag: 'fab_deudas',
+          onPressed: _nuevaDeuda,
+        ),
       ),
     );
   }
@@ -290,7 +285,7 @@ class _Activas extends StatelessWidget {
   final ValueChanged<int> onAbrir;
 
   /// Alto fijo de cada tarjeta de la cuadrícula.
-  static const _altoTarjeta = 188.0;
+  static const _altoTarjeta = 208.0;
 
   @override
   Widget build(BuildContext context) {
@@ -309,18 +304,21 @@ class _Activas extends StatelessWidget {
           slivers: [
             SliverPadding(
               padding: EdgeInsets.fromLTRB(margen, AppSpacing.sm, margen, 0),
-              sliver: SliverToBoxAdapter(
-                child: _Totales(totales: totales, enFila: ancho >= 560),
-              ),
+              sliver: SliverToBoxAdapter(child: _Totales(totales: totales)),
             ),
             SliverPadding(
-              padding: EdgeInsets.all(margen),
+              padding: EdgeInsets.fromLTRB(
+                margen,
+                AppSpacing.lg,
+                margen,
+                margen,
+              ),
               sliver: SliverGrid.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: columnas,
                   mainAxisExtent: _altoTarjeta,
-                  crossAxisSpacing: AppSpacing.md,
-                  mainAxisSpacing: AppSpacing.md,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
                 ),
                 itemCount: activas.length,
                 itemBuilder: (context, i) {
@@ -342,95 +340,63 @@ class _Activas extends StatelessWidget {
   }
 }
 
-/// Los tres datos de arriba: total de las deudas, pagos mínimos al mes y
-/// qué porcentaje del total ya se pagó.
+/// Los tres datos de arriba, sueltos (sin tarjeta): total de las deudas,
+/// pagos mínimos al mes y qué porcentaje del total ya se pagó.
 class _Totales extends StatelessWidget {
-  const _Totales({required this.totales, required this.enFila});
+  const _Totales({required this.totales});
 
   final TotalesDeudas totales;
 
-  /// Los tres en una fila (PC, tablet) o el total arriba y los otros dos
-  /// debajo (celular).
-  final bool enFila;
-
   @override
   Widget build(BuildContext context) {
-    final c = context.colores;
     final porcentaje = (totales.fraccionPagada * 100).round();
-    final total = _Total(
-      titulo: 'Total de las deudas',
-      valor: formatCOP(totales.totalDeudas),
-    );
-    final minimos = _Total(
-      titulo: 'Pagos mínimos al mes',
-      valor: formatCOP(totales.pagosMinimosMes),
-    );
-    final pagado = _Total(
-      titulo: 'Pagado del total',
-      valor: '$porcentaje%',
-      pie: BarraProgreso(fraccion: totales.fraccionPagada, color: c.positivo),
-    );
-    Widget fila(List<Widget> hijos) => IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (i, h) in hijos.indexed) ...[
-            if (i > 0) const SizedBox(width: AppSpacing.md),
-            Expanded(child: h),
-          ],
-        ],
-      ),
-    );
-    if (enFila) return fila([total, minimos, pagado]);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Wrap(
+      spacing: 40,
+      runSpacing: AppSpacing.md,
       children: [
-        total,
-        const SizedBox(height: AppSpacing.sm),
-        fila([minimos, pagado]),
+        _Total(
+          titulo: 'Total de las deudas',
+          valor: formatCOP(totales.totalDeudas),
+        ),
+        _Total(
+          titulo: 'Pagos mínimos al mes',
+          valor: formatCOP(totales.pagosMinimosMes),
+        ),
+        _Total(titulo: 'Pagado del total', valor: '$porcentaje%'),
       ],
     );
   }
 }
 
 class _Total extends StatelessWidget {
-  const _Total({required this.titulo, required this.valor, this.pie});
+  const _Total({required this.titulo, required this.valor});
 
   final String titulo;
   final String valor;
-  final Widget? pie;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              titulo,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: context.colores.textoSecundario,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                valor,
-                style: monoStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-            if (pie != null) ...[const SizedBox(height: AppSpacing.sm), pie!],
-          ],
+    final ancho = MediaQuery.sizeOf(context).width >= 600;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          titulo,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: context.colores.textoSecundario,
+          ),
         ),
-      ),
+        const SizedBox(height: 2),
+        Text(
+          valor,
+          style: monoStyle(
+            fontSize: ancho ? 28 : 22,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -467,21 +433,23 @@ class _TarjetaDeuda extends StatelessWidget {
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        side: BorderSide(color: elegida ? c.acento : c.divisor, width: 1.5),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusTarjeta),
+        side: BorderSide(
+          color: elegida ? c.acento : c.divisor,
+          width: elegida ? 1.5 : AppSpacing.borde,
+        ),
       ),
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.all(22),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ImagenDeuda(tipo: deuda.tipo),
-                  const SizedBox(width: AppSpacing.sm),
+                  ImagenDeuda(tipo: deuda.tipo, lado: 40),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,8 +458,9 @@ class _TarjetaDeuda extends StatelessWidget {
                           deuda.acreedorNombre,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
@@ -506,7 +475,7 @@ class _TarjetaDeuda extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  AppChip(label: etiquetaTasa(deuda)),
+                  AppChip(label: etiquetaTasa(deuda), neutra: true),
                 ],
               ),
               const Spacer(),
@@ -515,10 +484,10 @@ class _TarjetaDeuda extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   formatCOP(resumen.saldo),
-                  style: monoStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: monoStyle(fontSize: 28, fontWeight: FontWeight.w600),
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: 14),
               BarraProgreso(
                 fraccion: resumen.fraccionPagada,
                 color: c.positivo,
@@ -573,7 +542,6 @@ class _Pagadas extends StatelessWidget {
     if (pagadas.isEmpty) {
       return const _Vacio('Todavía no has terminado de pagar ninguna deuda.');
     }
-    final theme = Theme.of(context);
     final c = context.colores;
     // Las liquidadas más recientemente, primero.
     final ordenadas = [...pagadas]
@@ -582,77 +550,82 @@ class _Pagadas extends StatelessWidget {
         final fb = b.deuda.fechaPagoReal ?? b.deuda.actualizadoEn;
         return fb.compareTo(fa);
       });
-    return ListView.separated(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(margen, AppSpacing.sm, margen, margen),
-      itemCount: ordenadas.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, i) {
-        final r = ordenadas[i];
-        final deuda = r.deuda;
-        final pagada = deuda.fechaPagoReal;
-        final detalle = [
-          if (deuda.descripcion.isNotEmpty) deuda.descripcion,
-          pagada == null
-              ? 'Liquidada'
-              : 'Liquidada ${formatMesAnioCorto(fechaCivilGuardada(pagada))}',
-        ].join(' · ');
-        return Card(
-          key: ValueKey(deuda.id),
-          margin: EdgeInsets.zero,
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            side: BorderSide(
-              color: deuda.id == seleccionada ? c.acento : c.divisor,
-              width: 1.5,
-            ),
-          ),
-          child: InkWell(
-            onTap: () => onAbrir(deuda.id),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                children: [
-                  ImagenDeuda(tipo: deuda.tipo),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          deuda.acreedorNombre,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          detalle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: c.textoSecundario,
-                          ),
-                        ),
-                      ],
+      child: Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            for (final (i, r) in ordenadas.indexed) ...[
+              if (i > 0)
+                Divider(height: 1, indent: 22, endIndent: 22, color: c.divisor),
+              _fila(context, r),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _fila(BuildContext context, ResumenDeuda r) {
+    final theme = Theme.of(context);
+    final c = context.colores;
+    final deuda = r.deuda;
+    final pagada = deuda.fechaPagoReal;
+    final detalle = [
+      if (deuda.descripcion.isNotEmpty) deuda.descripcion,
+      pagada == null
+          ? 'Liquidada'
+          : 'Liquidada ${formatMesAnioCorto(fechaCivilGuardada(pagada))}',
+    ].join(' · ');
+    return Material(
+      key: ValueKey(deuda.id),
+      color: deuda.id == seleccionada ? c.relieve : Colors.transparent,
+      child: InkWell(
+        onTap: () => onAbrir(deuda.id),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          child: Row(
+            children: [
+              Icon(Icons.verified, size: 24, color: c.positivo),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      deuda.acreedorNombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Text(
-                    formatCOP(r.abonado),
-                    style: monoStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: c.positivo,
+                    Text(
+                      detalle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: c.textoSecundario,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: AppSpacing.md),
+              Text(
+                formatCOP(r.abonado),
+                style: monoStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: c.textoSecundario,
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

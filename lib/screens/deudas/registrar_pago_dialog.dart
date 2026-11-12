@@ -112,9 +112,9 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
 
     return Dialog(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 380),
+        constraints: const BoxConstraints(maxWidth: 420),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.all(26),
           child: Form(
             key: formKey,
             child: Column(
@@ -123,38 +123,45 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
               children: [
                 Text(
                   'Registrar pago',
-                  textAlign: TextAlign.center,
                   style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   '${widget.nombre} · Saldo '
                   '${formatCOP(widget.saldoPendiente)}',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
                     color: c.textoSecundario,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: 18),
                 Text(
                   'Monto',
-                  style: theme.textTheme.labelLarge?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w600,
+                    color: c.textoSecundario,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.xs),
+                const SizedBox(height: AppSpacing.sm),
                 TextFormField(
                   controller: _montoCtrl,
                   autofocus: true,
-                  style: monoStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: monoStyle(fontSize: 24, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     hintText: '0',
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 16,
+                    ),
                     prefixText: r'$ ',
                     prefixStyle: monoStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
                       color: c.textoSecundario,
                     ),
                     errorMaxLines: 2,
@@ -200,22 +207,23 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                Row(
+                // A la derecha, uno al lado del otro; si no caben (celular
+                // angosto), uno debajo del otro.
+                OverflowBar(
+                  alignment: MainAxisAlignment.end,
+                  overflowAlignment: OverflowBarAlignment.end,
+                  spacing: AppSpacing.sm,
+                  overflowSpacing: AppSpacing.sm,
                   children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: guardando
-                            ? null
-                            : () => Navigator.pop(context, false),
-                        child: const Text('Cancelar'),
-                      ),
+                    OutlinedButton(
+                      onPressed: guardando
+                          ? null
+                          : () => Navigator.pop(context, false),
+                      child: const Text('Cancelar'),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: guardando ? null : _guardar,
-                        child: Text(guardando ? 'Guardando...' : 'Guardar'),
-                      ),
+                    FilledButton(
+                      onPressed: guardando ? null : _guardar,
+                      child: Text(guardando ? 'Guardando...' : 'Guardar'),
                     ),
                   ],
                 ),

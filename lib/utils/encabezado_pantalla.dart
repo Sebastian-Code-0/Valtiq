@@ -1,0 +1,115 @@
+import 'package:flutter/material.dart';
+
+import '../theme/theme.dart';
+
+/// Encabezado de una pantalla: una línea pequeña en mayúsculas ([kicker],
+/// p. ej. "3 ACTIVAS") y debajo el título grande. A la derecha puede llevar
+/// una acción (el botón de crear).
+class EncabezadoPantalla extends StatelessWidget {
+  const EncabezadoPantalla({
+    super.key,
+    required this.titulo,
+    this.kicker,
+    this.accion,
+  });
+
+  final String titulo;
+
+  /// Se muestra en mayúsculas; se escribe normal ("3 activas").
+  final String? kicker;
+  final Widget? accion;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colores;
+    // Título grande en ventanas anchas; más contenido en celular.
+    final ancho = MediaQuery.sizeOf(context).width >= 600;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (kicker != null) ...[
+                TextoKicker(kicker!),
+                const SizedBox(height: 6),
+              ],
+              Text(
+                titulo,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: fuenteTexto,
+                  fontSize: ancho ? 40 : 30,
+                  height: 1.05,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.8,
+                  color: c.texto,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (accion != null) ...[const SizedBox(width: AppSpacing.md), accion!],
+      ],
+    );
+  }
+}
+
+/// Texto pequeño en mayúsculas y con las letras separadas, para rotular.
+class TextoKicker extends StatelessWidget {
+  const TextoKicker(this.texto, {super.key, this.color});
+
+  final String texto;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      texto.toUpperCase(),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontFamily: fuenteTexto,
+        fontSize: 11.5,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.6,
+        color: color ?? context.colores.textoSecundario,
+      ),
+    );
+  }
+}
+
+/// Botón de crear de una pantalla: píldora con texto en ventanas anchas,
+/// botón redondo con "+" en celular.
+class BotonCrear extends StatelessWidget {
+  const BotonCrear({
+    super.key,
+    required this.texto,
+    required this.onPressed,
+    this.heroTag,
+  });
+
+  /// "Nueva deuda". En celular queda como texto de ayuda del botón.
+  final String texto;
+  final VoidCallback onPressed;
+  final Object? heroTag;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.sizeOf(context).width >= 600) {
+      return FilledButton.icon(
+        onPressed: onPressed,
+        icon: const Icon(Icons.add, size: 18),
+        label: Text(texto),
+      );
+    }
+    return FloatingActionButton.small(
+      heroTag: heroTag,
+      tooltip: texto,
+      onPressed: onPressed,
+      child: const Icon(Icons.add),
+    );
+  }
+}
