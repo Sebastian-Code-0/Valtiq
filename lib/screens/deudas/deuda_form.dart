@@ -534,22 +534,20 @@ class _DeudaFormState extends State<DeudaForm>
           title: 'Pagos y notas',
           icon: Icons.payments_outlined,
           children: [
-            // Brillo que se enciende y se apaga solo cuando se llega aquí
-            // desde el aviso del Plan de pago. Es una sombra (no relleno ni
-            // borde) para que no mueva nada de su sitio.
+            // Velo que se enciende y se apaga solo cuando se llega aquí
+            // desde el aviso del Plan de pago. Es UNA sola sombra plana (sin
+            // relleno encima, que se veía en dos capas) y de tono neutro, no
+            // vino. Al ser sombra no mueve nada de su sitio.
             AnimatedContainer(
               key: _clavePagoMinimo,
               duration: const Duration(milliseconds: 450),
               curve: Curves.easeInOut,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusCampo),
-                color: _resaltarPagoMinimo
-                    ? context.colores.acento.withValues(alpha: 0.16)
-                    : Colors.transparent,
                 boxShadow: [
                   BoxShadow(
                     color: _resaltarPagoMinimo
-                        ? context.colores.acento.withValues(alpha: 0.16)
+                        ? context.colores.texto.withValues(alpha: 0.08)
                         : Colors.transparent,
                     spreadRadius: 10,
                   ),

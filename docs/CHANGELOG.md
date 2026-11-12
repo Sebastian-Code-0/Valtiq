@@ -10,6 +10,8 @@
   y día a día) es más ancho (mínimo 180 px).
 - **Plan de pago:** el aviso de deudas sin pago mínimo ya no va en rojo; se
   ve como una tarjeta más, con el ícono en el color de marca.
+- **Formulario de deuda:** el resaltado del pago mínimo (al llegar desde
+  el Plan de pago) es un solo velo neutro; antes eran dos capas en vino.
 - La lógica no cambió.
 - Tests: 356 (1 nuevo en `test/screens/prestamos/`).
 
