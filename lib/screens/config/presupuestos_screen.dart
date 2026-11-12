@@ -6,9 +6,11 @@ import '../../db/database.dart';
 import '../../theme/theme.dart';
 import '../../utils/categoria_gasto.dart';
 import '../../utils/currency_input.dart';
+import '../../utils/encabezado_pantalla.dart';
+import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/notificaciones.dart';
-import 'settings_screen.dart';
+import 'ajustes_widgets.dart';
 
 class PresupuestosScreen extends StatefulWidget {
   const PresupuestosScreen({super.key, required this.db});
@@ -56,47 +58,135 @@ class _PresupuestosScreenState extends State<PresupuestosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: barraAjustes(context, 'Presupuestos por categoría'),
-      body: StreamBuilder<List<PresupuestosCategoria>>(
-        stream: widget.db.presupuestosCategoriasDao.watchPresupuestos(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError && !_errorAvisado) {
-            _errorAvisado = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                mostrarAlerta(context, 'No se pudieron cargar los presupuestos.');
-              }
-            });
-          }
-          final lista = snapshot.data ?? const [];
-          return ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
+    final hoy = DateTime.now();
+    return StreamBuilder<List<PresupuestosCategoria>>(
+      stream: widget.db.presupuestosCategoriasDao.watchPresupuestos(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError && !_errorAvisado) {
+          _errorAvisado = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              mostrarAlerta(context, 'No se pudieron cargar los presupuestos.');
+            }
+          });
+        }
+        final lista = snapshot.data ?? const <PresupuestosCategoria>[];
+        // Lo gastado este mes en "Día a día", por categoría.
+        return StreamBuilder<Map<String, int>>(
+          stream: widget.db.gastosVariablesDao.watchTotalPorCategoria(
+            hoy.year,
+            hoy.month,
+          ),
+          builder: (context, gastos) =>
+              _contenido(context, lista, gastos.data ?? const {}),
+        );
+      },
+    );
+  }
+
+  Widget _contenido(
+    BuildContext context,
+    List<PresupuestosCategoria> lista,
+    Map<String, int> gastado,
+  ) {
+    final theme = Theme.of(context);
+    final c = context.colores;
+    final conLimite = lista.length;
+    return PaginaAjustes(
+      titulo: 'Presupuestos por categoría',
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(6, 4, 6, AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final categoria in CategoriaGasto.values) ...[
-                Card(
-                  child: ListTile(
-                    leading: Icon(categoria.icono, color: categoria.color),
-                    title: Text(categoria.nombre),
-                    subtitle: Text(
-                      switch (_presupuestoPara(lista, categoria)) {
-                        final p? => formatCOP(p.limiteMensual),
-                        null => 'Sin límite',
-                      },
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _editarPresupuesto(
-                      categoria,
-                      _presupuestoPara(lista, categoria),
-                    ),
-                  ),
+              TextoKicker(
+                conLimite == 1
+                    ? '1 categoría con límite'
+                    : '$conLimite categorías con límite',
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Pon un tope mensual a tus gastos del día a día. Toca una '
+                'categoría para ponerlo o cambiarlo.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 13,
+                  color: c.textoSecundario,
                 ),
-                const SizedBox(height: AppSpacing.md),
-              ],
+              ),
             ],
-          );
-        },
+          ),
+        ),
+        TarjetaFilas(
+          children: [
+            for (final categoria in CategoriaGasto.values)
+              _fila(
+                context,
+                categoria,
+                _presupuestoPara(lista, categoria),
+                gastado[categoria.nombre] ?? 0,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _fila(
+    BuildContext context,
+    CategoriaGasto categoria,
+    PresupuestosCategoria? presupuesto,
+    int gastado,
+  ) {
+    final theme = Theme.of(context);
+    final c = context.colores;
+    final flecha = Icon(Icons.chevron_right, color: c.textoSecundario);
+    if (presupuesto == null) {
+      return FilaAjuste(
+        icono: categoria.icono,
+        colorIcono: categoria.color,
+        titulo: categoria.nombre,
+        subtitulo: 'Sin límite',
+        trailing: flecha,
+        onTap: () => _editarPresupuesto(categoria, null),
+      );
+    }
+    final limite = presupuesto.limiteMensual;
+    final superado = gastado > limite;
+    return FilaAjuste(
+      icono: categoria.icono,
+      colorIcono: categoria.color,
+      titulo: categoria.nombre,
+      abajo: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          BarraProgreso(
+            fraccion: limite > 0 ? gastado / limite : 0,
+            color: superado ? c.alerta : c.acento,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            superado
+                ? 'Superado por ${formatCOP(gastado - limite)} este mes'
+                : 'Llevas ${formatCOP(gastado)} este mes',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: superado ? c.alerta : c.textoSecundario,
+              fontWeight: superado ? FontWeight.w600 : null,
+            ),
+          ),
+        ],
       ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            formatCOP(limite),
+            style: monoStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          flecha,
+        ],
+      ),
+      onTap: () => _editarPresupuesto(categoria, presupuesto),
     );
   }
 }
@@ -141,9 +231,11 @@ class _EditarPresupuestoDialogState extends State<_EditarPresupuestoDialog> {
         child: TextFormField(
           controller: _controller,
           autofocus: true,
+          style: monoStyle(fontSize: 16, fontWeight: FontWeight.w600),
           decoration: const InputDecoration(
-            labelText: 'Límite mensual',
-            prefixIcon: Icon(Icons.attach_money),
+            hintText: '0',
+            prefixText: r'$ ',
+            helperText: 'Tope para un mes',
           ),
           keyboardType: TextInputType.number,
           inputFormatters: [
@@ -171,7 +263,7 @@ class _EditarPresupuestoDialogState extends State<_EditarPresupuestoDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancelar'),
         ),
-        TextButton(
+        FilledButton(
           onPressed: () {
             if (!_formKey.currentState!.validate()) return;
             Navigator.pop(context, parseCOP(_controller.text));

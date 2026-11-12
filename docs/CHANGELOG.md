@@ -1,5 +1,35 @@
 # Changelog
 
+## Ajustes por dentro con el estilo nuevo (2026-11-12)
+
+- Piezas comunes en `lib/screens/config/ajustes_widgets.dart`:
+  `PaginaAjustes`, `TarjetaFilas`, `FilaAjuste`, `AvisoDiscreto`.
+- **Seguridad:** una sola tarjeta con filas; "Bloquear después de" pasa de
+  lista desplegable a píldoras.
+- **Presupuestos:** una sola tarjeta con todas las categorías; las que
+  tienen límite muestran una barra con lo gastado este mes ("Llevas …" o
+  "Superado por …"); arriba, "N categorías con límite".
+- **Copia de seguridad:** Exportar e Importar son filas de la tarjeta "Tus
+  datos"; "Borrar todo" va aparte en "Zona de cuidado" con botón de
+  contorno (el rojo fuerte queda para la confirmación).
+- **Recordatorios por correo:** mismo diseño que los demás formularios
+  (nombre encima del campo, campos en dos columnas en PC); el proveedor
+  (Gmail, Outlook, Yahoo) se elige con píldoras; el interruptor de activar
+  va arriba; aviso de Gmail discreto.
+- **Notificaciones:** la hora del recordatorio diario va en una píldora;
+  "Si no te llegan los avisos" sigue siempre a la vista, ahora como lista
+  de consejos con ícono y título (`ConsejosNotificaciones`).
+- **Perfil:** foto a la izquierda con los botones al lado (centrado en
+  celular), nombre y apellido con la etiqueta encima y vista previa del
+  saludo de Inicio mientras se escribe.
+- **Cómo funciona:** las preguntas van agrupadas en tres tarjetas
+  ("Deudas, préstamos e interés", "Ingresos y gastos", "Recordatorios,
+  seguridad y tus datos").
+- **Acerca de:** logo y versión sin tarjeta; enlaces y privacidad como
+  filas.
+- La lógica no cambió.
+- Tests: 362 (6 nuevos en `test/screens/config/ajustes_secciones_test.dart`).
+
 ## Retoques tras la revisión completa (2026-11-12)
 
 - **Detalle de préstamo y de deuda → "Más información":** las filas de

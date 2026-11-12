@@ -6,6 +6,7 @@ import '../../theme/theme.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/notificaciones.dart';
 import '../../utils/selector_hora.dart';
+import 'ajustes_widgets.dart';
 import 'settings_screen.dart';
 
 /// Configuración → Notificaciones: permiso, avisos a la hora exacta y
@@ -123,16 +124,17 @@ class _NotificacionesScreenState extends State<NotificacionesScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: barraAjustes(context, 'Notificaciones'),
-      body: _cargando
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              children: NotificationService.programacionSoportada
-                  ? _ajustesCelular(context)
-                  : [_soloComputador(context)],
-            ),
+    if (_cargando) {
+      return Scaffold(
+        appBar: barraAjustes(context, 'Notificaciones'),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    return PaginaAjustes(
+      titulo: 'Notificaciones',
+      children: NotificationService.programacionSoportada
+          ? _ajustesCelular(context)
+          : [_soloComputador(context)],
     );
   }
 
@@ -229,44 +231,165 @@ class _NotificacionesScreenState extends State<NotificacionesScreen>
             onChanged: _cambiarDiario,
           ),
           if (_diario)
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-              ),
-              leading: Icon(Icons.schedule, color: c.textoSecundario),
-              title: const Text('Hora del aviso'),
-              trailing: Text(
-                _horaDiario,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: c.acento,
-                  fontWeight: FontWeight.bold,
+            InkWell(
+              onTap: _elegirHoraDiario,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.schedule, size: 20, color: c.textoSecundario),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'Hora del aviso',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    // La hora en una píldora, como en el formulario de
+                    // recordatorio.
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: ShapeDecoration(
+                        color: c.relieve,
+                        shape: StadiumBorder(
+                          side: BorderSide(
+                            color: c.divisor,
+                            width: AppSpacing.borde,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        _horaDiario,
+                        style: monoStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              onTap: _elegirHoraDiario,
             ),
         ],
       ),
       const SizedBox(height: AppSpacing.md),
-      FormSection(
-        title: 'Si no te llegan los avisos',
-        icon: Icons.help_outline,
+      const ConsejosNotificaciones(),
+    ];
+  }
+}
+
+/// "Si no te llegan los avisos". Siempre a la vista (no plegable): es lo
+/// que hay que leer cuando un aviso no llega.
+class ConsejosNotificaciones extends StatelessWidget {
+  const ConsejosNotificaciones({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const FormSection(
+      title: 'Si no te llegan los avisos',
+      icon: Icons.help_outline,
+      children: [
+        _Consejo(
+          icono: Icons.battery_saver_outlined,
+          titulo: 'Quítale la restricción de batería',
+          texto:
+              'Ajustes del celular → Aplicaciones → Valtiq → Batería → '
+              '"Sin restricciones".',
+        ),
+        _Consejo(
+          icono: Icons.rocket_launch_outlined,
+          titulo: 'Activa el "Inicio automático"',
+          texto:
+              'En Xiaomi, Huawei, Oppo y similares hace falta para que '
+              'los avisos vuelvan después de reiniciar.',
+        ),
+        _Consejo(
+          icono: Icons.block_outlined,
+          titulo: 'No uses "Forzar detención"',
+          texto:
+              'Android cancela todos los avisos hasta que vuelvas a abrir '
+              'Valtiq.',
+        ),
+        _Consejo(
+          icono: Icons.email_outlined,
+          titulo: 'Los correos salen al abrir Valtiq',
+          texto:
+              'Los recordatorios por correo se envían cuando abres la '
+              'aplicación.',
+          ultimo: true,
+        ),
+      ],
+    );
+  }
+}
+
+/// Un consejo de "Si no te llegan los avisos": ícono en recuadro, qué
+/// hacer en negrita y el detalle debajo.
+class _Consejo extends StatelessWidget {
+  const _Consejo({
+    required this.icono,
+    required this.titulo,
+    required this.texto,
+    this.ultimo = false,
+  });
+
+  final IconData icono;
+  final String titulo;
+  final String texto;
+  final bool ultimo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = context.colores;
+    return Padding(
+      padding: EdgeInsets.only(bottom: ultimo ? 0 : 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '• Revisa que Valtiq no tenga restringida la batería: Ajustes '
-            'del celular → Aplicaciones → Valtiq → Batería → "Sin '
-            'restricciones".\n'
-            '• En Xiaomi, Huawei, Oppo y similares, activa también "Inicio '
-            'automático" para Valtiq.\n'
-            '• Si usas "Forzar detención", Android cancela todos los avisos '
-            'hasta que vuelvas a abrir Valtiq.\n'
-            '• Los recordatorios por correo se envían cuando abres la '
-            'aplicación.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: c.textoSecundario,
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: c.relieve,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icono, size: 18, color: c.textoSecundario),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  texto,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: c.textoSecundario,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-    ];
+    );
   }
 }

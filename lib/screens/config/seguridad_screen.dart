@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../services/app_lock_service.dart';
 import '../../theme/theme.dart';
 import '../../utils/notificaciones.dart';
+import '../../utils/selector_pildoras.dart';
 import '../lock/configurar_pin_screen.dart';
+import 'ajustes_widgets.dart';
 import 'settings_screen.dart';
 
 class SeguridadScreen extends StatefulWidget {
@@ -117,86 +119,76 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
     );
   }
 
+  /// Texto corto para las píldoras.
   String _nombreTimeout(Duration d) {
     if (d == Duration.zero) return 'Inmediato';
-    if (d.inMinutes < 1) return '${d.inSeconds} segundos';
-    return d.inMinutes == 1 ? '1 minuto' : '${d.inMinutes} minutos';
+    if (d.inMinutes < 1) return '${d.inSeconds} s';
+    return '${d.inMinutes} min';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: barraAjustes(context, 'Seguridad'),
-      body: _cargando
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              children: [
-                Card(
-                  child: SwitchListTile(
-                    title: const Text('Bloqueo con PIN/biometría'),
-                    subtitle: const Text(
-                      'Pide desbloquear la app cada vez que la abres',
-                    ),
-                    value: _bloqueoActivo,
-                    onChanged: (v) => v ? _activar() : _desactivar(),
-                  ),
-                ),
-                if (_bloqueoActivo) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  if (_biometriaDisponible)
-                    Card(
-                      child: SwitchListTile(
-                        title: const Text('Usar biometría'),
-                        subtitle: const Text(
-                          'Huella, rostro o PIN del sistema, cuando esté '
-                          'disponible',
-                        ),
-                        value: _usaBiometria,
-                        onChanged: (v) async {
-                          await AppLockService.setUsaBiometria(v);
-                          setState(() => _usaBiometria = v);
-                        },
-                      ),
-                    ),
-                  const SizedBox(height: AppSpacing.md),
-                  Card(
-                    child: ListTile(
-                      title: const Text('Bloquear después de'),
-                      subtitle: Text(
-                        'Al volver de segundo plano — ${_nombreTimeout(_timeout)}',
-                      ),
-                      trailing: DropdownButton<Duration>(
-                        value: _timeout,
-                        underline: const SizedBox.shrink(),
-                        items: _opcionesTimeout
-                            .map(
-                              (d) => DropdownMenuItem(
-                                value: d,
-                                child: Text(_nombreTimeout(d)),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (d) async {
-                          if (d == null) return;
-                          await AppLockService.setTimeoutReloqueo(d);
-                          setState(() => _timeout = d);
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.password_outlined),
-                      title: const Text('Cambiar PIN'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: _cambiarPin,
-                    ),
-                  ),
-                ],
-              ],
+    if (_cargando) {
+      return Scaffold(
+        appBar: barraAjustes(context, 'Seguridad'),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    return PaginaAjustes(
+      titulo: 'Seguridad',
+      children: [
+        TarjetaFilas(
+          children: [
+            FilaAjuste.interruptor(
+              icono: Icons.lock_outline,
+              titulo: 'Bloqueo con PIN/biometría',
+              subtitulo: 'Pide desbloquear la app cada vez que la abres',
+              valor: _bloqueoActivo,
+              onChanged: (v) => v ? _activar() : _desactivar(),
             ),
+            if (_bloqueoActivo) ...[
+              if (_biometriaDisponible)
+                FilaAjuste.interruptor(
+                  icono: Icons.fingerprint,
+                  titulo: 'Usar biometría',
+                  subtitulo:
+                      'Huella, rostro o PIN del sistema, cuando esté '
+                      'disponible',
+                  valor: _usaBiometria,
+                  onChanged: (v) async {
+                    await AppLockService.setUsaBiometria(v);
+                    setState(() => _usaBiometria = v);
+                  },
+                ),
+              FilaAjuste(
+                icono: Icons.timer_outlined,
+                titulo: 'Bloquear después de',
+                subtitulo: 'Cuánto esperar al salir de Valtiq y volver',
+                abajo: GrupoPildoras<Duration>(
+                  opciones: {
+                    for (final d in {..._opcionesTimeout, _timeout})
+                      d: _nombreTimeout(d),
+                  },
+                  valor: _timeout,
+                  onElegir: (d) async {
+                    await AppLockService.setTimeoutReloqueo(d);
+                    setState(() => _timeout = d);
+                  },
+                ),
+              ),
+              FilaAjuste(
+                icono: Icons.password_outlined,
+                titulo: 'Cambiar PIN',
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: context.colores.textoSecundario,
+                ),
+                onTap: _cambiarPin,
+              ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 }

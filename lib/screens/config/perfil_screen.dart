@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 
 import '../../services/perfil_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/date_format.dart';
+import '../../utils/encabezado_pantalla.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/notificaciones.dart';
 import '../barra_lateral.dart';
-import 'settings_screen.dart';
+import 'ajustes_widgets.dart';
 
 /// Ajustes → Perfil: foto redonda (se elige de la galería / archivos) y
 /// nombre + apellido. El NOMBRE es el que saluda en Inicio ("Buenos días, Sofía").
@@ -78,127 +80,149 @@ class _PerfilScreenState extends State<PerfilScreen> {
     mostrarExito(context, 'Perfil guardado.');
   }
 
+  /// Cómo saludará Inicio con lo que hay escrito ahora mismo.
+  String get _saludo {
+    final nombre = _nombreCtrl.text.trim();
+    final saludo = saludoSegunHora(DateTime.now());
+    return nombre.isEmpty ? saludo : '$saludo, $nombre';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = context.colores;
-    final nombre = TextField(
-      controller: _nombreCtrl,
-      textCapitalization: TextCapitalization.words,
-      textInputAction: TextInputAction.next,
-      decoration: const InputDecoration(
-        labelText: 'Nombre',
-        helperText: 'Así te saludará Valtiq',
-        prefixIcon: Icon(Icons.badge_outlined),
-      ),
-    );
-    final apellido = TextField(
-      controller: _apellidoCtrl,
-      textCapitalization: TextCapitalization.words,
-      textInputAction: TextInputAction.done,
-      onSubmitted: (_) => _guardar(),
-      decoration: const InputDecoration(
-        labelText: 'Apellido',
-        helperText: 'Opcional',
-        prefixIcon: Icon(Icons.badge_outlined),
-      ),
+
+    Widget botonesFoto(Perfil perfil) => Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        OutlinedButton.icon(
+          onPressed: _cambiandoFoto ? null : _elegirFoto,
+          icon: const Icon(Icons.photo_library_outlined, size: 18),
+          label: Text(perfil.rutaFoto == null ? 'Elegir foto' : 'Cambiar foto'),
+        ),
+        if (perfil.rutaFoto != null)
+          TextButton(
+            onPressed: _cambiandoFoto ? null : PerfilService.quitarFoto,
+            child: const Text('Quitar foto'),
+          ),
+      ],
     );
 
-    return Scaffold(
-      appBar: barraAjustes(context, 'Perfil'),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    children: [
-                      ValueListenableBuilder<Perfil>(
-                        valueListenable: PerfilService.perfil,
-                        builder: (context, perfil, _) => Column(
-                          children: [
-                            FotoPerfil(perfil: perfil, radio: 56),
-                            const SizedBox(height: AppSpacing.md),
-                            Wrap(
-                              alignment: WrapAlignment.center,
-                              spacing: AppSpacing.sm,
-                              runSpacing: AppSpacing.sm,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: _cambiandoFoto
-                                      ? null
-                                      : _elegirFoto,
-                                  icon: const Icon(
-                                    Icons.photo_library_outlined,
-                                    size: 18,
-                                  ),
-                                  label: Text(
-                                    perfil.rutaFoto == null
-                                        ? 'Elegir foto'
-                                        : 'Cambiar foto',
-                                  ),
+    // Vista previa del saludo: para qué sirve el nombre, sin ir a Inicio.
+    Widget saludo({required bool centrado}) => Column(
+      crossAxisAlignment: centrado
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
+      children: [
+        const TextoKicker('Así te saluda Valtiq'),
+        const SizedBox(height: 6),
+        Text(
+          _saludo,
+          key: const ValueKey('perfil-saludo'),
+          textAlign: centrado ? TextAlign.center : TextAlign.start,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.4,
+          ),
+        ),
+      ],
+    );
+
+    return PaginaAjustes(
+      titulo: 'Perfil',
+      children: [
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ValueListenableBuilder<Perfil>(
+                  valueListenable: PerfilService.perfil,
+                  builder: (context, perfil, _) => LayoutBuilder(
+                    // Foto a la izquierda con el saludo y los botones al
+                    // lado; en pantallas angostas, todo centrado en columna.
+                    builder: (context, constraints) =>
+                        constraints.maxWidth >= 480
+                        ? Row(
+                            children: [
+                              FotoPerfil(perfil: perfil, radio: 64),
+                              const SizedBox(width: AppSpacing.lg),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    saludo(centrado: false),
+                                    const SizedBox(height: AppSpacing.md),
+                                    botonesFoto(perfil),
+                                  ],
                                 ),
-                                if (perfil.rutaFoto != null)
-                                  TextButton(
-                                    onPressed: _cambiandoFoto
-                                        ? null
-                                        : PerfilService.quitarFoto,
-                                    child: Text(
-                                      'Quitar foto',
-                                      style: TextStyle(color: c.alerta),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      // Nombre y apellido lado a lado si hay espacio; uno
-                      // debajo del otro en pantallas angostas.
-                      LayoutBuilder(
-                        builder: (context, constraints) =>
-                            constraints.maxWidth >= 480
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: nombre),
-                                  const SizedBox(width: AppSpacing.md),
-                                  Expanded(child: apellido),
-                                ],
-                              )
-                            : Column(
-                                children: [
-                                  nombre,
-                                  const SizedBox(height: AppSpacing.md),
-                                  apellido,
-                                ],
                               ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      FormSaveButton(onPressed: _guardar, loading: _guardando),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'Tu nombre y tu foto se guardan solo en este '
-                        'dispositivo y no se incluyen en la copia de '
-                        'seguridad.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: c.textoSecundario,
-                        ),
-                      ),
-                    ],
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              FotoPerfil(perfil: perfil, radio: 56),
+                              const SizedBox(height: AppSpacing.md),
+                              saludo(centrado: true),
+                              const SizedBox(height: AppSpacing.md),
+                              botonesFoto(perfil),
+                            ],
+                          ),
                   ),
                 ),
-              ),
+                const SizedBox(height: AppSpacing.lg),
+                FilaCampos(
+                  children: [
+                    CampoEtiquetado(
+                      etiqueta: 'Nombre',
+                      ayuda: 'Así te saludará Valtiq.',
+                      child: TextField(
+                        key: const ValueKey('perfil-nombre'),
+                        controller: _nombreCtrl,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          hintText: 'Tu nombre',
+                        ),
+                      ),
+                    ),
+                    CampoEtiquetado(
+                      etiqueta: 'Apellido (opcional)',
+                      child: TextField(
+                        key: const ValueKey('perfil-apellido'),
+                        controller: _apellidoCtrl,
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _guardar(),
+                        decoration: const InputDecoration(
+                          hintText: 'Tu apellido',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                FormSaveButton(onPressed: _guardar, loading: _guardando),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Tu nombre y tu foto se guardan solo en este '
+                  'dispositivo y no se incluyen en la copia de '
+                  'seguridad.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: c.textoSecundario,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

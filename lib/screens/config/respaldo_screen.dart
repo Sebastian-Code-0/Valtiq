@@ -8,8 +8,9 @@ import '../../services/app_lock_service.dart';
 import '../../services/backup_service.dart';
 import '../../services/borrado_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/encabezado_pantalla.dart';
 import '../../utils/notificaciones.dart';
-import 'settings_screen.dart';
+import 'ajustes_widgets.dart';
 
 class RespaldoScreen extends StatefulWidget {
   const RespaldoScreen({super.key, required this.db});
@@ -150,118 +151,87 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
     final theme = Theme.of(context);
     final c = context.colores;
 
-    return Scaffold(
-      appBar: barraAjustes(context, 'Copia de seguridad'),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: c.relieve,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusRecuadro),
+    Widget cola(bool ocupado) => ocupado
+        ? const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Icon(Icons.chevron_right, color: c.textoSecundario);
+
+    return PaginaAjustes(
+      titulo: 'Copia de seguridad',
+      children: [
+        TarjetaFilas(
+          titulo: 'Tus datos',
+          children: [
+            FilaAjuste(
+              icono: Icons.upload_outlined,
+              titulo: 'Exportar datos',
+              subtitulo: 'Guarda un archivo JSON con tus datos',
+              trailing: cola(_exportando),
+              onTap: _exportando ? null : _exportar,
             ),
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Row(
+            FilaAjuste(
+              icono: Icons.download_outlined,
+              titulo: 'Importar datos',
+              subtitulo: 'Reemplaza tus datos desde un archivo',
+              trailing: cola(_importando),
+              onTap: _importando ? null : _importar,
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        const AvisoDiscreto(
+          texto:
+              'Por seguridad, la configuración de recordatorios por '
+              'correo no se incluye en este respaldo. Si restauras '
+              'estos datos en otro dispositivo, deberás configurarla '
+              'de nuevo en Ajustes → Correo.',
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        // Separado del resto: es lo único de esta pantalla que destruye.
+        // Aquí va discreto; el rojo fuerte queda para la confirmación.
+        const Padding(
+          padding: EdgeInsets.only(left: 6, bottom: AppSpacing.sm),
+          child: TextoKicker('Zona de cuidado'),
+        ),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 18,
-                  color: theme.colorScheme.onSurface,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'Por seguridad, la configuración de recordatorios por '
-                    'correo no se incluye en este respaldo. Si restauras '
-                    'estos datos en otro dispositivo, deberás configurarla '
-                    'de nuevo en Ajustes → Correo.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                    ),
+                Text(
+                  'Borrar todo',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Deja Valtiq como recién instalada en este dispositivo: '
+                  'borra todos tus datos, tu perfil y tus ajustes. No se '
+                  'puede deshacer.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
+                    color: c.textoSecundario,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                OutlinedButton.icon(
+                  onPressed: _borrando ? null : _borrarTodo,
+                  style: OutlinedButton.styleFrom(foregroundColor: c.alerta),
+                  icon: const Icon(Icons.delete_forever_outlined, size: 18),
+                  label: Text(_borrando ? 'Borrando...' : 'Borrar todo'),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Card(
-            child: ListTile(
-              leading: _exportando
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.upload_outlined),
-              title: const Text('Exportar datos'),
-              subtitle: const Text('Guarda un archivo JSON con tus datos'),
-              onTap: _exportando ? null : _exportar,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Card(
-            child: ListTile(
-              leading: _importando
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.download_outlined),
-              title: const Text('Importar datos'),
-              subtitle: const Text('Reemplaza tus datos desde un archivo'),
-              onTap: _importando ? null : _importar,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          // Separado y en rojo: es lo único de esta pantalla que destruye.
-          Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusTarjeta),
-              side: BorderSide(
-                color: c.alerta.withValues(alpha: 0.45),
-                width: AppSpacing.borde,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Borrar todo',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Deja Valtiq como recién instalada en este dispositivo: '
-                    'borra todos tus datos, tu perfil y tus ajustes. No se '
-                    'puede deshacer.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 13,
-                      color: c.textoSecundario,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  FilledButton.icon(
-                    onPressed: _borrando ? null : _borrarTodo,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: c.alerta.withValues(alpha: 0.14),
-                      foregroundColor: c.alerta,
-                    ),
-                    icon: const Icon(Icons.delete_forever_outlined, size: 18),
-                    label: Text(_borrando ? 'Borrando...' : 'Borrar todo'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -381,6 +381,18 @@ Las pantallas de configuración dibujan su `AppBar` con
 `SettingsScreen` (marcado con el `InheritedWidget` `AjustesEmbebido`) y una
 barra normal cuando se abren sueltas.
 
+Por dentro, las secciones usan las piezas de `ajustes_widgets.dart`:
+`PaginaAjustes` (columna centrada de 760 px como máximo, con
+`barraAjustes`), `TarjetaFilas` + `FilaAjuste` (una sola tarjeta con filas
+de ícono, título, explicación y algo a la derecha; `FilaAjuste.interruptor`
+para las de encender/apagar) y `AvisoDiscreto` (aviso informativo sin rojo,
+igual que el del Plan de pago). Los formularios (Perfil, Correo) usan
+`FormSection`/`CampoEtiquetado`/`FilaCampos` como los demás. Presupuestos
+cruza `watchPresupuestos` con `GastosVariablesDao.watchTotalPorCategoria`
+del mes en curso para dibujar lo gastado contra el límite.
+`ConsejosNotificaciones` es público para poder probarlo (la pantalla de
+celular llama al plugin de Android, que no existe en las pruebas).
+
 `PerfilService` (nombre, apellido, foto) y `montosOcultosNotifier` /
 `formatMonto` ("Ocultar montos": solo oculta Inicio, a propósito) viven en
 `SharedPreferences`, se cargan en `main()` antes de `runApp` y se publican

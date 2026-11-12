@@ -30,7 +30,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.dark(), home: SettingsScreen(db: db)),
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: SettingsScreen(db: db),
+      ),
     );
     await tester.pumpAndSettle();
   }
@@ -75,8 +78,20 @@ void main() {
   ) async {
     await montar(tester, const Size(412, 900));
 
-    await tester.enterText(find.widgetWithText(TextField, 'Nombre'), ' Sofía ');
-    await tester.enterText(find.widgetWithText(TextField, 'Apellido'), 'Rojas');
+    await tester.enterText(
+      find.byKey(const ValueKey('perfil-nombre')),
+      ' Sofía ',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('perfil-apellido')),
+      'Rojas',
+    );
+    await tester.pump();
+    // La vista previa del saludo sigue lo que se escribe.
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('perfil-saludo'))).data,
+      endsWith(', Sofía'),
+    );
     await tester.tap(find.text('Guardar'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));

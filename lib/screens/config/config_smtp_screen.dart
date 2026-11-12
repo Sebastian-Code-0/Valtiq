@@ -8,7 +8,8 @@ import '../../theme/theme.dart';
 import '../../utils/error_messages.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/notificaciones.dart';
-import 'settings_screen.dart';
+import '../../utils/selector_pildoras.dart';
+import 'ajustes_widgets.dart';
 
 class ConfigSmtpScreen extends StatefulWidget {
   const ConfigSmtpScreen({super.key, required this.db});
@@ -202,284 +203,230 @@ class _ConfigSmtpScreenState extends State<ConfigSmtpScreen> {
     }
   }
 
-  Widget _bannerGmail() {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final colorIcono = isDark
-        ? theme.colorScheme.onSurface
-        : context.colores.secundario;
-    final colorBorde = theme.colorScheme.outline;
-    final colorFondo = theme.colorScheme.surfaceContainerHighest;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colorFondo,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: colorBorde),
-      ),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.info_outline, size: 18, color: colorIcono),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Gmail requiere App Password',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: colorIcono,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'No uses tu contraseña normal de Google. '
-            'Gmail exige una Contraseña de aplicación para acceso SMTP.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          OutlinedButton.icon(
-            onPressed: _abrirAppPasswords,
-            icon: const Icon(Icons.open_in_new, size: 16),
-            label: const Text('Crear contraseña de aplicación'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: colorIcono,
-              side: BorderSide(color: colorIcono),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_cargando) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final esGmail = _servidorCtrl.text.trim() == 'smtp.gmail.com';
+    final servidor = _servidorCtrl.text.trim();
+    final esGmail = servidor == 'smtp.gmail.com';
+    // El proveedor cuyo servidor está escrito ahora (o ninguno).
+    _Preset? elegido;
+    for (final p in _presets) {
+      if (p.servidor == servidor) elegido = p;
+    }
+    const espacio = SizedBox(height: AppSpacing.md);
 
-    return Scaffold(
-      appBar: barraAjustes(context, 'Recordatorios por correo'),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.bolt, size: 18),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          'Presets rápidos',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      children: [
-                        for (final p in _presets)
-                          OutlinedButton(
-                            onPressed: () => _aplicarPreset(p),
-                            child: Text(p.nombre),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
+    return Form(
+      key: _formKey,
+      child: PaginaAjustes(
+        titulo: 'Recordatorios por correo',
+        children: [
+          TarjetaFilas(
+            children: [
+              FilaAjuste.interruptor(
+                icono: Icons.mark_email_read_outlined,
+                titulo: 'Enviar recordatorios por correo',
+                subtitulo:
+                    'Los recordatorios de tipo "correo" o "ambos" te '
+                    'llegarán también por email.',
+                valor: _habilitado,
+                onChanged: (v) => setState(() => _habilitado = v),
               ),
-            ),
-            if (esGmail) ...[
-              const SizedBox(height: AppSpacing.md),
-              _bannerGmail(),
             ],
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Servidor',
-              icon: Icons.dns_outlined,
-              children: [
-                TextFormField(
-                  controller: _servidorCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Servidor SMTP',
-                    hintText: 'smtp.gmail.com',
-                    prefixIcon: Icon(Icons.dns_outlined),
-                  ),
-                  validator: (v) {
-                    if (!_habilitado) return null;
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Requerido si SMTP está habilitado';
-                    }
-                    return null;
+          ),
+          espacio,
+          FormSection(
+            title: 'Servidor',
+            icon: Icons.dns_outlined,
+            children: [
+              CampoEtiquetado(
+                etiqueta: 'Tu proveedor de correo',
+                ayuda: 'Al elegir uno se llenan solos el servidor y el puerto.',
+                child: GrupoPildoras<_Preset?>(
+                  opciones: {for (final p in _presets) p: p.nombre},
+                  valor: elegido,
+                  onElegir: (p) {
+                    if (p != null) _aplicarPreset(p);
                   },
                 ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _puertoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Puerto',
-                    hintText: '587 / 465',
-                    prefixIcon: Icon(Icons.numbers),
+              ),
+              if (esGmail) ...[
+                espacio,
+                AvisoDiscreto(
+                  titulo: 'Gmail pide una contraseña de aplicación',
+                  texto:
+                      'No uses tu contraseña normal de Google: Gmail exige '
+                      'una "Contraseña de aplicación" para enviar correos '
+                      'desde otra app.',
+                  accion: OutlinedButton.icon(
+                    onPressed: _abrirAppPasswords,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 38),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                    ),
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: const Text('Crear contraseña de aplicación'),
                   ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(5),
-                  ],
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Requerido';
-                    final n = int.tryParse(v.trim());
-                    if (n == null || n < 1 || n > 65535) {
-                      return 'Puerto inválido';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                SwitchTile(
-                  icon: Icons.lock_outline,
-                  title: 'Usar SSL/TLS',
-                  subtitle:
-                      'Actívalo para puerto 465. Para 587 (STARTTLS) déjalo apagado.',
-                  value: _ssl,
-                  onChanged: (v) => setState(() => _ssl = v),
                 ),
               ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Credenciales',
-              icon: Icons.key,
-              children: [
-                TextFormField(
-                  controller: _usuarioCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Usuario / correo de envío',
-                    hintText: 'tu-correo@gmail.com',
-                    prefixIcon: Icon(Icons.account_circle_outlined),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (!_habilitado) return null;
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Requerido si SMTP está habilitado';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _passCtrl,
-                  decoration: InputDecoration(
-                    labelText: 'Contraseña / token',
-                    hintText: _tieneContrasena
-                        ? 'Ingresa nueva contraseña (dejar vacío para conservar la actual)'
-                        : null,
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _mostrarPassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+              espacio,
+              FilaCampos(
+                children: [
+                  CampoEtiquetado(
+                    etiqueta: 'Servidor de correo (SMTP)',
+                    child: TextFormField(
+                      controller: _servidorCtrl,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        hintText: 'smtp.gmail.com',
                       ),
-                      onPressed: () =>
-                          setState(() => _mostrarPassword = !_mostrarPassword),
+                      validator: _requeridoSiActivo,
                     ),
                   ),
-                  obscureText: !_mostrarPassword,
-                  validator: (v) {
-                    if (!_habilitado) return null;
-                    if ((v == null || v.isEmpty) && !_tieneContrasena) {
-                      return 'Requerido si SMTP está habilitado';
-                    }
-                    return null;
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            FormSection(
-              title: 'Destinatario',
-              icon: Icons.send_outlined,
-              children: [
-                TextFormField(
-                  controller: _destinoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Correo destino',
-                    hintText: 'A dónde llegan los recordatorios',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  CampoEtiquetado(
+                    etiqueta: 'Puerto',
+                    child: TextFormField(
+                      controller: _puertoCtrl,
+                      style: monoStyle(fontSize: 15),
+                      decoration: const InputDecoration(hintText: '587 / 465'),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(5),
+                      ],
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Requerido';
+                        final n = int.tryParse(v.trim());
+                        if (n == null || n < 1 || n > 65535) {
+                          return 'Puerto inválido';
+                        }
+                        return null;
+                      },
+                    ),
                   ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (!_habilitado) return null;
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Requerido si SMTP está habilitado';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _remitenteCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del remitente',
-                    prefixIcon: Icon(Icons.badge_outlined),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SwitchTile(
+                icon: Icons.lock_outline,
+                title: 'Usar SSL/TLS',
+                subtitle:
+                    'Actívalo para puerto 465. Para 587 (STARTTLS) déjalo '
+                    'apagado.',
+                value: _ssl,
+                onChanged: (v) => setState(() => _ssl = v),
+              ),
+            ],
+          ),
+          espacio,
+          FormSection(
+            title: 'Tu cuenta de envío',
+            icon: Icons.key,
+            children: [
+              FilaCampos(
+                children: [
+                  CampoEtiquetado(
+                    etiqueta: 'Usuario / correo de envío',
+                    child: TextFormField(
+                      controller: _usuarioCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'tu-correo@gmail.com',
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: _requeridoSiActivo,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: SwitchTile(
-                  icon: Icons.toggle_on,
-                  title: 'Habilitar envío de correo',
-                  subtitle:
-                      'Los recordatorios "correo" o "ambos" enviarán email.',
-                  value: _habilitado,
-                  onChanged: (v) => setState(() => _habilitado = v),
-                ),
+                  CampoEtiquetado(
+                    etiqueta: 'Contraseña / token',
+                    ayuda: _tieneContrasena
+                        ? 'Ya hay una guardada. Déjala vacía para conservarla.'
+                        : null,
+                    child: TextFormField(
+                      controller: _passCtrl,
+                      decoration: InputDecoration(
+                        hintText: _tieneContrasena ? '••••••••' : null,
+                        suffixIcon: IconButton(
+                          tooltip: _mostrarPassword ? 'Ocultar' : 'Mostrar',
+                          icon: Icon(
+                            _mostrarPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setState(
+                            () => _mostrarPassword = !_mostrarPassword,
+                          ),
+                        ),
+                      ),
+                      obscureText: !_mostrarPassword,
+                      validator: (v) {
+                        if (!_habilitado) return null;
+                        if ((v == null || v.isEmpty) && !_tieneContrasena) {
+                          return 'Requerido si el envío está activado';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            OutlinedButton.icon(
-              onPressed: _probando ? null : _probar,
-              icon: _probando
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send),
-              label: Text(
-                _probando ? 'Enviando prueba...' : 'Enviar correo de prueba',
+            ],
+          ),
+          espacio,
+          FormSection(
+            title: 'A dónde llegan',
+            icon: Icons.send_outlined,
+            children: [
+              FilaCampos(
+                children: [
+                  CampoEtiquetado(
+                    etiqueta: 'Correo destino',
+                    ayuda: 'A dónde llegan los recordatorios.',
+                    child: TextFormField(
+                      controller: _destinoCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'correo@ejemplo.com',
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: _requeridoSiActivo,
+                    ),
+                  ),
+                  CampoEtiquetado(
+                    etiqueta: 'Nombre del remitente',
+                    ayuda: 'Quién aparece como autor del correo.',
+                    child: TextFormField(controller: _remitenteCtrl),
+                  ),
+                ],
               ),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          OutlinedButton.icon(
+            onPressed: _probando ? null : _probar,
+            icon: _probando
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.send_outlined, size: 18),
+            label: Text(
+              _probando ? 'Enviando prueba...' : 'Enviar correo de prueba',
             ),
-            const SizedBox(height: AppSpacing.sm),
-            FormSaveButton(onPressed: _guardar, loading: _guardando),
-            const SizedBox(height: AppSpacing.md),
-          ],
-        ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          FormSaveButton(onPressed: _guardar, loading: _guardando),
+        ],
       ),
     );
+  }
+
+  String? _requeridoSiActivo(String? v) {
+    if (!_habilitado) return null;
+    if (v == null || v.trim().isEmpty) {
+      return 'Requerido si el envío está activado';
+    }
+    return null;
   }
 }
