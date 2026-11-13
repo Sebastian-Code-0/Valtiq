@@ -14,12 +14,17 @@ class CampoNombreConSugerencias extends StatefulWidget {
     this.decoration = const InputDecoration(),
     this.validator,
     this.alElegir,
+    this.grupos,
   });
 
   final TextEditingController controller;
   final InputDecoration decoration;
   final FormFieldValidator<String>? validator;
   final ValueChanged<Sugerencia>? alElegir;
+
+  /// Qué grupos de la lista sugerir (null = todos). En gastos no salen
+  /// bancos ni financieras: ver `esGrupoDeGasto`.
+  final bool Function(GrupoNombres)? grupos;
 
   @override
   State<CampoNombreConSugerencias> createState() =>
@@ -42,7 +47,8 @@ class _CampoNombreConSugerenciasState extends State<CampoNombreConSugerencias> {
       textEditingController: widget.controller,
       focusNode: _foco,
       displayStringForOption: (s) => s.nombre,
-      optionsBuilder: (valor) => sugerirNombres(valor.text, limite: 6),
+      optionsBuilder: (valor) =>
+          sugerirNombres(valor.text, limite: 6, grupos: widget.grupos),
       onSelected: (s) => widget.alElegir?.call(s),
       fieldViewBuilder: (context, controller, foco, alEnviar) => TextFormField(
         controller: controller,

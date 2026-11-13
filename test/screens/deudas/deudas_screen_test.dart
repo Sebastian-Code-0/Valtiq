@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' show ImageByteFormat;
 
+import 'package:flutter/gestures.dart' show kSecondaryButton;
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -244,6 +245,41 @@ void main() {
     expect(find.byKey(const ValueKey('panel-deuda')), findsNothing);
     expect(find.text('Registrar pago'), findsOneWidget);
     await captura(tester, 'detalle-360');
+    await _cerrar(tester);
+  });
+
+  testWidgets('mantener presionada una deuda (o clic derecho en PC) pide '
+      'confirmación y la elimina con sus pagos', (tester) async {
+    final ids = await sembrar();
+    await montar(tester, const Size(360, 640));
+
+    // "Cancelar" no borra nada.
+    await tester.longPress(find.text('Tarjeta Nu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Eliminar deuda'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(await db.deudasDao.getAllDeudas(), hasLength(4));
+
+    await tester.longPress(find.text('Tarjeta Nu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Tarjeta Nu'), findsNothing);
+    final quedan = await db.deudasDao.getAllDeudas();
+    expect(quedan.map((d) => d.id), isNot(contains(ids.nu)));
+
+    // Clic derecho en una pagada (PC): mismo aviso.
+    await tester.tap(find.text('Pagadas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Celular a meses'), buttons: kSecondaryButton);
+    await tester.pumpAndSettle();
+    expect(find.text('Eliminar deuda'), findsOneWidget);
+    await tester.tap(find.text('Eliminar'));
+    await tester.pumpAndSettle();
+    expect(await db.deudasDao.getAllDeudas(), hasLength(2));
+    expect(await db.pagosDeudaDao.getPagosDeDeuda(ids.celular), isEmpty);
     await _cerrar(tester);
   });
 

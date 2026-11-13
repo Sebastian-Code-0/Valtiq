@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../services/categorias_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/date_format.dart';
 import '../../utils/encabezado_pantalla.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/format.dart';
@@ -47,6 +48,7 @@ class AnotarRapidoScreen extends StatefulWidget {
     required this.alCerrar,
     this.ahora = DateTime.now,
     this.cierreAutomatico = const Duration(seconds: 4),
+    this.oscurecerFondo = true,
   });
 
   final AppDatabase db;
@@ -57,6 +59,10 @@ class AnotarRapidoScreen extends StatefulWidget {
 
   /// Cuánto se queda abierto el "Guardado" si no se toca nada.
   final Duration cierreAutomatico;
+
+  /// Oscurecer lo de atrás. En Android lo hace la ventana misma (aparece
+  /// al instante de tocar el widget, antes de que Flutter arranque).
+  final bool oscurecerFondo;
 
   @override
   State<AnotarRapidoScreen> createState() => _AnotarRapidoScreenState();
@@ -84,12 +90,15 @@ class _AnotarRapidoScreenState extends State<AnotarRapidoScreen> {
   void initState() {
     super.initState();
     _texto.addListener(_alEscribir);
+    // Las categorías pueden llegar después del primer dibujo.
+    CategoriasService.lista.addListener(_alEscribir);
     _cargarHistorial();
   }
 
   @override
   void dispose() {
     _cierre?.cancel();
+    CategoriasService.lista.removeListener(_alEscribir);
     _texto.dispose();
     _foco.dispose();
     super.dispose();
@@ -206,39 +215,59 @@ class _AnotarRapidoScreenState extends State<AnotarRapidoScreen> {
     final c = context.colores;
     return Scaffold(
       // Fondo oscurecido: tocar fuera de la tarjeta cierra.
-      backgroundColor: Colors.black.withValues(alpha: 0.55),
+      backgroundColor: widget.oscurecerFondo
+          ? Colors.black.withValues(alpha: 0.5)
+          : Colors.transparent,
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.alCerrar,
         child: SafeArea(
           child: Align(
             alignment: Alignment.bottomCenter,
-            child: GestureDetector(
-              // Los toques dentro de la tarjeta no la cierran.
-              onTap: () {},
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: Container(
-                  key: const ValueKey('anotar-tarjeta'),
-                  margin: const EdgeInsets.all(12),
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                  decoration: BoxDecoration(
-                    color: c.superficie,
-                    borderRadius: BorderRadius.circular(
-                      AppSpacing.radiusTarjeta,
+            // Entra subiendo un poco, como una hoja que sale de abajo.
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              builder: (context, t, hijo) => Opacity(
+                opacity: t,
+                child: Transform.translate(
+                  offset: Offset(0, 40 * (1 - t)),
+                  child: hijo,
+                ),
+              ),
+              child: GestureDetector(
+                // Los toques dentro de la tarjeta no la cierran.
+                onTap: () {},
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: Container(
+                    key: const ValueKey('anotar-tarjeta'),
+                    margin: const EdgeInsets.all(10),
+                    padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+                    decoration: BoxDecoration(
+                      color: c.superficie,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: c.divisor,
+                        width: AppSpacing.borde,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
-                    border: Border.all(
-                      color: c.divisor,
-                      width: AppSpacing.borde,
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      alignment: Alignment.bottomCenter,
+                      child: _guardado == null
+                          ? _escribir(context)
+                          : _listo(context),
                     ),
-                  ),
-                  child: AnimatedSize(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    alignment: Alignment.bottomCenter,
-                    child: _guardado == null
-                        ? _escribir(context)
-                        : _listo(context),
                   ),
                 ),
               ),
@@ -249,25 +278,143 @@ class _AnotarRapidoScreenState extends State<AnotarRapidoScreen> {
     );
   }
 
+  /// La rayita de arriba, como en las hojas que salen de abajo.
+  Widget _manija(BuildContext context) => Center(
+    child: Container(
+      width: 36,
+      height: 4,
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: context.colores.divisor,
+        borderRadius: BorderRadius.circular(2),
+      ),
+    ),
+  );
+
   Widget _escribir(BuildContext context) {
     final theme = Theme.of(context);
     final c = context.colores;
     final leido = _leido;
+    final colorCategoria = CategoriasService.colorPara(_categoria);
     return Column(
       key: const ValueKey('anotar-escribir'),
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _manija(context),
         Row(
           children: [
-            const Expanded(child: TextoKicker('Anotar gasto')),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: c.acentoSuave,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.edit_note_rounded, color: c.acento, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Anotar gasto',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    'Hoy, ${formatDiaMesCorto(widget.ahora())}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: c.textoSecundario,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             IconButton(
               tooltip: 'Cerrar',
               onPressed: widget.alCerrar,
-              icon: Icon(Icons.close, color: c.textoSecundario),
+              icon: Icon(Icons.close_rounded, color: c.textoSecundario),
             ),
           ],
         ),
+        const SizedBox(height: 14),
+        // Lo que Valtiq entendió: el monto grande, como en un recibo.
+        Container(
+          key: const ValueKey('anotar-vista-previa'),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          decoration: BoxDecoration(
+            color: c.relieve,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusRecuadro),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        leido == null ? r'$0' : formatCOP(leido.monto),
+                        maxLines: 1,
+                        style: monoStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w700,
+                          color: leido == null
+                              ? c.textoSecundario.withValues(alpha: 0.5)
+                              : c.texto,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      leido != null
+                          ? (leido.descripcion.isEmpty
+                                ? 'Sin nombre'
+                                : leido.descripcion)
+                          : _intentoSinMonto
+                          ? 'Falta el monto. Escribe qué fue y cuánto: '
+                                'café 5000.'
+                          : 'Escribe qué fue y cuánto: café 5000, '
+                                'almuerzo 15mil, bus 2.500…',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: _intentoSinMonto && leido == null
+                            ? c.alerta
+                            : c.textoSecundario,
+                        fontWeight: _intentoSinMonto && leido == null
+                            ? FontWeight.w600
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              // La categoría elegida, con su color.
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: colorCategoria.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  CategoriasService.iconoPara(_categoria),
+                  color: colorCategoria,
+                  size: 22,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         TextField(
           key: const ValueKey('anotar-texto'),
           controller: _texto,
@@ -279,49 +426,29 @@ class _AnotarRapidoScreenState extends State<AnotarRapidoScreen> {
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
-          decoration: const InputDecoration(hintText: 'Ej. café 5000'),
-        ),
-        const SizedBox(height: 10),
-        // Lo que Valtiq entendió, o cómo escribirlo.
-        if (leido != null)
-          Row(
-            key: const ValueKey('anotar-vista-previa'),
-            children: [
-              Expanded(
-                child: Text(
-                  leido.descripcion.isEmpty ? 'Sin nombre' : leido.descripcion,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: c.textoSecundario,
-                  ),
-                ),
-              ),
-              Text(
-                formatCOP(leido.monto),
-                style: monoStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-            ],
-          )
-        else
-          Text(
-            _intentoSinMonto
-                ? 'Falta el monto. Escribe qué fue y cuánto: café 5000.'
-                : 'Escribe qué fue y cuánto: café 5000, almuerzo 15mil, '
-                      'bus 2.500…',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: _intentoSinMonto ? c.alerta : c.textoSecundario,
-              fontWeight: _intentoSinMonto ? FontWeight.w600 : null,
-            ),
+          decoration: const InputDecoration(
+            hintText: 'café 5000',
+            prefixIcon: Icon(Icons.keyboard_alt_outlined, size: 20),
           ),
+        ),
         const SizedBox(height: 14),
+        const TextoKicker('Categoría'),
+        const SizedBox(height: 8),
         _selectorCategoria(context),
         const SizedBox(height: 16),
-        FilledButton.icon(
-          key: const ValueKey('anotar-guardar'),
-          onPressed: _guardando ? null : _guardar,
-          icon: const Icon(Icons.check, size: 18),
-          label: const Text('Guardar'),
+        SizedBox(
+          height: 52,
+          child: FilledButton.icon(
+            key: const ValueKey('anotar-guardar'),
+            onPressed: _guardando ? null : _guardar,
+            style: FilledButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.radiusCampo),
+              ),
+            ),
+            icon: const Icon(Icons.check_rounded, size: 20),
+            label: const Text('Guardar'),
+          ),
         ),
       ],
     );
@@ -349,7 +476,8 @@ class _AnotarRapidoScreenState extends State<AnotarRapidoScreen> {
               _categoriaElegida = true;
             }),
             customBorder: const StadiumBorder(),
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: ShapeDecoration(
                 color: elegida ? color.withValues(alpha: 0.18) : c.relieve,
@@ -391,56 +519,135 @@ class _AnotarRapidoScreenState extends State<AnotarRapidoScreen> {
     final theme = Theme.of(context);
     final c = context.colores;
     final g = _guardado!;
+    final color = CategoriasService.colorPara(g.categoria);
     return Column(
       key: const ValueKey('anotar-listo'),
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Icon(Icons.check_circle, color: c.positivo),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              'Guardado',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+        _manija(context),
+        const SizedBox(height: 4),
+        // El visto aparece con un pequeño rebote.
+        Center(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.6, end: 1),
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutBack,
+            builder: (context, t, hijo) =>
+                Transform.scale(scale: t, child: hijo),
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: c.positivo.withValues(alpha: 0.16),
+                shape: BoxShape.circle,
               ),
+              child: Icon(Icons.check_rounded, color: c.positivo, size: 32),
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: 10),
         Text(
-          '${g.gasto.descripcion} · ${formatCOP(g.gasto.monto)} · '
-          '${g.categoria}',
-          style: theme.textTheme.bodyMedium?.copyWith(color: c.textoSecundario),
+          'Guardado',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+          decoration: BoxDecoration(
+            color: c.relieve,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusRecuadro),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  CategoriasService.iconoPara(g.categoria),
+                  color: color,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      g.gasto.descripcion,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      g.categoria,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: c.textoSecundario,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                formatCOP(g.gasto.monto),
+                style: monoStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
         ),
         if (g.aviso != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            g.aviso!,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: c.alerta,
-              fontWeight: FontWeight.w600,
-            ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline_rounded, size: 16, color: c.alerta),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  g.aviso!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: c.alerta,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
         const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
-              child: OutlinedButton(
-                key: const ValueKey('anotar-deshacer'),
-                onPressed: _deshacer,
-                child: const Text('Deshacer'),
+              child: SizedBox(
+                height: 48,
+                child: OutlinedButton.icon(
+                  key: const ValueKey('anotar-deshacer'),
+                  onPressed: _deshacer,
+                  icon: const Icon(Icons.undo_rounded, size: 18),
+                  label: const Text('Deshacer'),
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: FilledButton(
-                key: const ValueKey('anotar-otro'),
-                onPressed: _anotarOtro,
-                child: const Text('Anotar otro'),
+              child: SizedBox(
+                height: 48,
+                child: FilledButton.icon(
+                  key: const ValueKey('anotar-otro'),
+                  onPressed: _anotarOtro,
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Anotar otro'),
+                ),
               ),
             ),
           ],

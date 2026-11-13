@@ -955,15 +955,27 @@ _porNombre = () {
 int get totalNombresConocidos =>
     gruposNombres.fold(0, (t, g) => t + g.nombres.length);
 
+/// Si un grupo tiene sentido para un gasto (fijo o del día a día): todo
+/// menos bancos, billeteras, tarjetas, financieras, cooperativas y cajas,
+/// que son de deudas.
+bool esGrupoDeGasto(GrupoNombres g) =>
+    g.categoria != null || g.tipoDeuda == TipoDeuda.tienda;
+
 /// Nombres que empiezan (o tienen una palabra que empieza) como [texto],
-/// sin importar tildes ni mayúsculas. Primero los que empiezan igual.
-List<Sugerencia> sugerirNombres(String texto, {int limite = 8}) {
+/// sin importar tildes ni mayúsculas. Primero los que empiezan igual. Con
+/// [grupos] solo se buscan los grupos que cumplan (ver [esGrupoDeGasto]).
+List<Sugerencia> sugerirNombres(
+  String texto, {
+  int limite = 8,
+  bool Function(GrupoNombres)? grupos,
+}) {
   final buscado = normalizarNombre(texto);
   if (buscado.length < 2) return const [];
   final alInicio = <Sugerencia>[];
   final enMedio = <Sugerencia>[];
   final vistos = <String>{};
   for (final g in gruposNombres) {
+    if (grupos != null && !grupos(g)) continue;
     for (final n in g.nombres) {
       if (!vistos.add(n.nombre)) continue;
       final formas = [n.nombre, ...n.alias].map(normalizarNombre);

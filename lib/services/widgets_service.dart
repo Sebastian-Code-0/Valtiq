@@ -5,32 +5,30 @@ import 'package:flutter/foundation.dart';
 import 'package:home_widget/home_widget.dart';
 
 import '../db/database.dart';
-import '../utils/date_format.dart';
+import '../utils/fecha_civil.dart';
 import '../utils/format.dart';
 import 'dashboard_service.dart';
 
-/// Qué muestra un widget de resumen (deudas o préstamos).
+/// Qué muestra un widget de resumen (deudas o préstamos): lo mismo que la
+/// tarjeta de Inicio.
 enum TipoWidgetResumen {
   deudas(
     clave: 'deudas',
     proveedor: 'com.valtiq.valtiq.DeudasWidget',
-    singular: 'deuda activa',
-    plural: 'deudas activas',
+    nota: 'Lo que debes hoy',
     vacio: 'No tienes deudas activas',
   ),
   prestamos(
     clave: 'prestamos',
     proveedor: 'com.valtiq.valtiq.PrestamosWidget',
-    singular: 'persona te debe',
-    plural: 'personas te deben',
+    nota: 'Lo que te deben hoy',
     vacio: 'Nadie te debe por ahora',
   );
 
   const TipoWidgetResumen({
     required this.clave,
     required this.proveedor,
-    required this.singular,
-    required this.plural,
+    required this.nota,
     required this.vacio,
   });
 
@@ -40,38 +38,49 @@ enum TipoWidgetResumen {
 
   /// Clase de Android del widget.
   final String proveedor;
-  final String singular;
-  final String plural;
+  final String nota;
   final String vacio;
 }
 
-/// Cuántos renglones (nombre y saldo) muestra un widget de resumen.
-const filasWidgetResumen = 3;
+/// Cuántos días quedan calculados para el widget. El interés cambia cada
+/// día y el widget no puede calcularlo solo, así que Valtiq le deja el
+/// total de hoy y de los días que siguen: mientras nadie registre un pago
+/// (y eso solo se hace dentro de Valtiq, que lo recalcula), esos números
+/// son los reales. Pasados estos días sin abrir Valtiq, el widget no
+/// muestra montos y pide abrirla.
+const diasWidgetResumen = 90;
 
-/// Los textos que se le mandan a un widget de resumen. Separado para poder
-/// probarlo sin Android: total, cuántos, los [filasWidgetResumen] de mayor
-/// saldo y la fecha de actualización (el interés cambia cada día y el
-/// widget solo se actualiza cuando se abre Valtiq).
+/// `2026-11-12`: la fecha civil como la lee el widget de Android.
+String _fechaWidget(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
+
+/// Los datos que se le dejan a un widget de resumen. Separado para poder
+/// probarlo sin Android:
+/// - `{clave}_desde`: el primer día calculado (hoy),
+/// - `{clave}_totales`: un total por renglón, de hoy en adelante
+///   ([diasWidgetResumen] renglones),
+/// - `{clave}_nota`: "Lo que debes hoy", o que no hay ninguna.
 Map<String, String> contenidoWidgetResumen(
   TipoWidgetResumen tipo,
-  List<SaldoActivo> saldos,
+  List<CuentaActiva> cuentas,
   DateTime ahora,
 ) {
-  final lista = [...saldos]..sort((a, b) => b.saldo.compareTo(a.saldo));
-  final total = lista.fold<int>(0, (t, s) => t + s.saldo);
-  final n = lista.length;
+  final hoy = normalizarFechaCivil(ahora);
   final k = tipo.clave;
   return {
-    '${k}_total': formatCOP(total),
-    '${k}_cantidad': n == 0
-        ? tipo.vacio
-        : '$n ${n == 1 ? tipo.singular : tipo.plural}',
-    for (var i = 0; i < filasWidgetResumen; i++) ...{
-      '${k}_nombre_$i': i < n ? lista[i].nombre : '',
-      '${k}_monto_$i': i < n ? formatCOP(lista[i].saldo) : '',
-    },
-    '${k}_mas': n > filasWidgetResumen ? '+ ${n - filasWidgetResumen} más' : '',
-    '${k}_actualizado': 'Actualizado ${formatDiaMesCorto(ahora)}',
+    '${k}_desde': _fechaWidget(hoy),
+    '${k}_totales': [
+      for (var i = 0; i < diasWidgetResumen; i++)
+        formatCOP(
+          cuentas.fold<int>(
+            0,
+            (t, c) => t + c.saldoAl(hoy.add(Duration(days: i))),
+          ),
+        ),
+    ].join('\n'),
+    '${k}_nota': cuentas.isEmpty ? tipo.vacio : tipo.nota,
   };
 }
 
@@ -94,12 +103,12 @@ abstract final class WidgetsService {
     _suscripciones
       ..clear()
       ..add(
-        DashboardService.watchSaldosDeudasActivas(
+        DashboardService.watchDeudasActivas(
           db,
         ).listen((l) => _publicar(TipoWidgetResumen.deudas, l)),
       )
       ..add(
-        DashboardService.watchSaldosPrestamosActivos(
+        DashboardService.watchPrestamosActivos(
           db,
         ).listen((l) => _publicar(TipoWidgetResumen.prestamos, l)),
       );
@@ -107,10 +116,10 @@ abstract final class WidgetsService {
 
   static Future<void> _publicar(
     TipoWidgetResumen tipo,
-    List<SaldoActivo> saldos,
+    List<CuentaActiva> cuentas,
   ) async {
     try {
-      final datos = contenidoWidgetResumen(tipo, saldos, DateTime.now());
+      final datos = contenidoWidgetResumen(tipo, cuentas, DateTime.now());
       for (final e in datos.entries) {
         await HomeWidget.saveWidgetData<String>(e.key, e.value);
       }

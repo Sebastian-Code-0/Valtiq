@@ -6,8 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
-import android.view.View
 import android.widget.RemoteViews
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
+import java.time.temporal.ChronoUnit
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
 
@@ -40,7 +42,7 @@ class AnotarWidget : HomeWidgetProvider() {
     }
 }
 
-/** Widget de deudas activas: total, cuántas y las tres más grandes. */
+/** Widget de deudas activas: lo que debes hoy, como la tarjeta de Inicio. */
 class DeudasWidget : HomeWidgetProvider() {
     override fun onUpdate(
         context: Context,
@@ -49,11 +51,11 @@ class DeudasWidget : HomeWidgetProvider() {
         widgetData: SharedPreferences,
     ) = pintarResumen(
         context, appWidgetManager, appWidgetIds, widgetData,
-        clave = "deudas", titulo = "Deudas activas", seccion = "deudas",
+        layout = R.layout.widget_deudas, clave = "deudas", seccion = "deudas",
     )
 }
 
-/** Widget de préstamos activos: lo que te deben, cuántos y los mayores. */
+/** Widget de préstamos: lo que te deben hoy, como la tarjeta de Inicio. */
 class PrestamosWidget : HomeWidgetProvider() {
     override fun onUpdate(
         context: Context,
@@ -62,22 +64,40 @@ class PrestamosWidget : HomeWidgetProvider() {
         widgetData: SharedPreferences,
     ) = pintarResumen(
         context, appWidgetManager, appWidgetIds, widgetData,
-        clave = "prestamos", titulo = "Te deben", seccion = "prestamos",
+        layout = R.layout.widget_prestamos, clave = "prestamos", seccion = "prestamos",
     )
 }
 
 /**
- * Pinta un widget de resumen con los textos que deja Valtiq al abrirse
- * (ver `contenidoWidgetResumen` en lib/services/widgets_service.dart). Si
- * Valtiq nunca se ha abierto desde que se puso el widget, invita a abrirla.
+ * El total de hoy entre los que dejó calculados Valtiq (ver
+ * `contenidoWidgetResumen` en lib/services/widgets_service.dart): un
+ * renglón por día desde `{clave}_desde`. El interés cambia cada día, así
+ * que el widget no repite el número del día en que se abrió Valtiq, sino
+ * el que corresponde a hoy. `null` si no hay datos para hoy (Valtiq nunca
+ * se abrió, o hace demasiados días).
  */
+private fun totalDeHoy(datos: SharedPreferences, clave: String): String? {
+    val desde = datos.getString("${clave}_desde", null) ?: return null
+    val totales = datos.getString("${clave}_totales", null) ?: return null
+    val dias = try {
+        ChronoUnit.DAYS.between(LocalDate.parse(desde), LocalDate.now())
+    } catch (e: DateTimeParseException) {
+        return null
+    }
+    val lista = totales.split("\n")
+    // Si el reloj del celular va para atrás, el primer día es el más cercano.
+    val i = dias.coerceAtLeast(0)
+    return if (i < lista.size) lista[i.toInt()] else null
+}
+
+/** Pinta un widget de resumen y lo deja abriendo Valtiq en su sección. */
 private fun pintarResumen(
     context: Context,
     appWidgetManager: AppWidgetManager,
     appWidgetIds: IntArray,
     datos: SharedPreferences,
+    layout: Int,
     clave: String,
-    titulo: String,
     seccion: String,
 ) {
     val abrir = HomeWidgetLaunchIntent.getActivity(
@@ -85,31 +105,15 @@ private fun pintarResumen(
         MainActivity::class.java,
         Uri.parse("valtiq://$seccion"),
     )
-    val filas = listOf(
-        Triple(R.id.fila_0, R.id.nombre_0, R.id.monto_0),
-        Triple(R.id.fila_1, R.id.nombre_1, R.id.monto_1),
-        Triple(R.id.fila_2, R.id.nombre_2, R.id.monto_2),
-    )
-    val total = datos.getString("${clave}_total", null)
+    val total = totalDeHoy(datos, clave)
     for (id in appWidgetIds) {
-        val vista = RemoteViews(context.packageName, R.layout.widget_resumen)
-        vista.setTextViewText(R.id.titulo, titulo)
+        val vista = RemoteViews(context.packageName, layout)
         vista.setTextViewText(R.id.total, total ?: "—")
         vista.setTextViewText(
-            R.id.cantidad,
-            if (total == null) "Abre Valtiq para ver tus datos"
-            else datos.getString("${clave}_cantidad", ""),
+            R.id.nota,
+            if (total == null) context.getString(R.string.widget_abrir_valtiq)
+            else datos.getString("${clave}_nota", "") ?: "",
         )
-        filas.forEachIndexed { i, (fila, nombre, monto) ->
-            val n = datos.getString("${clave}_nombre_$i", "") ?: ""
-            vista.setViewVisibility(fila, if (n.isEmpty()) View.GONE else View.VISIBLE)
-            vista.setTextViewText(nombre, n)
-            vista.setTextViewText(monto, datos.getString("${clave}_monto_$i", ""))
-        }
-        val mas = datos.getString("${clave}_mas", "") ?: ""
-        vista.setViewVisibility(R.id.mas, if (mas.isEmpty()) View.GONE else View.VISIBLE)
-        vista.setTextViewText(R.id.mas, mas)
-        vista.setTextViewText(R.id.actualizado, datos.getString("${clave}_actualizado", ""))
         vista.setOnClickPendingIntent(R.id.widget_raiz, abrir)
         appWidgetManager.updateAppWidget(id, vista)
     }

@@ -5,10 +5,12 @@ import 'package:flutter/services.dart';
 import '../../db/database.dart';
 import '../../services/categorias_service.dart';
 import '../../theme/theme.dart';
+import '../../utils/campo_nombre_sugerencias.dart';
 import '../../utils/currency_input.dart';
-import '../../utils/form_widgets.dart';
 import '../../utils/fecha_civil.dart';
+import '../../utils/form_widgets.dart';
 import '../../utils/formulario_guardado_mixin.dart';
+import '../../utils/nombres_conocidos.dart';
 import '../../utils/notificaciones.dart';
 
 class GastoVariableForm extends StatefulWidget {
@@ -153,13 +155,24 @@ class _GastoVariableFormState extends State<GastoVariableForm>
               children: [
                 CampoEtiquetado(
                   etiqueta: 'Descripción',
-                  child: TextFormField(
+                  child: CampoNombreConSugerencias(
+                    key: const ValueKey('gasto-descripcion'),
                     controller: _descripcionCtrl,
+                    grupos: esGrupoDeGasto,
                     decoration: const InputDecoration(
                       hintText: 'Mercado, ropa, taxi...',
                     ),
                     validator: (v) =>
                         (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                    // Elegir "D1" pone Alimentación (si esa categoría
+                    // existe); se puede cambiar después.
+                    alElegir: (s) {
+                      final cat = s.categoria;
+                      if (cat != null &&
+                          CategoriasService.nombres.contains(cat)) {
+                        setState(() => _categoria = cat);
+                      }
+                    },
                   ),
                 ),
                 CampoEtiquetado(

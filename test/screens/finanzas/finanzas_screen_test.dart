@@ -12,6 +12,7 @@ import 'package:valtiq/screens/finanzas/finanzas_screen.dart';
 import 'package:valtiq/screens/finanzas/gasto_fijo_form.dart';
 import 'package:valtiq/screens/finanzas/gasto_variable_form.dart';
 import 'package:valtiq/screens/finanzas/ingreso_form.dart';
+import 'package:valtiq/services/categorias_service.dart';
 import 'package:valtiq/theme/theme.dart';
 import 'package:valtiq/utils/fecha_civil.dart';
 import 'package:valtiq/utils/format.dart';
@@ -152,6 +153,54 @@ void main() {
       await _cerrar(tester);
     });
   }
+
+  testWidgets('gasto del día a día: escribir "d1" sugiere D1 y elegirlo '
+      'pone Alimentación; en gastos no salen bancos', (tester) async {
+    await tester.runAsync(() => CategoriasService.iniciar(db));
+    addTearDown(() => CategoriasService.lista.value = const []);
+    await montar(tester, const Size(360, 780), home: GastoVariableForm(db: db));
+    await tester.enterText(
+      find.byKey(const ValueKey('gasto-descripcion')),
+      'd1',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('D1').last);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Alimentación'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('gasto-descripcion')),
+      'bancol',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Bancolombia'), findsNothing);
+    await _cerrar(tester);
+  });
+
+  testWidgets('gasto fijo: "netf" sugiere Netflix', (tester) async {
+    await montar(tester, const Size(360, 780), home: GastoFijoForm(db: db));
+    await tester.enterText(
+      find.byKey(const ValueKey('gasto-fijo-concepto')),
+      'netf',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Netflix').last);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<EditableText>(
+            find.descendant(
+              of: find.byKey(const ValueKey('gasto-fijo-concepto')),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .controller
+          .text,
+      'Netflix',
+    );
+    await _cerrar(tester);
+  });
 
   testWidgets('el botón de crear cambia con la sección y desactivar un '
       'ingreso lo saca del conteo', (tester) async {

@@ -18,6 +18,18 @@ class SaldoActivo {
   final int saldo;
 }
 
+/// Una deuda o un préstamo activo con lo necesario para saber cuánto falta
+/// en cualquier día (el interés cambia de un día a otro). El widget de
+/// Android lo usa para dejar calculados los próximos días.
+class CuentaActiva {
+  const CuentaActiva(this.nombre, this.saldoAl);
+
+  final String nombre;
+
+  /// Lo que falta el día civil dado (`null` = hoy), con interés.
+  final int Function(DateTime? dia) saldoAl;
+}
+
 class DashboardService {
   const DashboardService._();
 
@@ -30,9 +42,22 @@ class DashboardService {
   static double _sumar(List<SaldoActivo> lista) =>
       lista.fold<double>(0, (t, s) => t + s.saldo);
 
-  /// Cada deuda activa con lo que falta pagarle hoy (con interés). La usan
-  /// el total de Inicio y el widget de Android.
-  static Stream<List<SaldoActivo>> watchSaldosDeudasActivas(AppDatabase db) {
+  /// Cada deuda activa con lo que falta pagarle hoy (con interés). La usa
+  /// el total de Inicio.
+  static Stream<List<SaldoActivo>> watchSaldosDeudasActivas(AppDatabase db) =>
+      watchDeudasActivas(db).map(_hoy);
+
+  /// Cada préstamo activo con lo que falta cobrarle hoy (con interés).
+  static Stream<List<SaldoActivo>> watchSaldosPrestamosActivos(
+    AppDatabase db,
+  ) => watchPrestamosActivos(db).map(_hoy);
+
+  static List<SaldoActivo> _hoy(List<CuentaActiva> cuentas) => [
+    for (final c in cuentas) SaldoActivo(c.nombre, c.saldoAl(null)),
+  ];
+
+  /// Cada deuda activa, para calcular su saldo en cualquier día.
+  static Stream<List<CuentaActiva>> watchDeudasActivas(AppDatabase db) {
     final d = db.deudas;
     final pd = db.pagosDeuda;
     final query = db.select(d).join([
@@ -54,9 +79,9 @@ class DashboardService {
       }
       return [
         for (final deuda in deudas.values)
-          SaldoActivo(
+          CuentaActiva(
             deuda.acreedorNombre,
-            InteresCalculator.calcularDeudaTotal(
+            (dia) => InteresCalculator.calcularDeudaTotal(
               montoPrestado: deuda.montoOriginal,
               tasaInteres: deuda.tasaInteres,
               tipoInteres: deuda.tipoInteres,
@@ -68,14 +93,15 @@ class DashboardService {
               ),
               tipoAmortizacion: deuda.tipoAmortizacion,
               abonos: abonosPorDeuda[deuda.id] ?? const [],
+              fechaFin: dia,
             ),
           ),
       ];
     });
   }
 
-  /// Cada préstamo activo con lo que falta cobrarle hoy (con interés).
-  static Stream<List<SaldoActivo>> watchSaldosPrestamosActivos(AppDatabase db) {
+  /// Cada préstamo activo, para calcular su saldo en cualquier día.
+  static Stream<List<CuentaActiva>> watchPrestamosActivos(AppDatabase db) {
     final p = db.prestamos;
     final pr = db.pagosRecibidos;
     final query = db.select(p).join([
@@ -97,9 +123,9 @@ class DashboardService {
       }
       return [
         for (final prestamo in prestamos.values)
-          SaldoActivo(
+          CuentaActiva(
             prestamo.deudorNombre,
-            InteresCalculator.calcularDeudaTotal(
+            (dia) => InteresCalculator.calcularDeudaTotal(
               montoPrestado: prestamo.montoPrestado,
               tasaInteres: prestamo.tasaInteres,
               tipoInteres: prestamo.tipoInteres,
@@ -109,6 +135,7 @@ class DashboardService {
                   .fold<int>(0, (s, a) => s + a.monto),
               tipoAmortizacion: prestamo.tipoAmortizacion,
               abonos: abonosPorPrestamo[prestamo.id] ?? const [],
+              fechaFin: dia,
             ),
           ),
       ];

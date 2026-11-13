@@ -612,6 +612,7 @@ class _TarjetaPrestamo extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         onLongPress: onEliminar,
+        onSecondaryTap: onEliminar,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(22, 22, 14, 18),
           child: Column(
@@ -824,6 +825,8 @@ class _Cobrados extends StatelessWidget {
                         : Colors.transparent,
                     child: InkWell(
                       onTap: () => onAbrir(r.prestamo.id),
+                      onLongPress: () => onEliminar(r.prestamo),
+                      onSecondaryTap: () => onEliminar(r.prestamo),
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(22, 12, 10, 12),
                         child: Row(

@@ -91,6 +91,16 @@ void main() {
     });
   });
 
+  test('en gastos no se sugieren bancos ni financieras', () {
+    final enGastos = sugerirNombres('ban', grupos: esGrupoDeGasto, limite: 50);
+    expect(enGastos.map((s) => s.nombre), isNot(contains('Bancolombia')));
+    expect(sugerirNombres('ban').map((s) => s.nombre), contains('Bancolombia'));
+    expect(
+      sugerirNombres('rappi', grupos: esGrupoDeGasto).map((s) => s.nombre),
+      contains('Rappi'),
+    );
+  });
+
   test('tipoDeudaPorNombre', () {
     expect(tipoDeudaPorNombre('Bancolombia'), TipoDeuda.banco);
     expect(tipoDeudaPorNombre('tarjeta exito'), TipoDeuda.tarjeta);

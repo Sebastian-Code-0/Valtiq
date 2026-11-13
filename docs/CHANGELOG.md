@@ -1,5 +1,26 @@
 # Changelog
 
+## Widgets que funcionan, anotar más rápido y borrar deudas manteniendo presionado (2026-11-12)
+
+- **Widgets de deudas y préstamos:** no se podían agregar ("no se pudo
+  agregar el widget") porque su diseño usaba una `View` suelta, que
+  Android no acepta en widgets. Ahora son iguales a la tarjeta de Inicio
+  (ícono, título, total y nota) y no muestran números viejos: Valtiq deja
+  calculados los totales de hoy y de los próximos 90 días
+  (`DashboardService.watchDeudasActivas/PrestamosActivos`, `CuentaActiva`)
+  y el widget elige el del día; pasados esos días sin abrir Valtiq, pide
+  abrirla en vez de mostrar un monto.
+- **Anotar gasto:** widget nuevo (tarjeta con círculo vino y ejemplo) y
+  ventana rediseñada (monto grande con la categoría al lado, entrada desde
+  abajo, visto animado al guardar). Abre más rápido: Android oscurece el
+  fondo al instante y la ventana se dibuja antes de cargar las categorías.
+- **Deudas:** mantener presionada una deuda (activa o pagada), o clic
+  derecho en PC, la elimina con sus pagos tras confirmar. En Préstamos,
+  clic derecho y también los cobrados.
+- **Sugerencias de nombres en gastos fijos y del día a día** (sin bancos ni
+  financieras, `esGrupoDeGasto`); en el día a día ponen la categoría.
+- Tests: 428.
+
 ## Migración v15: categorías editables, widgets y anotar en una línea (2026-11-12)
 
 - **Base de datos (schemaVersion 15):** tabla `Categorias` (nombre, ícono,

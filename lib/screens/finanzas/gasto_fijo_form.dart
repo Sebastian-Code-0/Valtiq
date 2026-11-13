@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
+import '../../utils/campo_nombre_sugerencias.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/formulario_guardado_mixin.dart';
+import '../../utils/nombres_conocidos.dart';
 import '../../utils/notificaciones.dart';
 import '../../utils/selector_pildoras.dart';
 
@@ -113,8 +115,10 @@ class _GastoFijoFormState extends State<GastoFijoForm>
               children: [
                 CampoEtiquetado(
                   etiqueta: 'Concepto',
-                  child: TextFormField(
+                  child: CampoNombreConSugerencias(
+                    key: const ValueKey('gasto-fijo-concepto'),
                     controller: _conceptoCtrl,
+                    grupos: esGrupoDeGasto,
                     decoration: const InputDecoration(
                       hintText: 'Netflix, arriendo, luz...',
                     ),

@@ -4,45 +4,72 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/services/dashboard_service.dart';
 import 'package:valtiq/services/widgets_service.dart';
+import 'package:valtiq/services/interes_calculator.dart';
 import 'package:valtiq/utils/fecha_civil.dart';
+import 'package:valtiq/utils/format.dart';
 
 void main() {
   final hoy = DateTime(2026, 11, 12);
 
-  test('widget de deudas: total, cuántas, las 3 mayores y "+ N más"', () {
-    final datos = contenidoWidgetResumen(TipoWidgetResumen.deudas, const [
-      SaldoActivo('Juan', 50000),
-      SaldoActivo('Nu', 1200000),
-      SaldoActivo('Addi', 300000),
-      SaldoActivo('Mamá', 80000),
+  test('widget de deudas: el total de hoy y de los días que siguen (el '
+      'interés sube cada día), desde hoy', () {
+    final dia0 = normalizarFechaCivil(hoy);
+    final datos = contenidoWidgetResumen(TipoWidgetResumen.deudas, [
+      CuentaActiva('Nu', (d) => 100000 + 1000 * d!.difference(dia0).inDays),
+      CuentaActiva('Mamá', (_) => 50000),
     ], hoy);
-    expect(datos['deudas_total'], r'$1.630.000');
-    expect(datos['deudas_cantidad'], '4 deudas activas');
-    expect(
-      [for (var i = 0; i < 3; i++) datos['deudas_nombre_$i']],
-      ['Nu', 'Addi', 'Mamá'],
-    );
-    expect(datos['deudas_monto_0'], r'$1.200.000');
-    expect(datos['deudas_mas'], '+ 1 más');
-    expect(datos['deudas_actualizado'], 'Actualizado 12 nov');
+    expect(datos['deudas_desde'], '2026-11-12');
+    final totales = datos['deudas_totales']!.split('\n');
+    expect(totales, hasLength(diasWidgetResumen));
+    expect(totales[0], r'$150.000');
+    expect(totales[1], r'$151.000');
+    expect(totales[30], r'$180.000');
+    expect(datos['deudas_nota'], 'Lo que debes hoy');
   });
 
-  test('widget de préstamos: singular, y vacío sin filas', () {
-    final uno = contenidoWidgetResumen(TipoWidgetResumen.prestamos, const [
-      SaldoActivo('Ana', 20000),
-    ], hoy);
-    expect(uno['prestamos_cantidad'], '1 persona te debe');
-    expect(uno['prestamos_nombre_1'], '');
-    expect(uno['prestamos_mas'], '');
-
+  test('widget de préstamos vacío: \$0 y "Nadie te debe por ahora"', () {
     final vacio = contenidoWidgetResumen(
       TipoWidgetResumen.prestamos,
       const [],
       hoy,
     );
-    expect(vacio['prestamos_total'], r'$0');
-    expect(vacio['prestamos_cantidad'], 'Nadie te debe por ahora');
-    expect(vacio['prestamos_nombre_0'], '');
+    expect(vacio['prestamos_totales']!.split('\n').first, r'$0');
+    expect(vacio['prestamos_nota'], 'Nadie te debe por ahora');
+  });
+
+  test('con una deuda real con interés, el total de dentro de 30 días es el '
+      'que dará Valtiq ese día', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final inicio = DateTime.utc(2026, 10, 1);
+    await db.deudasDao.insertDeuda(
+      DeudasCompanion.insert(
+        acreedorNombre: 'Banco',
+        montoOriginal: 1000000,
+        fechaPrestamo: inicio,
+        tasaInteres: const Value(2),
+        tipoInteres: const Value('mensual'),
+      ),
+    );
+    final cuentas = await DashboardService.watchDeudasActivas(db).first;
+    final datos = contenidoWidgetResumen(
+      TipoWidgetResumen.deudas,
+      cuentas,
+      hoy,
+    );
+    final totales = datos['deudas_totales']!.split('\n');
+    final en30 = InteresCalculator.calcularDeudaTotal(
+      montoPrestado: 1000000,
+      tasaInteres: 2,
+      tipoInteres: 'mensual',
+      modalidadCalculo:
+          (await db.deudasDao.getAllDeudas()).single.modalidadCalculo,
+      fechaPrestamo: inicio,
+      totalAbonado: 0,
+      fechaFin: DateTime.utc(2026, 12, 12),
+    );
+    expect(totales[30], formatCOP(en30));
+    expect(totales[30], isNot(totales[0]), reason: 'el interés sí cambia');
   });
 
   test('seccionDeUri: solo las secciones de los widgets', () {

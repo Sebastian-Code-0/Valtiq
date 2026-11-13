@@ -48,8 +48,8 @@ la app.
 ## Función opcional: widgets de la pantalla de inicio (Android)
 
 Si pones un widget de Valtiq en tu pantalla de inicio:
-- **Deudas activas / Préstamos activos** muestran en la pantalla de inicio
-  cuánto debes o te deben y a quién. Esos textos se guardan en el
+- **Deudas activas / Prestado activo** muestran en la pantalla de inicio
+  el total que debes o que te deben (sin nombres). Esos totales se guardan en el
   almacenamiento privado de la app para que Android pueda dibujar el
   widget; no salen del dispositivo. Cualquiera que vea tu pantalla de
   inicio los puede leer, aunque tengas el bloqueo con PIN activo: si no lo

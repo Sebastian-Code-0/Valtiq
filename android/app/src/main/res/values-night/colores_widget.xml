@@ -6,4 +6,7 @@
     <color name="widget_texto_sec">#A9A196</color>
     <color name="widget_acento">#6A1628</color>
     <color name="widget_sobre_acento">#EFE7DA</color>
+    <!-- Íconos de las tarjetas: los de Inicio. -->
+    <color name="widget_alerta">#FF5C5C</color>
+    <color name="widget_acento_texto">#B8304C</color>
 </resources>

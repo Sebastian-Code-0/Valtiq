@@ -630,27 +630,39 @@ botón de registro rápido dentro de la app.
 
 - **Tres widgets** (`android/app/src/main/kotlin/.../ResumenWidgets.kt`,
   con el paquete `home_widget`, licencia BSD, solo dependencias AndroidX):
-  - `AnotarWidget`: una píldora vino "+ Anotar gasto". Abre
-    `AnotarActivity`.
-  - `DeudasWidget` y `PrestamosWidget`: total de hoy (con interés), cuántos,
-    los tres de mayor saldo, "+ N más" y "Actualizado <fecha>". Al tocarlos
-    abren Valtiq en esa sección (`valtiq://deudas` / `valtiq://prestamos`,
+  - `AnotarWidget`: tarjeta con un círculo vino con "+", "Anotar gasto" y
+    "café 5000". Abre `AnotarActivity`.
+  - `DeudasWidget` y `PrestamosWidget`: iguales a la tarjeta de Inicio
+    (ícono, título, total de hoy con interés y nota). Al tocarlos abren
+    Valtiq en esa sección (`valtiq://deudas` / `valtiq://prestamos`,
     `ShellScreen._abrirDesdeWidget`), con el bloqueo de siempre.
   - Diseños en `res/layout/widget_*.xml`, colores del tema en
-    `res/values(-night)/colores_widget.xml`.
+    `res/values(-night)/colores_widget.xml`, íconos (los de Material de
+    Inicio, en PNG blanco teñido) en `res/drawable-nodpi/`. Solo vistas que
+    acepta `RemoteViews` (LinearLayout, ImageView, TextView): una `View`
+    suelta hace que Android no deje agregar el widget.
 - **Datos de los widgets de resumen:** `WidgetsService` escucha
-  `DashboardService.watchSaldosDeudasActivas/PrestamosActivos` mientras la
-  app está abierta y guarda los textos ya formateados
-  (`contenidoWidgetResumen`, probado sin Android) con
-  `HomeWidget.saveWidgetData`; luego `updateWidget`. El interés cambia cada
-  día y el widget solo se actualiza cuando se abre Valtiq: por eso muestra
-  la fecha. Por decisión del usuario estos widgets **no** se ocultan con el
-  bloqueo con PIN (ponerlos es opcional).
+  `DashboardService.watchDeudasActivas/PrestamosActivos` (cada
+  `CuentaActiva` sabe calcular su saldo en cualquier día) mientras la app
+  está abierta y guarda, ya formateados, los totales de hoy y de los
+  próximos `diasWidgetResumen` (90) días (`contenidoWidgetResumen`, probado
+  sin Android): `{clave}_desde`, `{clave}_totales` (uno por renglón) y
+  `{clave}_nota`. El widget (`totalDeHoy` en Kotlin) elige el renglón de la
+  fecha del celular, así que el interés avanza aunque no se abra Valtiq;
+  como los pagos solo se registran dentro de Valtiq, que recalcula todo,
+  esos números son los reales. Pasados los 90 días muestra "—" y pide
+  abrir Valtiq. `updatePeriodMillis` = 1 h para cambiar de día (solo lee
+  preferencias, no arranca Flutter). Por decisión del usuario estos
+  widgets **no** se ocultan con el bloqueo con PIN (ponerlos es opcional).
 - **"Anotar gasto":** `AnotarActivity` es un `FlutterActivity` aparte
   (tarea propia, fuera de recientes, fondo transparente) que corre
   `anotarMain()` de `main.dart`: su propia conexión a la base y solo
   `AnotarRapidoScreen`, sin splash ni bloqueo con PIN (decisión del
-  usuario: solo agrega un gasto y no muestra nada de lo guardado). Un
+  usuario: solo agrega un gasto y no muestra nada de lo guardado). Para
+  que se sienta rápido: el tema `AnotarTheme` oscurece el fondo con
+  `backgroundDimEnabled` (sale al instante, antes que Flutter) y
+  `anotarMain` llama a `runApp` sin esperar las categorías (la pantalla
+  escucha `CategoriasService.lista`). Un
   renglón ("café 5mil"), vista previa de lo entendido, categoría
   propuesta en píldoras (se puede cambiar) y Guardar/Enter. Después:
   "Guardado", aviso si se pasó el presupuesto del mes, "Deshacer" y

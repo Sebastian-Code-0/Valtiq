@@ -1,29 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Widget "Anotar gasto": una píldora vino con un "+" y el texto. -->
+<!-- Widget "Anotar gasto": tarjeta con un círculo vino con "+", el nombre y
+     un ejemplo de cómo escribir. Solo vistas que acepta Android en widgets
+     (LinearLayout, ImageView, TextView). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_raiz"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_boton"
-    android:gravity="center"
+    android:background="@drawable/widget_fondo"
+    android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingStart="16dp"
+    android:paddingStart="10dp"
     android:paddingEnd="16dp">
 
     <ImageView
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:background="@drawable/widget_circulo"
         android:contentDescription="@null"
+        android:padding="9dp"
         android:src="@drawable/widget_mas" />
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:text="@string/widget_anotar_nombre"
-        android:textColor="@color/widget_sobre_acento"
-        android:textSize="15sp"
-        android:textStyle="bold" />
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/widget_anotar_nombre"
+            android:textColor="@color/widget_texto"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="monospace"
+            android:maxLines="1"
+            android:text="@string/widget_anotar_ejemplo"
+            android:textColor="@color/widget_texto_sec"
+            android:textSize="12sp" />
+    </LinearLayout>
 </LinearLayout>

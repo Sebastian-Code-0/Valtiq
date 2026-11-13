@@ -106,12 +106,14 @@ Tres widgets (mantener presionada la pantalla de inicio → Widgets → Valtiq):
 
 | Widget | Qué hace |
 |--------|----------|
-| Anotar gasto | Abre `AnotarActivity` (Flutter con `anotarMain`, fondo transparente, tarea aparte) para escribir "café 5000" y guardarlo. No pide PIN. |
-| Deudas activas | Total de hoy, cuántas y las 3 mayores. Al tocarlo abre Valtiq en Deudas. |
-| Préstamos activos | Lo que te deben hoy, cuántos y los 3 mayores. Al tocarlo abre Valtiq en Préstamos. |
+| Anotar gasto | Abre `AnotarActivity` (Flutter con `anotarMain`, fondo oscurecido por Android, tarea aparte) para escribir "café 5000" y guardarlo. No pide PIN. |
+| Deudas activas | Igual que la tarjeta de Inicio: lo que debes hoy. Al tocarlo abre Valtiq en Deudas. |
+| Prestado activo | Igual que la tarjeta de Inicio: lo que te deben hoy. Al tocarlo abre Valtiq en Préstamos. |
 
-Los de resumen se actualizan cuando Valtiq se abre (el interés cambia cada
-día; por eso muestran "Actualizado <fecha>"). Código: `ResumenWidgets.kt`,
+Los de resumen traen calculados los totales de hoy y de los próximos 90
+días (el interés cambia cada día) y muestran el del día; pasados esos días
+sin abrir Valtiq piden abrirla. Solo usan vistas que acepta `RemoteViews`
+(nada de `View` suelta). Código: `ResumenWidgets.kt`,
 `AnotarActivity.kt`, `res/layout/widget_*.xml`, `res/xml/widget_*_info.xml`,
 `lib/services/widgets_service.dart`, `lib/screens/anotar/anotar_rapido.dart`.
 Paquete: `home_widget` (BSD-3, solo AndroidX: Glance, WorkManager).

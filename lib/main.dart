@@ -100,7 +100,10 @@ Future<void> anotarMain() async {
     'dark' => ThemeMode.dark,
     _ => ThemeMode.system,
   };
-  await CategoriasService.iniciar(db);
+  // Primero se dibuja la ventana y después se cargan las categorías: así
+  // aparece apenas se toca el widget (la pantalla se actualiza cuando
+  // llegan).
+  unawaited(CategoriasService.iniciar(db));
   runApp(
     MaterialApp(
       title: 'Anotar gasto',
@@ -117,6 +120,9 @@ Future<void> anotarMain() async {
       ],
       home: AnotarRapidoScreen(
         db: db,
+        // El fondo oscuro lo pone la ventana de Android desde el primer
+        // instante (styles.xml), antes de que arranque Flutter.
+        oscurecerFondo: false,
         alCerrar: () async {
           await db.close();
           await SystemNavigator.pop();

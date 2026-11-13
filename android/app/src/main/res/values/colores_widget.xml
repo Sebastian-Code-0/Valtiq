@@ -8,4 +8,7 @@
     <color name="widget_texto_sec">#5C5249</color>
     <color name="widget_acento">#5A1222</color>
     <color name="widget_sobre_acento">#EFE7DA</color>
+    <!-- Íconos de las tarjetas: los de Inicio. -->
+    <color name="widget_alerta">#C21F1F</color>
+    <color name="widget_acento_texto">#5A1222</color>
 </resources>

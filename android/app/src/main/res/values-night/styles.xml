@@ -19,12 +19,14 @@
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
-    <!-- Ventana "Anotar gasto" del widget: transparente, encima de la
-         pantalla de inicio (el fondo oscurecido lo pinta Flutter). -->
+    <!-- Ventana "Anotar gasto" del widget: encima de la pantalla de inicio.
+         Android oscurece lo de atrás (backgroundDim), para que se vea al
+         instante de tocar el widget mientras Flutter arranca. -->
     <style name="AnotarTheme" parent="@android:style/Theme.Translucent.NoTitleBar">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
-        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.5</item>
         <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
     </style>
 </resources>

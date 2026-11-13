@@ -95,6 +95,29 @@ class _DeudasScreenState extends State<DeudasScreen> {
     MaterialPageRoute(builder: (_) => DeudaForm(db: widget.db)),
   );
 
+  /// Mantener presionada una deuda (o clic derecho en PC): eliminarla con
+  /// sus pagos, tras confirmar. Igual que en Préstamos.
+  Future<void> _eliminar(Deuda deuda) async {
+    final ok = await confirmar(
+      context,
+      titulo: 'Eliminar deuda',
+      mensaje:
+          '¿Eliminar "${deuda.acreedorNombre}"? También se eliminarán sus '
+          'pagos registrados.',
+      accion: 'Eliminar',
+      peligro: true,
+    );
+    if (!ok) return;
+    try {
+      await widget.db.deudasDao.deleteDeudaConPagos(deuda.id);
+      if (mounted && _seleccionada == deuda.id) {
+        setState(() => _seleccionada = null);
+      }
+    } catch (_) {
+      if (mounted) mostrarAlerta(context, 'No se pudo eliminar la deuda.');
+    }
+  }
+
   /// Elimina todas las deudas pagadas (con sus pagos), tras confirmar.
   Future<void> _limpiarHistorial(int cuantas) async {
     final ok = await confirmar(
@@ -209,6 +232,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                           margen: margen,
                           seleccionada: panelAbierto ? _seleccionada : null,
                           onAbrir: (id) => _abrir(id, enPanel: conPanel),
+                          onEliminar: _eliminar,
                         ),
                         1 => PlanPagoTab(
                           activas: activas,
@@ -229,6 +253,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                           margen: margen,
                           seleccionada: panelAbierto ? _seleccionada : null,
                           onAbrir: (id) => _abrir(id, enPanel: conPanel),
+                          onEliminar: _eliminar,
                         ),
                       },
                     ),
@@ -336,12 +361,14 @@ class _Activas extends StatelessWidget {
     required this.margen,
     required this.seleccionada,
     required this.onAbrir,
+    required this.onEliminar,
   });
 
   final List<ResumenDeuda> activas;
   final double margen;
   final int? seleccionada;
   final ValueChanged<int> onAbrir;
+  final ValueChanged<Deuda> onEliminar;
 
   /// Alto fijo de cada tarjeta de la cuadrícula.
   static const _altoTarjeta = 208.0;
@@ -388,6 +415,7 @@ class _Activas extends StatelessWidget {
                     hoy: hoy,
                     elegida: r.deuda.id == seleccionada,
                     onTap: () => onAbrir(r.deuda.id),
+                    onEliminar: () => onEliminar(r.deuda),
                   );
                 },
               ),
@@ -470,12 +498,14 @@ class _TarjetaDeuda extends StatelessWidget {
     required this.hoy,
     required this.elegida,
     required this.onTap,
+    required this.onEliminar,
   });
 
   final ResumenDeuda resumen;
   final DateTime hoy;
   final bool elegida;
   final VoidCallback onTap;
+  final VoidCallback onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -500,6 +530,8 @@ class _TarjetaDeuda extends StatelessWidget {
       ),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onEliminar,
+        onSecondaryTap: onEliminar,
         child: Padding(
           padding: const EdgeInsets.all(22),
           child: Column(
@@ -589,12 +621,14 @@ class _Pagadas extends StatelessWidget {
     required this.margen,
     required this.seleccionada,
     required this.onAbrir,
+    required this.onEliminar,
   });
 
   final List<ResumenDeuda> pagadas;
   final double margen;
   final int? seleccionada;
   final ValueChanged<int> onAbrir;
+  final ValueChanged<Deuda> onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -643,6 +677,8 @@ class _Pagadas extends StatelessWidget {
       color: deuda.id == seleccionada ? c.relieve : Colors.transparent,
       child: InkWell(
         onTap: () => onAbrir(deuda.id),
+        onLongPress: () => onEliminar(deuda),
+        onSecondaryTap: () => onEliminar(deuda),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           child: Row(
