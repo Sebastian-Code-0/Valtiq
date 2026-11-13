@@ -7,7 +7,10 @@ class BackupService {
   BackupService(this.db);
   final AppDatabase db;
 
-  static const formatoVersion = 1;
+  /// 2 = trae `categorias` (schemaVersion 15). Los de versión 1 se siguen
+  /// leyendo: sus categorías se arman con las de fábrica más las que usen
+  /// sus gastos.
+  static const formatoVersion = 2;
 
   Future<Map<String, dynamic>> exportarDatos() async {
     final packageInfo = await PackageInfo.fromPlatform();
@@ -45,6 +48,9 @@ class BackupService {
             (await db.presupuestosCategoriasDao.getAllPresupuestos())
                 .map((e) => e.toJson())
                 .toList(),
+        'categorias': (await db.categoriasDao.getCategorias())
+            .map((e) => e.toJson())
+            .toList(),
       },
       // ConfigSmtps se excluye a propósito — nunca debe salir en el backup.
     };
@@ -157,6 +163,20 @@ class BackupService {
         .map(PresupuestosCategoria.fromJson)
         .toList();
 
+    // `null` = respaldo anterior a las categorías editables.
+    final categorias = datos['categorias'] is List
+        ? _lista(datos, 'categorias')
+              .map(
+                (r) => _conDefaults(r, const {
+                  'icono': 'otros',
+                  'orden': 0,
+                  'color': 0xFF8B93A3,
+                }),
+              )
+              .map(Categoria.fromJson)
+              .toList()
+        : null;
+
     await db.transaction(() async {
       // Borra primero las tablas hijas (referencian deuda/préstamo por FK),
       // luego las padres — mismo orden que ya sigue el borrado en cascada
@@ -170,6 +190,7 @@ class BackupService {
       await db.delete(db.gastosFijos).go();
       await db.delete(db.gastosVariables).go();
       await db.delete(db.presupuestosCategorias).go();
+      await db.delete(db.categorias).go();
 
       // Reinserta en el orden inverso: padres antes que hijos, para que las
       // FK de pagosDeuda/pagosRecibidos encuentren su deuda/préstamo ya
@@ -185,7 +206,12 @@ class BackupService {
         b.insertAll(db.gastosVariables, gastosVariables);
         b.insertAll(db.recordatorios, recordatorios);
         b.insertAll(db.presupuestosCategorias, presupuestosCategorias);
+        if (categorias != null) b.insertAll(db.categorias, categorias);
       });
+      // Que ningún gasto quede con una categoría que no existe. Un respaldo
+      // con categorías trae las que el usuario dejó (no se le devuelven las
+      // de fábrica que borró); uno viejo arranca con las de fábrica.
+      await db.sembrarCategorias(deFabrica: categorias == null);
     });
   }
 }

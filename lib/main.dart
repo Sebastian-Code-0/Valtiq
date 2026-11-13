@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,7 +9,10 @@ import 'db/database.dart';
 import 'screens/lock/app_lock_overlay.dart';
 import 'screens/splash_screen.dart';
 import 'services/app_lock_service.dart';
+import 'screens/anotar/anotar_rapido.dart';
+import 'services/categorias_service.dart';
 import 'services/crypto_service.dart';
+import 'services/widgets_service.dart';
 import 'services/notification_service.dart';
 import 'services/perfil_service.dart';
 import 'theme/theme.dart';
@@ -50,6 +54,7 @@ void main() async {
   await prefs.remove('valtiq_acento');
 
   await PerfilService.cargar();
+  await CategoriasService.iniciar(db);
   await cargarMontosOcultos();
   await cargarMenuSuperior();
 
@@ -69,12 +74,56 @@ void main() async {
 
   runApp(ValtiqApp(db: db, bloqueoInicial: bloqueoInicial));
 
+  // Widgets de Android: los de deudas y préstamos se mantienen al día
+  // mientras la app está abierta.
+  WidgetsService.iniciar(db);
+
   // Después de runApp: en Android 13+ esto espera la respuesta real del
   // diálogo nativo de permisos. Si corriera antes de runApp (como hacía
   // NotificationService.init() antes), el primer frame de la app quedaría
   // bloqueado hasta que el usuario decida — así la app ya se ve mientras
   // el diálogo aparece encima.
   unawaited(NotificationService.solicitarPermisoNotificaciones());
+}
+
+/// Arranque de la ventana "Anotar gasto" que abre el widget de Android
+/// (`AnotarActivity` en Kotlin). Corre aparte de la app principal: su propia
+/// conexión a la base, sin splash ni bloqueo con PIN (solo agrega un gasto y
+/// no muestra nada de lo guardado; decisión del usuario, 2026-11-12).
+@pragma('vm:entry-point')
+Future<void> anotarMain() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final db = AppDatabase(AppDatabase.openConnection());
+  final prefs = await SharedPreferences.getInstance();
+  final tema = switch (prefs.getString('valtiq_theme')) {
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.system,
+  };
+  await CategoriasService.iniciar(db);
+  runApp(
+    MaterialApp(
+      title: 'Anotar gasto',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: tema,
+      locale: const Locale('es', 'CO'),
+      supportedLocales: const [Locale('es', 'CO')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: AnotarRapidoScreen(
+        db: db,
+        alCerrar: () async {
+          await db.close();
+          await SystemNavigator.pop();
+        },
+      ),
+    ),
+  );
 }
 
 class ValtiqApp extends StatelessWidget {

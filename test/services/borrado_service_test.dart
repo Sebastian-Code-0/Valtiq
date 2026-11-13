@@ -7,6 +7,7 @@ import 'package:valtiq/db/database.dart';
 import 'package:valtiq/main.dart' as app;
 import 'package:valtiq/services/app_lock_service.dart';
 import 'package:valtiq/services/borrado_service.dart';
+import 'package:valtiq/utils/categoria_gasto.dart';
 import 'package:valtiq/services/interes_calculator.dart';
 import 'package:valtiq/services/perfil_service.dart';
 import 'package:valtiq/utils/fecha_civil.dart';
@@ -58,12 +59,18 @@ void main() {
     await BorradoService.borrarTodo(db);
 
     for (final tabla in db.allTables) {
+      // Las categorías vuelven a las de fábrica (como recién instalada).
+      if (tabla == db.categorias) continue;
       expect(
         await db.select(tabla).get(),
         isEmpty,
         reason: tabla.actualTableName,
       );
     }
+    expect(
+      (await db.categoriasDao.getCategorias()).map((c) => c.nombre),
+      CategoriaGasto.nombres,
+    );
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getKeys(), isEmpty);
     expect(await AppLockService.bloqueoActivo(), isFalse);

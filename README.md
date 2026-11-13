@@ -14,8 +14,10 @@ sin servidores, sin nube, sin cuentas de usuario.
   (avalancha o bola de nieve) que estima cuándo se queda libre de deudas
 - Desglose auditable del interés ("¿Cómo se calculó?") y guía integrada
   ("Cómo funciona Valtiq") que explica cada cálculo en lenguaje simple
-- Ingresos, gastos fijos y gastos del día a día por categoría, con
-  presupuestos mensuales
+- Ingresos, gastos fijos y gastos del día a día por categoría (editables:
+  crear, renombrar, cambiar ícono y color), con presupuestos mensuales
+- Widgets de Android: anotar un gasto en una línea ("café 5mil") sin abrir
+  la app, y ver tus deudas y préstamos activos en la pantalla de inicio
 - Inicio con balance real: Ingresos − Gastos fijos − Gastos del día a día
 - Comparativo mensual de gastos del día a día por categoría
 - Recordatorios de pago con notificación del sistema (en Android llegan a su hora aunque la app esté cerrada) y/o correo SMTP
@@ -29,7 +31,7 @@ sin servidores, sin nube, sin cuentas de usuario.
 | Componente     | Tecnología                          |
 |----------------|--------------------------------------|
 | Framework      | Flutter 3.32.1 / Dart                |
-| Base de datos  | SQLite vía drift ORM (schemaVersion 14) |
+| Base de datos  | SQLite vía drift ORM (schemaVersion 15) |
 | Notificaciones | flutter_local_notifications          |
 | Correo         | mailer + encrypt (AES-256)           |
 | Seguridad      | local_auth (biometría) + PIN propio (SHA-256 con salt) |

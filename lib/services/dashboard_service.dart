@@ -10,10 +10,29 @@ import 'interes_calculator.dart';
 /// antes vivía en `_DashboardScreenState.initState()` — mismo query, mismo
 /// join sin agregar (necesario para `saldo_insoluto`, que necesita la fecha
 /// de cada abono y no solo la suma, ver `InteresCalculator`).
+/// Una deuda o un préstamo activo: a quién y cuánto falta hoy.
+class SaldoActivo {
+  const SaldoActivo(this.nombre, this.saldo);
+
+  final String nombre;
+  final int saldo;
+}
+
 class DashboardService {
   const DashboardService._();
 
-  static Stream<double> watchTotalDeudasActivas(AppDatabase db) {
+  static Stream<double> watchTotalDeudasActivas(AppDatabase db) =>
+      watchSaldosDeudasActivas(db).map(_sumar);
+
+  static Stream<double> watchTotalPrestamosActivos(AppDatabase db) =>
+      watchSaldosPrestamosActivos(db).map(_sumar);
+
+  static double _sumar(List<SaldoActivo> lista) =>
+      lista.fold<double>(0, (t, s) => t + s.saldo);
+
+  /// Cada deuda activa con lo que falta pagarle hoy (con interés). La usan
+  /// el total de Inicio y el widget de Android.
+  static Stream<List<SaldoActivo>> watchSaldosDeudasActivas(AppDatabase db) {
     final d = db.deudas;
     final pd = db.pagosDeuda;
     final query = db.select(d).join([
@@ -33,25 +52,30 @@ class DashboardService {
           );
         }
       }
-      double total = 0;
-      for (final deuda in deudas.values) {
-        final abonos = abonosPorDeuda[deuda.id] ?? const [];
-        total += InteresCalculator.calcularDeudaTotal(
-          montoPrestado: deuda.montoOriginal,
-          tasaInteres: deuda.tasaInteres,
-          tipoInteres: deuda.tipoInteres,
-          modalidadCalculo: deuda.modalidadCalculo,
-          fechaPrestamo: deuda.fechaPrestamo,
-          totalAbonado: abonos.fold<int>(0, (s, a) => s + a.monto),
-          tipoAmortizacion: deuda.tipoAmortizacion,
-          abonos: abonos,
-        );
-      }
-      return total;
+      return [
+        for (final deuda in deudas.values)
+          SaldoActivo(
+            deuda.acreedorNombre,
+            InteresCalculator.calcularDeudaTotal(
+              montoPrestado: deuda.montoOriginal,
+              tasaInteres: deuda.tasaInteres,
+              tipoInteres: deuda.tipoInteres,
+              modalidadCalculo: deuda.modalidadCalculo,
+              fechaPrestamo: deuda.fechaPrestamo,
+              totalAbonado: (abonosPorDeuda[deuda.id] ?? const []).fold<int>(
+                0,
+                (s, a) => s + a.monto,
+              ),
+              tipoAmortizacion: deuda.tipoAmortizacion,
+              abonos: abonosPorDeuda[deuda.id] ?? const [],
+            ),
+          ),
+      ];
     });
   }
 
-  static Stream<double> watchTotalPrestamosActivos(AppDatabase db) {
+  /// Cada préstamo activo con lo que falta cobrarle hoy (con interés).
+  static Stream<List<SaldoActivo>> watchSaldosPrestamosActivos(AppDatabase db) {
     final p = db.prestamos;
     final pr = db.pagosRecibidos;
     final query = db.select(p).join([
@@ -71,21 +95,23 @@ class DashboardService {
           );
         }
       }
-      double total = 0;
-      for (final prestamo in prestamos.values) {
-        final abonos = abonosPorPrestamo[prestamo.id] ?? const [];
-        total += InteresCalculator.calcularDeudaTotal(
-          montoPrestado: prestamo.montoPrestado,
-          tasaInteres: prestamo.tasaInteres,
-          tipoInteres: prestamo.tipoInteres,
-          modalidadCalculo: prestamo.modalidadCalculo,
-          fechaPrestamo: prestamo.fechaPrestamo,
-          totalAbonado: abonos.fold<int>(0, (s, a) => s + a.monto),
-          tipoAmortizacion: prestamo.tipoAmortizacion,
-          abonos: abonos,
-        );
-      }
-      return total;
+      return [
+        for (final prestamo in prestamos.values)
+          SaldoActivo(
+            prestamo.deudorNombre,
+            InteresCalculator.calcularDeudaTotal(
+              montoPrestado: prestamo.montoPrestado,
+              tasaInteres: prestamo.tasaInteres,
+              tipoInteres: prestamo.tipoInteres,
+              modalidadCalculo: prestamo.modalidadCalculo,
+              fechaPrestamo: prestamo.fechaPrestamo,
+              totalAbonado: (abonosPorPrestamo[prestamo.id] ?? const [])
+                  .fold<int>(0, (s, a) => s + a.monto),
+              tipoAmortizacion: prestamo.tipoAmortizacion,
+              abonos: abonosPorPrestamo[prestamo.id] ?? const [],
+            ),
+          ),
+      ];
     });
   }
 
@@ -128,7 +154,11 @@ class DashboardService {
 
     void emitir() {
       if (!controller.isClosed) {
-        controller.add((ingresos: ingresos, gastos: gastos, variables: variables));
+        controller.add((
+          ingresos: ingresos,
+          gastos: gastos,
+          variables: variables,
+        ));
       }
     }
 

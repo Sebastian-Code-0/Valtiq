@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
+import '../../services/categorias_service.dart';
 import '../../theme/theme.dart';
-import '../../utils/categoria_gasto.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/fecha_civil.dart';
@@ -198,9 +198,31 @@ class _GastoVariableFormState extends State<GastoVariableForm>
                       AppSpacing.radiusRecuadro,
                     ),
                     hint: const Text('Elige una categoría'),
-                    items: CategoriaGasto.nombres
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                        .toList(),
+                    // Las categorías actuales (editables en Ajustes →
+                    // Presupuestos). Si el gasto trae una que ya no está, se
+                    // agrega para que el campo no quede vacío.
+                    items: [
+                      for (final c in {
+                        ...CategoriasService.nombres,
+                        ?_categoria,
+                      })
+                        DropdownMenuItem(
+                          value: c,
+                          child: Row(
+                            children: [
+                              Icon(
+                                CategoriasService.iconoPara(c),
+                                size: 18,
+                                color: CategoriasService.colorPara(c),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Flexible(
+                                child: Text(c, overflow: TextOverflow.ellipsis),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                     onChanged: (v) => setState(() => _categoria = v),
                     validator: (v) =>
                         (v == null || v.isEmpty) ? 'Requerido' : null,

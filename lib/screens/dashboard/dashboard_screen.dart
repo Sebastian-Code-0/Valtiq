@@ -174,6 +174,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       titulo: perfil.nombre.isEmpty
           ? saludoSegunHora(DateTime.now())
           : '${saludoSegunHora(DateTime.now())}, ${perfil.nombre}',
+      // Un nombre largo pasa al renglón de abajo en vez de cortarse.
+      multilinea: true,
       accion: accion,
     ),
   );

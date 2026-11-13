@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
 
 import '../db/database.dart';
 import '../main.dart';
 import '../services/crypto_service.dart';
 import '../services/notification_service.dart';
+import '../services/widgets_service.dart';
 import '../utils/notificaciones.dart';
 import '../utils/fecha_civil.dart';
 import '../utils/preferencia_menu.dart';
@@ -63,11 +65,28 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     // información sobre el estado de la cuenta quedaría lista/mostrándose
     // antes de que alguien probara el PIN. `appDesbloqueadaNotifier` (ver
     // main.dart) es falso mientras la app arranca bloqueada.
+    _escucharWidgets();
     if (appDesbloqueadaNotifier.value) {
       _revisarAvisosPendientes();
     } else {
       appDesbloqueadaNotifier.addListener(_onAppDesbloqueada);
     }
+  }
+
+  StreamSubscription<Uri?>? _widgetTocado;
+
+  /// Al tocar el widget de deudas o de préstamos se abre Valtiq en esa
+  /// sección (con el bloqueo con PIN de siempre, si está activo).
+  void _escucharWidgets() {
+    if (!WidgetsService.soportado) return;
+    HomeWidget.initiallyLaunchedFromHomeWidget().then(_abrirDesdeWidget);
+    _widgetTocado = HomeWidget.widgetClicked.listen(_abrirDesdeWidget);
+  }
+
+  void _abrirDesdeWidget(Uri? uri) {
+    final seccion = WidgetsService.seccionDeUri(uri);
+    if (seccion == null || !mounted) return;
+    _cambiarIndice(seccion == 'deudas' ? 1 : 2);
   }
 
   void _onAppDesbloqueada() {
@@ -105,6 +124,10 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   /// ARRANCAR: en Android la app puede quedar viva en segundo plano varios
   /// días, y en ese tiempo no salía ningún aviso aunque se abriera a diario.
   Future<void> _alVolver() async {
+    // Lo anotado desde el widget de "Anotar gasto" entra por otra conexión
+    // a la base: se avisa a las pantallas para que lo muestren.
+    widget.db.markTablesUpdated([widget.db.gastosVariables]);
+
     unawaited(
       NotificationService.sincronizar(widget.db).catchError((Object e) {
         debugPrint('ShellScreen: fallo al revisar recordatorios al volver: $e');
@@ -129,6 +152,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     appDesbloqueadaNotifier.removeListener(_onAppDesbloqueada);
+    _widgetTocado?.cancel();
     super.dispose();
   }
 

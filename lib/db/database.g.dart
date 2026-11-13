@@ -3988,6 +3988,17 @@ class $RecordatoriosTable extends Recordatorios
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _diaOriginalMeta = const VerificationMeta(
+    'diaOriginal',
+  );
+  @override
+  late final GeneratedColumn<int> diaOriginal = GeneratedColumn<int>(
+    'dia_original',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4005,6 +4016,7 @@ class $RecordatoriosTable extends Recordatorios
     ultimoEnvioCorreo,
     horaAviso,
     minutoAviso,
+    diaOriginal,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4136,6 +4148,15 @@ class $RecordatoriosTable extends Recordatorios
         ),
       );
     }
+    if (data.containsKey('dia_original')) {
+      context.handle(
+        _diaOriginalMeta,
+        diaOriginal.isAcceptableOrUnknown(
+          data['dia_original']!,
+          _diaOriginalMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4205,6 +4226,10 @@ class $RecordatoriosTable extends Recordatorios
         DriftSqlType.int,
         data['${effectivePrefix}minuto_aviso'],
       )!,
+      diaOriginal: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dia_original'],
+      ),
     );
   }
 
@@ -4230,6 +4255,7 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
   final DateTime? ultimoEnvioCorreo;
   final int horaAviso;
   final int minutoAviso;
+  final int? diaOriginal;
   const Recordatorio({
     required this.id,
     required this.titulo,
@@ -4246,6 +4272,7 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
     this.ultimoEnvioCorreo,
     required this.horaAviso,
     required this.minutoAviso,
+    this.diaOriginal,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4273,6 +4300,9 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
     }
     map['hora_aviso'] = Variable<int>(horaAviso);
     map['minuto_aviso'] = Variable<int>(minutoAviso);
+    if (!nullToAbsent || diaOriginal != null) {
+      map['dia_original'] = Variable<int>(diaOriginal);
+    }
     return map;
   }
 
@@ -4301,6 +4331,9 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
           : Value(ultimoEnvioCorreo),
       horaAviso: Value(horaAviso),
       minutoAviso: Value(minutoAviso),
+      diaOriginal: diaOriginal == null && nullToAbsent
+          ? const Value.absent()
+          : Value(diaOriginal),
     );
   }
 
@@ -4329,6 +4362,7 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
       ),
       horaAviso: serializer.fromJson<int>(json['horaAviso']),
       minutoAviso: serializer.fromJson<int>(json['minutoAviso']),
+      diaOriginal: serializer.fromJson<int?>(json['diaOriginal']),
     );
   }
   @override
@@ -4350,6 +4384,7 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
       'ultimoEnvioCorreo': serializer.toJson<DateTime?>(ultimoEnvioCorreo),
       'horaAviso': serializer.toJson<int>(horaAviso),
       'minutoAviso': serializer.toJson<int>(minutoAviso),
+      'diaOriginal': serializer.toJson<int?>(diaOriginal),
     };
   }
 
@@ -4369,6 +4404,7 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
     Value<DateTime?> ultimoEnvioCorreo = const Value.absent(),
     int? horaAviso,
     int? minutoAviso,
+    Value<int?> diaOriginal = const Value.absent(),
   }) => Recordatorio(
     id: id ?? this.id,
     titulo: titulo ?? this.titulo,
@@ -4391,6 +4427,7 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
         : this.ultimoEnvioCorreo,
     horaAviso: horaAviso ?? this.horaAviso,
     minutoAviso: minutoAviso ?? this.minutoAviso,
+    diaOriginal: diaOriginal.present ? diaOriginal.value : this.diaOriginal,
   );
   Recordatorio copyWithCompanion(RecordatoriosCompanion data) {
     return Recordatorio(
@@ -4427,6 +4464,9 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
       minutoAviso: data.minutoAviso.present
           ? data.minutoAviso.value
           : this.minutoAviso,
+      diaOriginal: data.diaOriginal.present
+          ? data.diaOriginal.value
+          : this.diaOriginal,
     );
   }
 
@@ -4447,7 +4487,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
           ..write('ultimaNotificacion: $ultimaNotificacion, ')
           ..write('ultimoEnvioCorreo: $ultimoEnvioCorreo, ')
           ..write('horaAviso: $horaAviso, ')
-          ..write('minutoAviso: $minutoAviso')
+          ..write('minutoAviso: $minutoAviso, ')
+          ..write('diaOriginal: $diaOriginal')
           ..write(')'))
         .toString();
   }
@@ -4469,6 +4510,7 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
     ultimoEnvioCorreo,
     horaAviso,
     minutoAviso,
+    diaOriginal,
   );
   @override
   bool operator ==(Object other) =>
@@ -4488,7 +4530,8 @@ class Recordatorio extends DataClass implements Insertable<Recordatorio> {
           other.ultimaNotificacion == this.ultimaNotificacion &&
           other.ultimoEnvioCorreo == this.ultimoEnvioCorreo &&
           other.horaAviso == this.horaAviso &&
-          other.minutoAviso == this.minutoAviso);
+          other.minutoAviso == this.minutoAviso &&
+          other.diaOriginal == this.diaOriginal);
 }
 
 class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
@@ -4507,6 +4550,7 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
   final Value<DateTime?> ultimoEnvioCorreo;
   final Value<int> horaAviso;
   final Value<int> minutoAviso;
+  final Value<int?> diaOriginal;
   const RecordatoriosCompanion({
     this.id = const Value.absent(),
     this.titulo = const Value.absent(),
@@ -4523,6 +4567,7 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
     this.ultimoEnvioCorreo = const Value.absent(),
     this.horaAviso = const Value.absent(),
     this.minutoAviso = const Value.absent(),
+    this.diaOriginal = const Value.absent(),
   });
   RecordatoriosCompanion.insert({
     this.id = const Value.absent(),
@@ -4540,6 +4585,7 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
     this.ultimoEnvioCorreo = const Value.absent(),
     this.horaAviso = const Value.absent(),
     this.minutoAviso = const Value.absent(),
+    this.diaOriginal = const Value.absent(),
   }) : titulo = Value(titulo),
        fechaAlerta = Value(fechaAlerta);
   static Insertable<Recordatorio> custom({
@@ -4558,6 +4604,7 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
     Expression<DateTime>? ultimoEnvioCorreo,
     Expression<int>? horaAviso,
     Expression<int>? minutoAviso,
+    Expression<int>? diaOriginal,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4575,6 +4622,7 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
       if (ultimoEnvioCorreo != null) 'ultimo_envio_correo': ultimoEnvioCorreo,
       if (horaAviso != null) 'hora_aviso': horaAviso,
       if (minutoAviso != null) 'minuto_aviso': minutoAviso,
+      if (diaOriginal != null) 'dia_original': diaOriginal,
     });
   }
 
@@ -4594,6 +4642,7 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
     Value<DateTime?>? ultimoEnvioCorreo,
     Value<int>? horaAviso,
     Value<int>? minutoAviso,
+    Value<int?>? diaOriginal,
   }) {
     return RecordatoriosCompanion(
       id: id ?? this.id,
@@ -4611,6 +4660,7 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
       ultimoEnvioCorreo: ultimoEnvioCorreo ?? this.ultimoEnvioCorreo,
       horaAviso: horaAviso ?? this.horaAviso,
       minutoAviso: minutoAviso ?? this.minutoAviso,
+      diaOriginal: diaOriginal ?? this.diaOriginal,
     );
   }
 
@@ -4662,6 +4712,9 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
     if (minutoAviso.present) {
       map['minuto_aviso'] = Variable<int>(minutoAviso.value);
     }
+    if (diaOriginal.present) {
+      map['dia_original'] = Variable<int>(diaOriginal.value);
+    }
     return map;
   }
 
@@ -4682,7 +4735,8 @@ class RecordatoriosCompanion extends UpdateCompanion<Recordatorio> {
           ..write('ultimaNotificacion: $ultimaNotificacion, ')
           ..write('ultimoEnvioCorreo: $ultimoEnvioCorreo, ')
           ..write('horaAviso: $horaAviso, ')
-          ..write('minutoAviso: $minutoAviso')
+          ..write('minutoAviso: $minutoAviso, ')
+          ..write('diaOriginal: $diaOriginal')
           ..write(')'))
         .toString();
   }
@@ -6168,6 +6222,395 @@ class PresupuestosCategoriasCompanion
   }
 }
 
+class $CategoriasTable extends Categorias
+    with TableInfo<$CategoriasTable, Categoria> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CategoriasTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nombreMeta = const VerificationMeta('nombre');
+  @override
+  late final GeneratedColumn<String> nombre = GeneratedColumn<String>(
+    'nombre',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _iconoMeta = const VerificationMeta('icono');
+  @override
+  late final GeneratedColumn<String> icono = GeneratedColumn<String>(
+    'icono',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('otros'),
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<int> color = GeneratedColumn<int>(
+    'color',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ordenMeta = const VerificationMeta('orden');
+  @override
+  late final GeneratedColumn<int> orden = GeneratedColumn<int>(
+    'orden',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _creadoEnMeta = const VerificationMeta(
+    'creadoEn',
+  );
+  @override
+  late final GeneratedColumn<DateTime> creadoEn = GeneratedColumn<DateTime>(
+    'creado_en',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    nombre,
+    icono,
+    color,
+    orden,
+    creadoEn,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'categorias';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Categoria> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('nombre')) {
+      context.handle(
+        _nombreMeta,
+        nombre.isAcceptableOrUnknown(data['nombre']!, _nombreMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nombreMeta);
+    }
+    if (data.containsKey('icono')) {
+      context.handle(
+        _iconoMeta,
+        icono.isAcceptableOrUnknown(data['icono']!, _iconoMeta),
+      );
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_colorMeta);
+    }
+    if (data.containsKey('orden')) {
+      context.handle(
+        _ordenMeta,
+        orden.isAcceptableOrUnknown(data['orden']!, _ordenMeta),
+      );
+    }
+    if (data.containsKey('creado_en')) {
+      context.handle(
+        _creadoEnMeta,
+        creadoEn.isAcceptableOrUnknown(data['creado_en']!, _creadoEnMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {nombre},
+  ];
+  @override
+  Categoria map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Categoria(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      nombre: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nombre'],
+      )!,
+      icono: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icono'],
+      )!,
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color'],
+      )!,
+      orden: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}orden'],
+      )!,
+      creadoEn: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}creado_en'],
+      )!,
+    );
+  }
+
+  @override
+  $CategoriasTable createAlias(String alias) {
+    return $CategoriasTable(attachedDatabase, alias);
+  }
+}
+
+class Categoria extends DataClass implements Insertable<Categoria> {
+  final int id;
+  final String nombre;
+  final String icono;
+  final int color;
+  final int orden;
+  final DateTime creadoEn;
+  const Categoria({
+    required this.id,
+    required this.nombre,
+    required this.icono,
+    required this.color,
+    required this.orden,
+    required this.creadoEn,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['nombre'] = Variable<String>(nombre);
+    map['icono'] = Variable<String>(icono);
+    map['color'] = Variable<int>(color);
+    map['orden'] = Variable<int>(orden);
+    map['creado_en'] = Variable<DateTime>(creadoEn);
+    return map;
+  }
+
+  CategoriasCompanion toCompanion(bool nullToAbsent) {
+    return CategoriasCompanion(
+      id: Value(id),
+      nombre: Value(nombre),
+      icono: Value(icono),
+      color: Value(color),
+      orden: Value(orden),
+      creadoEn: Value(creadoEn),
+    );
+  }
+
+  factory Categoria.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Categoria(
+      id: serializer.fromJson<int>(json['id']),
+      nombre: serializer.fromJson<String>(json['nombre']),
+      icono: serializer.fromJson<String>(json['icono']),
+      color: serializer.fromJson<int>(json['color']),
+      orden: serializer.fromJson<int>(json['orden']),
+      creadoEn: serializer.fromJson<DateTime>(json['creadoEn']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'nombre': serializer.toJson<String>(nombre),
+      'icono': serializer.toJson<String>(icono),
+      'color': serializer.toJson<int>(color),
+      'orden': serializer.toJson<int>(orden),
+      'creadoEn': serializer.toJson<DateTime>(creadoEn),
+    };
+  }
+
+  Categoria copyWith({
+    int? id,
+    String? nombre,
+    String? icono,
+    int? color,
+    int? orden,
+    DateTime? creadoEn,
+  }) => Categoria(
+    id: id ?? this.id,
+    nombre: nombre ?? this.nombre,
+    icono: icono ?? this.icono,
+    color: color ?? this.color,
+    orden: orden ?? this.orden,
+    creadoEn: creadoEn ?? this.creadoEn,
+  );
+  Categoria copyWithCompanion(CategoriasCompanion data) {
+    return Categoria(
+      id: data.id.present ? data.id.value : this.id,
+      nombre: data.nombre.present ? data.nombre.value : this.nombre,
+      icono: data.icono.present ? data.icono.value : this.icono,
+      color: data.color.present ? data.color.value : this.color,
+      orden: data.orden.present ? data.orden.value : this.orden,
+      creadoEn: data.creadoEn.present ? data.creadoEn.value : this.creadoEn,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Categoria(')
+          ..write('id: $id, ')
+          ..write('nombre: $nombre, ')
+          ..write('icono: $icono, ')
+          ..write('color: $color, ')
+          ..write('orden: $orden, ')
+          ..write('creadoEn: $creadoEn')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, nombre, icono, color, orden, creadoEn);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Categoria &&
+          other.id == this.id &&
+          other.nombre == this.nombre &&
+          other.icono == this.icono &&
+          other.color == this.color &&
+          other.orden == this.orden &&
+          other.creadoEn == this.creadoEn);
+}
+
+class CategoriasCompanion extends UpdateCompanion<Categoria> {
+  final Value<int> id;
+  final Value<String> nombre;
+  final Value<String> icono;
+  final Value<int> color;
+  final Value<int> orden;
+  final Value<DateTime> creadoEn;
+  const CategoriasCompanion({
+    this.id = const Value.absent(),
+    this.nombre = const Value.absent(),
+    this.icono = const Value.absent(),
+    this.color = const Value.absent(),
+    this.orden = const Value.absent(),
+    this.creadoEn = const Value.absent(),
+  });
+  CategoriasCompanion.insert({
+    this.id = const Value.absent(),
+    required String nombre,
+    this.icono = const Value.absent(),
+    required int color,
+    this.orden = const Value.absent(),
+    this.creadoEn = const Value.absent(),
+  }) : nombre = Value(nombre),
+       color = Value(color);
+  static Insertable<Categoria> custom({
+    Expression<int>? id,
+    Expression<String>? nombre,
+    Expression<String>? icono,
+    Expression<int>? color,
+    Expression<int>? orden,
+    Expression<DateTime>? creadoEn,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (nombre != null) 'nombre': nombre,
+      if (icono != null) 'icono': icono,
+      if (color != null) 'color': color,
+      if (orden != null) 'orden': orden,
+      if (creadoEn != null) 'creado_en': creadoEn,
+    });
+  }
+
+  CategoriasCompanion copyWith({
+    Value<int>? id,
+    Value<String>? nombre,
+    Value<String>? icono,
+    Value<int>? color,
+    Value<int>? orden,
+    Value<DateTime>? creadoEn,
+  }) {
+    return CategoriasCompanion(
+      id: id ?? this.id,
+      nombre: nombre ?? this.nombre,
+      icono: icono ?? this.icono,
+      color: color ?? this.color,
+      orden: orden ?? this.orden,
+      creadoEn: creadoEn ?? this.creadoEn,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (nombre.present) {
+      map['nombre'] = Variable<String>(nombre.value);
+    }
+    if (icono.present) {
+      map['icono'] = Variable<String>(icono.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<int>(color.value);
+    }
+    if (orden.present) {
+      map['orden'] = Variable<int>(orden.value);
+    }
+    if (creadoEn.present) {
+      map['creado_en'] = Variable<DateTime>(creadoEn.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CategoriasCompanion(')
+          ..write('id: $id, ')
+          ..write('nombre: $nombre, ')
+          ..write('icono: $icono, ')
+          ..write('color: $color, ')
+          ..write('orden: $orden, ')
+          ..write('creadoEn: $creadoEn')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6184,6 +6627,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $PresupuestosCategoriasTable presupuestosCategorias =
       $PresupuestosCategoriasTable(this);
+  late final $CategoriasTable categorias = $CategoriasTable(this);
   late final Index idxPagosDeudaDeudaId = Index(
     'idx_pagos_deuda_deuda_id',
     'CREATE INDEX idx_pagos_deuda_deuda_id ON pagos_deuda (deuda_id)',
@@ -6208,6 +6652,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final PresupuestosCategoriasDao presupuestosCategoriasDao =
       PresupuestosCategoriasDao(this as AppDatabase);
+  late final CategoriasDao categoriasDao = CategoriasDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6223,6 +6668,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     configSmtps,
     gastosVariables,
     presupuestosCategorias,
+    categorias,
     idxPagosDeudaDeudaId,
     idxPagosRecibidosPrestamoId,
   ];
@@ -8533,6 +8979,7 @@ typedef $$RecordatoriosTableCreateCompanionBuilder =
       Value<DateTime?> ultimoEnvioCorreo,
       Value<int> horaAviso,
       Value<int> minutoAviso,
+      Value<int?> diaOriginal,
     });
 typedef $$RecordatoriosTableUpdateCompanionBuilder =
     RecordatoriosCompanion Function({
@@ -8551,6 +8998,7 @@ typedef $$RecordatoriosTableUpdateCompanionBuilder =
       Value<DateTime?> ultimoEnvioCorreo,
       Value<int> horaAviso,
       Value<int> minutoAviso,
+      Value<int?> diaOriginal,
     });
 
 class $$RecordatoriosTableFilterComposer
@@ -8634,6 +9082,11 @@ class $$RecordatoriosTableFilterComposer
 
   ColumnFilters<int> get minutoAviso => $composableBuilder(
     column: $table.minutoAviso,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get diaOriginal => $composableBuilder(
+    column: $table.diaOriginal,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -8721,6 +9174,11 @@ class $$RecordatoriosTableOrderingComposer
     column: $table.minutoAviso,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get diaOriginal => $composableBuilder(
+    column: $table.diaOriginal,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RecordatoriosTableAnnotationComposer
@@ -8794,6 +9252,11 @@ class $$RecordatoriosTableAnnotationComposer
     column: $table.minutoAviso,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get diaOriginal => $composableBuilder(
+    column: $table.diaOriginal,
+    builder: (column) => column,
+  );
 }
 
 class $$RecordatoriosTableTableManager
@@ -8842,6 +9305,7 @@ class $$RecordatoriosTableTableManager
                 Value<DateTime?> ultimoEnvioCorreo = const Value.absent(),
                 Value<int> horaAviso = const Value.absent(),
                 Value<int> minutoAviso = const Value.absent(),
+                Value<int?> diaOriginal = const Value.absent(),
               }) => RecordatoriosCompanion(
                 id: id,
                 titulo: titulo,
@@ -8858,6 +9322,7 @@ class $$RecordatoriosTableTableManager
                 ultimoEnvioCorreo: ultimoEnvioCorreo,
                 horaAviso: horaAviso,
                 minutoAviso: minutoAviso,
+                diaOriginal: diaOriginal,
               ),
           createCompanionCallback:
               ({
@@ -8876,6 +9341,7 @@ class $$RecordatoriosTableTableManager
                 Value<DateTime?> ultimoEnvioCorreo = const Value.absent(),
                 Value<int> horaAviso = const Value.absent(),
                 Value<int> minutoAviso = const Value.absent(),
+                Value<int?> diaOriginal = const Value.absent(),
               }) => RecordatoriosCompanion.insert(
                 id: id,
                 titulo: titulo,
@@ -8892,6 +9358,7 @@ class $$RecordatoriosTableTableManager
                 ultimoEnvioCorreo: ultimoEnvioCorreo,
                 horaAviso: horaAviso,
                 minutoAviso: minutoAviso,
+                diaOriginal: diaOriginal,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -9695,6 +10162,216 @@ typedef $$PresupuestosCategoriasTableProcessedTableManager =
       PresupuestosCategoria,
       PrefetchHooks Function()
     >;
+typedef $$CategoriasTableCreateCompanionBuilder =
+    CategoriasCompanion Function({
+      Value<int> id,
+      required String nombre,
+      Value<String> icono,
+      required int color,
+      Value<int> orden,
+      Value<DateTime> creadoEn,
+    });
+typedef $$CategoriasTableUpdateCompanionBuilder =
+    CategoriasCompanion Function({
+      Value<int> id,
+      Value<String> nombre,
+      Value<String> icono,
+      Value<int> color,
+      Value<int> orden,
+      Value<DateTime> creadoEn,
+    });
+
+class $$CategoriasTableFilterComposer
+    extends Composer<_$AppDatabase, $CategoriasTable> {
+  $$CategoriasTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icono => $composableBuilder(
+    column: $table.icono,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orden => $composableBuilder(
+    column: $table.orden,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creadoEn => $composableBuilder(
+    column: $table.creadoEn,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CategoriasTableOrderingComposer
+    extends Composer<_$AppDatabase, $CategoriasTable> {
+  $$CategoriasTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nombre => $composableBuilder(
+    column: $table.nombre,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get icono => $composableBuilder(
+    column: $table.icono,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orden => $composableBuilder(
+    column: $table.orden,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creadoEn => $composableBuilder(
+    column: $table.creadoEn,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CategoriasTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CategoriasTable> {
+  $$CategoriasTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get nombre =>
+      $composableBuilder(column: $table.nombre, builder: (column) => column);
+
+  GeneratedColumn<String> get icono =>
+      $composableBuilder(column: $table.icono, builder: (column) => column);
+
+  GeneratedColumn<int> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<int> get orden =>
+      $composableBuilder(column: $table.orden, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creadoEn =>
+      $composableBuilder(column: $table.creadoEn, builder: (column) => column);
+}
+
+class $$CategoriasTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CategoriasTable,
+          Categoria,
+          $$CategoriasTableFilterComposer,
+          $$CategoriasTableOrderingComposer,
+          $$CategoriasTableAnnotationComposer,
+          $$CategoriasTableCreateCompanionBuilder,
+          $$CategoriasTableUpdateCompanionBuilder,
+          (
+            Categoria,
+            BaseReferences<_$AppDatabase, $CategoriasTable, Categoria>,
+          ),
+          Categoria,
+          PrefetchHooks Function()
+        > {
+  $$CategoriasTableTableManager(_$AppDatabase db, $CategoriasTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CategoriasTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CategoriasTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CategoriasTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> nombre = const Value.absent(),
+                Value<String> icono = const Value.absent(),
+                Value<int> color = const Value.absent(),
+                Value<int> orden = const Value.absent(),
+                Value<DateTime> creadoEn = const Value.absent(),
+              }) => CategoriasCompanion(
+                id: id,
+                nombre: nombre,
+                icono: icono,
+                color: color,
+                orden: orden,
+                creadoEn: creadoEn,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String nombre,
+                Value<String> icono = const Value.absent(),
+                required int color,
+                Value<int> orden = const Value.absent(),
+                Value<DateTime> creadoEn = const Value.absent(),
+              }) => CategoriasCompanion.insert(
+                id: id,
+                nombre: nombre,
+                icono: icono,
+                color: color,
+                orden: orden,
+                creadoEn: creadoEn,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CategoriasTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CategoriasTable,
+      Categoria,
+      $$CategoriasTableFilterComposer,
+      $$CategoriasTableOrderingComposer,
+      $$CategoriasTableAnnotationComposer,
+      $$CategoriasTableCreateCompanionBuilder,
+      $$CategoriasTableUpdateCompanionBuilder,
+      (Categoria, BaseReferences<_$AppDatabase, $CategoriasTable, Categoria>),
+      Categoria,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9722,4 +10399,6 @@ class $AppDatabaseManager {
         _db,
         _db.presupuestosCategorias,
       );
+  $$CategoriasTableTableManager get categorias =>
+      $$CategoriasTableTableManager(_db, _db.categorias);
 }

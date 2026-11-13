@@ -159,7 +159,7 @@ void main() {
     }
     await montar(tester, const Size(412, 2400), PresupuestosScreen(db: db));
     expect(find.byType(Card), findsOneWidget);
-    expect(find.text('2 CATEGORÍAS CON LÍMITE'), findsOneWidget);
+    expect(find.text('17 CATEGORÍAS · 2 CON LÍMITE'), findsOneWidget);
     expect(find.text('Llevas \$120.000 este mes'), findsOneWidget);
     expect(find.text('Superado por \$50.000 este mes'), findsOneWidget);
     expect(find.text('Sin límite'), findsWidgets);

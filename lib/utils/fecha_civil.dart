@@ -33,6 +33,15 @@ DateTime sumarMesesCivil(DateTime fecha, int meses) {
   return DateTime.utc(fecha.year, fecha.month + meses, dia);
 }
 
+/// Fecha civil [meses] meses después de [fecha], en el día [dia] del mes
+/// (o el último día, si ese mes no lo tiene). Para los recordatorios que se
+/// repiten: con el día que eligió el usuario, un 31 que pasó por febrero (28)
+/// vuelve a 31 en marzo.
+DateTime sumarMesesConDia(DateTime fecha, int meses, int dia) {
+  final ultimoDia = DateTime.utc(fecha.year, fecha.month + meses + 1, 0).day;
+  return DateTime.utc(fecha.year, fecha.month + meses, dia.clamp(1, ultimoDia));
+}
+
 DateTime fechaCivilGuardada(DateTime guardada) {
   final u = guardada.toUtc();
   return DateTime.utc(u.year, u.month, u.day);

@@ -2,8 +2,8 @@ import 'package:drift/drift.dart' show OrderingTerm;
 import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
+import '../../services/categorias_service.dart';
 import '../../theme/theme.dart';
-import '../../utils/categoria_gasto.dart';
 import '../../utils/confirmar.dart';
 import '../../utils/date_format.dart';
 import '../../utils/encabezado_pantalla.dart';
@@ -362,7 +362,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                   for (final g in gastos)
                     _Fila(
                       key: ValueKey(g.id),
-                      icono: CategoriaGasto.iconoPara(g.categoria),
+                      icono: CategoriasService.iconoPara(g.categoria),
                       titulo: g.descripcion,
                       detalle:
                           '${g.categoria} · '

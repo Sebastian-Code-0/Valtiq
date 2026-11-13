@@ -150,4 +150,36 @@ void main() {
     expect(deudas.single.tipoInteres, 'mensual');
     expect(deudas.single.modalidadCalculo, 'compuesto');
   });
+
+  testWidgets('el nombre sugiere nombres conocidos y al elegir uno pone su '
+      'tipo', (tester) async {
+    await montar(tester, const Size(412, 1400));
+    expect(find.text('Persona'), findsOneWidget);
+    await tester.enterText(
+      find.descendant(
+        of: find.byKey(const ValueKey('deuda-nombre')),
+        matching: find.byType(TextFormField),
+      ),
+      'bancol',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Bancolombia'), findsOneWidget);
+    await tester.tap(find.text('Bancolombia'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+      tester
+          .widget<EditableText>(
+            find.descendant(
+              of: find.byKey(const ValueKey('deuda-nombre')),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .controller
+          .text,
+      'Bancolombia',
+    );
+    expect(find.text('Banco o crédito'), findsOneWidget);
+    expect(find.text('Persona'), findsNothing);
+  });
 }

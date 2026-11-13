@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 
 import 'connection.dart' as conn;
+import '../utils/categoria_gasto.dart';
+import 'daos/categorias_dao.dart';
 import 'daos/config_smtp_dao.dart';
 import 'daos/deudas_dao.dart';
 import 'daos/gastos_fijos_dao.dart';
@@ -26,6 +28,7 @@ part 'database.g.dart';
     ConfigSmtps,
     GastosVariables,
     PresupuestosCategorias,
+    Categorias,
   ],
   daos: [
     DeudasDao,
@@ -37,6 +40,7 @@ part 'database.g.dart';
     ConfigSmtpDao,
     GastosVariablesDao,
     PresupuestosCategoriasDao,
+    CategoriasDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -45,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   static QueryExecutor openConnection() => conn.openValtiqConnection();
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -55,6 +59,7 @@ class AppDatabase extends _$AppDatabase {
         const ConfigSmtpsCompanion(id: Value(1)),
         mode: InsertMode.insertOrIgnore,
       );
+      await sembrarCategorias();
     },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
@@ -362,6 +367,7 @@ class AppDatabase extends _$AppDatabase {
                 "'localtime')) AS INTEGER)",
               ),
             },
+            newColumns: [recordatorios.diaOriginal],
           ),
         );
       }
@@ -436,9 +442,70 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(deudas, deudas.diaPago);
         }
       }
+      if (from < 15) {
+        // Categorías editables: la tabla nueva arranca con las de fábrica y
+        // con cualquier otro nombre que ya usen los gastos o presupuestos
+        // (p. ej. traído de un respaldo), para que ningún gasto quede
+        // apuntando a una categoría que no existe.
+        await m.createTable(categorias);
+        await sembrarCategorias();
+        // `Recordatorios.diaOriginal`. Mismo gotcha que `tipoAmortizacion`
+        // (bloque `from < 12`): el rebuild de `recordatorios` en `from < 11`
+        // ya la crea (está en su `newColumns`), así que el `addColumn` solo
+        // hace falta cuando `from` ya era >= 11. Los
+        // recordatorios existentes quedan en null y se usa el día de su
+        // `fechaAlerta`.
+        if (from >= 11) {
+          await m.addColumn(recordatorios, recordatorios.diaOriginal);
+        }
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
+      // La ventana de "Anotar gasto" (widget de Android) abre su propia
+      // conexión mientras la app principal puede tener otra: si las dos
+      // escriben a la vez, se espera hasta 3 s en vez de fallar.
+      await customStatement('PRAGMA busy_timeout = 3000');
     },
   );
+
+  /// Inserta las categorías de fábrica que falten (si [deFabrica]) y una por
+  /// cada nombre que usen los gastos o presupuestos y no exista todavía
+  /// (con el ícono y el color de "Otros"). "Otros" se asegura siempre. No
+  /// toca las que ya están. Se usa al crear la base, al migrar a
+  /// schemaVersion 15, al restaurar un respaldo y después de "Borrar todo".
+  Future<void> sembrarCategorias({bool deFabrica = true}) async {
+    final existentes = {
+      for (final c in await select(categorias).get()) c.nombre,
+    };
+    var orden = existentes.length;
+    for (final c in CategoriaGasto.values) {
+      if (!deFabrica && c != CategoriaGasto.otros) continue;
+      if (existentes.add(c.nombre)) {
+        await into(categorias).insert(
+          CategoriasCompanion.insert(
+            nombre: c.nombre,
+            icono: Value(c.name),
+            color: c.color.toARGB32(),
+            orden: Value(orden++),
+          ),
+        );
+      }
+    }
+    final usados = await customSelect(
+      'SELECT DISTINCT categoria AS n FROM gastos_variables '
+      'UNION SELECT DISTINCT categoria AS n FROM presupuestos_categorias',
+    ).get();
+    for (final fila in usados) {
+      final nombre = (fila.read<String?>('n') ?? '').trim();
+      if (nombre.isEmpty || !existentes.add(nombre)) continue;
+      await into(categorias).insert(
+        CategoriasCompanion.insert(
+          nombre: nombre,
+          color: CategoriaGasto.otros.color.toARGB32(),
+          orden: Value(orden++),
+        ),
+      );
+    }
+  }
 }

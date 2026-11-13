@@ -8,6 +8,7 @@ import '../../db/database.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
+import '../../utils/campo_nombre_sugerencias.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/fecha_civil.dart';
@@ -305,13 +306,19 @@ class _DeudaFormState extends State<DeudaForm>
               children: [
                 CampoEtiquetado(
                   etiqueta: 'Nombre',
-                  child: TextFormField(
+                  ayuda: 'Escribe y elige de la lista o pon el que quieras.',
+                  // Sugiere bancos, tiendas, billeteras… y al elegir uno
+                  // pone su tipo (y su ícono) solo.
+                  child: CampoNombreConSugerencias(
+                    key: const ValueKey('deuda-nombre'),
                     controller: _acreedorCtrl,
                     decoration: const InputDecoration(
                       hintText: 'Ej.: Tarjeta Nu, Juan, Crédito del carro',
                     ),
                     validator: (v) =>
                         (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                    alElegir: (s) =>
+                        setState(() => _tipo = s.grupo.tipoDeuda.clave),
                   ),
                 ),
                 CampoEtiquetado(

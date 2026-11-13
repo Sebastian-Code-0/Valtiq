@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/interes_calculator.dart';
 import '../theme/theme.dart';
-import 'categoria_gasto.dart';
+import '../services/categorias_service.dart';
 import 'date_format.dart';
 import 'encabezado_pantalla.dart';
 import 'format.dart';
@@ -638,7 +638,7 @@ class BarraCategoria extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = colorOverride ?? CategoriaGasto.colorPara(categoria);
+    final color = colorOverride ?? CategoriasService.colorPara(categoria);
     final fraccion = montoMaximo <= 0
         ? 0.0
         : (monto / montoMaximo).clamp(0.0, 1.0);
@@ -650,7 +650,11 @@ class BarraCategoria extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(CategoriaGasto.iconoPara(categoria), size: 16, color: color),
+              Icon(
+                CategoriasService.iconoPara(categoria),
+                size: 16,
+                color: color,
+              ),
               const SizedBox(width: AppSpacing.sm),
               SizedBox(
                 width: 96,
@@ -765,7 +769,7 @@ class BarraCategoriaComparada extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = CategoriaGasto.colorPara(categoria);
+    final color = CategoriasService.colorPara(categoria);
     final fraccionA = montoMaximo <= 0
         ? 0.0
         : (montoA / montoMaximo).clamp(0.0, 1.0);
@@ -780,7 +784,11 @@ class BarraCategoriaComparada extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(CategoriaGasto.iconoPara(categoria), size: 16, color: color),
+              Icon(
+                CategoriasService.iconoPara(categoria),
+                size: 16,
+                color: color,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(

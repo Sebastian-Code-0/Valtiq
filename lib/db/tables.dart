@@ -122,6 +122,12 @@ class Recordatorios extends Table {
   DateTimeColumn get ultimoEnvioCorreo => dateTime().nullable()();
   IntColumn get horaAviso => integer().withDefault(const Constant(12))();
   IntColumn get minutoAviso => integer().withDefault(const Constant(0))();
+  // Día del mes que el usuario eligió para un recordatorio que se repite
+  // (1–31). Al pasar por un mes corto la fecha baja a su último día (31 →
+  // 28 de febrero); con esto el mes siguiente vuelve al 31 en vez de
+  // quedarse en 28 para siempre. null = recordatorio guardado antes de
+  // schemaVersion 15 (se usa el día de `fechaAlerta`).
+  IntColumn get diaOriginal => integer().nullable()();
 }
 
 class ConfigSmtps extends Table {
@@ -165,5 +171,30 @@ class PresupuestosCategorias extends Table {
   @override
   List<Set<Column>> get uniqueKeys => [
     {categoria},
+  ];
+}
+
+/// Categorías de los gastos del día a día, editables por el usuario desde
+/// schemaVersion 15 (antes eran fijas en `CategoriaGasto`).
+///
+/// Los gastos y los presupuestos siguen guardando el NOMBRE de su categoría
+/// (texto), no este id: así los respaldos viejos se leen sin conversión y
+/// renombrar una categoría es un solo UPDATE sobre los gastos que la usan
+/// (ver `CategoriasDao.actualizar`).
+class Categorias extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get nombre => text()();
+  // Clave del catálogo fijo de `lib/utils/iconos_categoria.dart` (no el
+  // código del ícono: Flutter descarta en el APK los íconos que no se usan
+  // por nombre en el código).
+  TextColumn get icono => text().withDefault(const Constant('otros'))();
+  // Color ARGB (0xFFRRGGBB), uno de la paleta de `iconos_categoria.dart`.
+  IntColumn get color => integer()();
+  IntColumn get orden => integer().withDefault(const Constant(0))();
+  DateTimeColumn get creadoEn => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {nombre},
   ];
 }

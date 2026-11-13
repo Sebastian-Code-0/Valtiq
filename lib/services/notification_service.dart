@@ -177,9 +177,13 @@ class NotificationService {
         // Siempre se suma desde la fecha ORIGINAL (no desde el paso
         // anterior) para que un día 31 que pasó por febrero vuelva a caer
         // en 31 y no se quede en 28.
+        // `diaOriginal` (schemaVersion 15) recuerda el día que eligió el
+        // usuario: sin él, un 31 que cayó en 28 de febrero se quedaba en 28
+        // todos los meses siguientes.
+        final dia = r.diaOriginal ?? diaAlerta.day;
         DateTime nuevaFecha = diaAlerta;
         for (var meses = 1; ; meses++) {
-          nuevaFecha = sumarMesesCivil(diaAlerta, meses);
+          nuevaFecha = sumarMesesConDia(diaAlerta, meses, dia);
           final diff = nuevaFecha.difference(hoyCivil).inDays;
           if (diff >= -7) break;
         }
@@ -225,7 +229,9 @@ class NotificationService {
             SmtpService.buildServer(config, password),
           );
         } catch (e) {
-          debugPrint('NotificationService: no se pudo abrir la conexión SMTP: $e');
+          debugPrint(
+            'NotificationService: no se pudo abrir la conexión SMTP: $e',
+          );
           conexion = null;
         }
       }
@@ -256,7 +262,8 @@ class NotificationService {
           r.horaAviso,
           r.minutoAviso,
         );
-        final horaCumplida = !programacionSoportada || !ahora.isBefore(horaAviso);
+        final horaCumplida =
+            !programacionSoportada || !ahora.isBefore(horaAviso);
 
         if ((tipo == 'sistema' || tipo == 'ambos') && horaCumplida) {
           if (_debeAvisar(
@@ -307,7 +314,9 @@ class NotificationService {
         try {
           await conexion.close();
         } catch (e) {
-          debugPrint('NotificationService: fallo al cerrar la conexión SMTP: $e');
+          debugPrint(
+            'NotificationService: fallo al cerrar la conexión SMTP: $e',
+          );
         }
       }
     }
@@ -390,7 +399,9 @@ class NotificationService {
     for (final linea in guardados) {
       final partes = linea.split('|');
       final cuandoMs = partes.length == 2 ? int.tryParse(partes[0]) : null;
-      final recordatorioId = partes.length == 2 ? int.tryParse(partes[1]) : null;
+      final recordatorioId = partes.length == 2
+          ? int.tryParse(partes[1])
+          : null;
       if (cuandoMs == null || recordatorioId == null) continue;
       if (cuandoMs > ahoraMs) {
         pendientes.add(linea);
@@ -537,14 +548,18 @@ class NotificationService {
       // después de activarlo. Se reintenta en modo aproximado, que no
       // necesita ningún permiso especial.
       if (modo == AndroidScheduleMode.inexactAllowWhileIdle) {
-        debugPrint('NotificationService: no se pudo programar el aviso $id: $e');
+        debugPrint(
+          'NotificationService: no se pudo programar el aviso $id: $e',
+        );
         return false;
       }
       try {
         await intentar(AndroidScheduleMode.inexactAllowWhileIdle);
         return true;
       } catch (e2) {
-        debugPrint('NotificationService: no se pudo programar el aviso $id: $e2');
+        debugPrint(
+          'NotificationService: no se pudo programar el aviso $id: $e2',
+        );
         return false;
       }
     }
@@ -871,7 +886,9 @@ class NotificationService {
       // cancel() requires MSIX packaging on Windows; ignore the error otherwise.
       await _plugin.cancel(id: id);
     } catch (e) {
-      debugPrint('NotificationService: fallo al cancelar la notificación $id: $e');
+      debugPrint(
+        'NotificationService: fallo al cancelar la notificación $id: $e',
+      );
     }
   }
 }

@@ -36,6 +36,52 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Ventana "Anotar gasto" del widget: aparte de la app (su propia
+             tarea, no sale en recientes) y transparente. -->
+        <activity
+            android:name=".AnotarActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.valtiq.valtiq.anotar"
+            android:theme="@style/AnotarTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize" />
+        <!-- Widgets de la pantalla de inicio (ResumenWidgets.kt). -->
+        <receiver
+            android:name=".AnotarWidget"
+            android:exported="false"
+            android:label="@string/widget_anotar_nombre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_anotar_info" />
+        </receiver>
+        <receiver
+            android:name=".DeudasWidget"
+            android:exported="false"
+            android:label="@string/widget_deudas_nombre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_deudas_info" />
+        </receiver>
+        <receiver
+            android:name=".PrestamosWidget"
+            android:exported="false"
+            android:label="@string/widget_prestamos_nombre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_prestamos_info" />
+        </receiver>
         <!-- flutter_local_notifications: muestra los avisos programados a su
              hora y los reprograma tras reiniciar, encender o actualizar. -->
         <receiver

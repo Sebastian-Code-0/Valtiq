@@ -11,9 +11,14 @@ class EncabezadoPantalla extends StatelessWidget {
     required this.titulo,
     this.kicker,
     this.accion,
+    this.multilinea = false,
   });
 
   final String titulo;
+
+  /// Si el título no cabe, sigue en el renglón de abajo en vez de cortarse
+  /// con "…" (el saludo de Inicio lleva el nombre de la persona).
+  final bool multilinea;
 
   /// Se muestra en mayúsculas; se escribe normal ("3 activas").
   final String? kicker;
@@ -37,8 +42,8 @@ class EncabezadoPantalla extends StatelessWidget {
               ],
               Text(
                 titulo,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: multilinea ? null : 1,
+                overflow: multilinea ? null : TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: fuenteTexto,
                   fontSize: ancho ? 40 : 30,

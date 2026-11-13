@@ -19,7 +19,8 @@ rastreo.
 - Recordatorios de pago
 - Configuración de correo SMTP (si decides usar la función de recordatorios
   por correo)
-- Preferencias de apariencia (tema, color de acento)
+- Categorías de gasto que creas o cambias
+- Preferencias de apariencia (tema, posición del menú)
 - Si activas el bloqueo de la app (ver abajo): un hash con salt de tu PIN —
   nunca el PIN en sí
 
@@ -43,6 +44,19 @@ la app.
 - Esta función es solo un candado de acceso a la app: no cifra ni protege
   de forma adicional los datos guardados en el dispositivo (para eso está
   el cifrado AES-256 de las credenciales SMTP, descrito abajo).
+
+## Función opcional: widgets de la pantalla de inicio (Android)
+
+Si pones un widget de Valtiq en tu pantalla de inicio:
+- **Deudas activas / Préstamos activos** muestran en la pantalla de inicio
+  cuánto debes o te deben y a quién. Esos textos se guardan en el
+  almacenamiento privado de la app para que Android pueda dibujar el
+  widget; no salen del dispositivo. Cualquiera que vea tu pantalla de
+  inicio los puede leer, aunque tengas el bloqueo con PIN activo: si no lo
+  quieres así, no pongas esos widgets.
+- **Anotar gasto** abre una ventanita para agregar un gasto **sin pedir el
+  PIN** (a propósito, para que sea rápido). Solo permite agregar: no
+  muestra nada de lo que ya tienes guardado.
 
 ## Función opcional: recordatorios por correo (SMTP)
 

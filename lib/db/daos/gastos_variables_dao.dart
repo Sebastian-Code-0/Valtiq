@@ -53,6 +53,26 @@ class GastosVariablesDao extends DatabaseAccessor<AppDatabase>
         });
   }
 
+  /// Lo gastado en una categoría en un mes (consulta de una vez, sin
+  /// quedarse escuchando).
+  Future<int> totalCategoriaMes(String categoria, int anio, int mes) async {
+    final suma = gastosVariables.monto.sum();
+    final fila =
+        await (selectOnly(gastosVariables)
+              ..addColumns([suma])
+              ..where(
+                gastosVariables.categoria.equals(categoria) &
+                    gastosVariables.fecha.isBiggerOrEqualValue(
+                      DateTime.utc(anio, mes, 1),
+                    ) &
+                    gastosVariables.fecha.isSmallerThanValue(
+                      DateTime.utc(anio, mes + 1, 1),
+                    ),
+              ))
+            .getSingle();
+    return fila.read(suma) ?? 0;
+  }
+
   Stream<int> watchTotalMes(int anio, int mes) {
     final inicio = DateTime.utc(anio, mes, 1);
     final fin = DateTime.utc(anio, mes + 1, 1);

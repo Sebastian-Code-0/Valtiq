@@ -1,6 +1,6 @@
 # Arquitectura de Valtiq
 
-## Base de datos (SQLite vía drift, schemaVersion 14)
+## Base de datos (SQLite vía drift, schemaVersion 15)
 
 ### Tablas
 
@@ -160,10 +160,51 @@ ni columna `fecha`: siempre es recurrente.
 | Columna       | Tipo     | Notas                                |
 |---------------|----------|---------------------------------------|
 | id            | INTEGER  | PK autoincrement                     |
-| categoria     | TEXT     | UNIQUE — mismo texto que CategoriaGasto.nombre |
+| categoria     | TEXT     | UNIQUE — nombre de una fila de `Categorias` |
 | limiteMensual | INTEGER  | pesos enteros                         |
 | creadoEn      | DATETIME | default now                          |
 | actualizadoEn | DATETIME | default now                          |
+
+**Categorias** — categorías de los gastos del día a día, editables
+(schemaVersion 15; antes eran fijas en `CategoriaGasto`)
+| Columna  | Tipo     | Notas |
+|----------|----------|-------|
+| id       | INTEGER  | PK autoincrement |
+| nombre   | TEXT     | UNIQUE |
+| icono    | TEXT     | clave del catálogo fijo de `utils/iconos_categoria.dart` (Flutter descarta en el APK los íconos que no aparecen escritos en el código, por eso no se guarda el código del ícono) |
+| color    | INTEGER  | ARGB, de la paleta `coloresCategoria` |
+| orden    | INTEGER  | orden en las listas |
+| creadoEn | DATETIME | default now |
+
+`GastosVariables.categoria` y `PresupuestosCategorias.categoria` siguen
+guardando el **nombre** (texto), no el id: los respaldos viejos se leen
+sin conversión y renombrar es un solo `UPDATE` sobre gastos y presupuesto
+dentro de la misma transacción (`CategoriasDao.actualizar`). "Otros" no se
+puede renombrar ni borrar: es a donde van los gastos de una categoría
+borrada. `AppDatabase.sembrarCategorias()` crea las de fábrica que falten
+más una por cada nombre que usen gastos/presupuestos y no exista (para que
+ningún gasto quede huérfano); se usa al crear la base, al migrar, al
+restaurar un respaldo y en "Borrar todo".
+
+Borrar una categoría (`CategoriasDao.borrar`): en una transacción borra sus
+gastos del día a día de todos los meses **o** los pasa a "Otros"
+(`moverAOtros`), borra su presupuesto y la categoría. La pantalla
+(`BorrarCategoriaDialog`) primero dice cuántos gastos, cuánto suman y qué
+límite tiene, advierte que no hay papelera y ofrece pasarlos a "Otros";
+después, en la misma ventana, dice lo que se borró. Decisión del usuario
+(2026-11-12). Los recordatorios no se pueden vincular a gastos del día a
+día, así que no hay avisos que limpiar.
+
+`CategoriasService.lista` (`ValueNotifier`) las tiene en memoria para pintar
+ícono y color de cada gasto sin esperar a la base; se carga en `main()` y
+se mantiene sola con `watchCategorias()`. Sin cargar (pruebas) responde con
+las de fábrica.
+
+**Recordatorios.diaOriginal** (schemaVersion 15, nullable): día del mes que
+eligió el usuario para un recordatorio que se repite. La reprogramación
+mensual (`NotificationService.revisarRecordatorios`) usa
+`sumarMesesConDia(fecha, meses, diaOriginal ?? fecha.day)`: un 31 que pasó
+por febrero (28) vuelve a 31 en marzo. Antes se quedaba en 28 para siempre.
 
 ### Índices
 - `idx_pagos_recibidos_prestamo_id` en `PagosRecibidos.prestamoId`
@@ -290,6 +331,15 @@ versiones (no en el schema actual ni en una tabla recién creada), hay que
 guardarlo con el rango `from` correcto — no basta con que el bloque
 `if (from < N)` que lo contiene ya limite cuándo corre.
 `test/db/migration_v1_test.dart` cubre el salto completo v1→v12.
+
+- v14 → v15: crear `Categorias` (sembrada con las de fábrica y las que ya
+  usaban los gastos/presupuestos) y `Recordatorios.diaOriginal`. Mismo
+  gotcha de `newColumns`: el rebuild de `recordatorios` en `from < 11`
+  declara `diaOriginal` y el `addColumn` solo corre si `from >= 11`.
+  `test/db/migration_v15_test.dart` cubre v13→v15 y v14→v15.
+- `beforeOpen` fija también `PRAGMA busy_timeout = 3000`: la ventana de
+  "Anotar gasto" del widget abre su propia conexión mientras la app puede
+  tener otra abierta.
 
 ### Fechas de negocio vs. timestamps de auditoría
 
@@ -572,6 +622,69 @@ nunca muestran cifras distintas:
   meses, fecha libre de deudas, intereses totales y el orden con la fecha de
   cada deuda. La estrategia y el extra se guardan en `SharedPreferences`
   (`valtiq_plan_estrategia`, `valtiq_plan_extra`).
+
+### Widgets de Android y "Anotar gasto" (2026-11-12)
+
+Decisión del usuario: el registro rápido es **solo por widget**; no hay
+botón de registro rápido dentro de la app.
+
+- **Tres widgets** (`android/app/src/main/kotlin/.../ResumenWidgets.kt`,
+  con el paquete `home_widget`, licencia BSD, solo dependencias AndroidX):
+  - `AnotarWidget`: una píldora vino "+ Anotar gasto". Abre
+    `AnotarActivity`.
+  - `DeudasWidget` y `PrestamosWidget`: total de hoy (con interés), cuántos,
+    los tres de mayor saldo, "+ N más" y "Actualizado <fecha>". Al tocarlos
+    abren Valtiq en esa sección (`valtiq://deudas` / `valtiq://prestamos`,
+    `ShellScreen._abrirDesdeWidget`), con el bloqueo de siempre.
+  - Diseños en `res/layout/widget_*.xml`, colores del tema en
+    `res/values(-night)/colores_widget.xml`.
+- **Datos de los widgets de resumen:** `WidgetsService` escucha
+  `DashboardService.watchSaldosDeudasActivas/PrestamosActivos` mientras la
+  app está abierta y guarda los textos ya formateados
+  (`contenidoWidgetResumen`, probado sin Android) con
+  `HomeWidget.saveWidgetData`; luego `updateWidget`. El interés cambia cada
+  día y el widget solo se actualiza cuando se abre Valtiq: por eso muestra
+  la fecha. Por decisión del usuario estos widgets **no** se ocultan con el
+  bloqueo con PIN (ponerlos es opcional).
+- **"Anotar gasto":** `AnotarActivity` es un `FlutterActivity` aparte
+  (tarea propia, fuera de recientes, fondo transparente) que corre
+  `anotarMain()` de `main.dart`: su propia conexión a la base y solo
+  `AnotarRapidoScreen`, sin splash ni bloqueo con PIN (decisión del
+  usuario: solo agrega un gasto y no muestra nada de lo guardado). Un
+  renglón ("café 5mil"), vista previa de lo entendido, categoría
+  propuesta en píldoras (se puede cambiar) y Guardar/Enter. Después:
+  "Guardado", aviso si se pasó el presupuesto del mes, "Deshacer" y
+  "Anotar otro"; se cierra sola a los 4 s. Sin nombre → "Sin nombre"; la
+  fecha es hoy.
+- **Lectura de la línea:** `utils/gasto_rapido.dart` (`leerGastoRapido`):
+  5000, 5.000, 5,000, $5.000, 5mil, 5 mil, 5k, 5 lucas, 2,5 mil, 15 mil 500,
+  1 millón, 2 palos, 2 millones 500 mil…; con varios números gana el
+  marcado como plata ($, mil, pesos) y si no el mayor. `leerListaGastos`
+  ya lee listas enteras (para un "Pegar lista" futuro).
+- **Categoría propuesta** (`categoriaPropuesta`): 1) la que se usó antes
+  para ese nombre (`categoriaAprendida`, del historial: mismo nombre sin
+  tildes/mayúsculas, o una palabra de 4+ letras en común); 2) la de la
+  lista de nombres conocidos (`categoriaPorNombre`); 3) "Otros". Siempre
+  una categoría que existe.
+- **Al volver a la app** (`ShellScreen._alVolver`) se llama
+  `markTablesUpdated([gastosVariables])`: lo anotado entró por otra
+  conexión y las pantallas no se habrían enterado.
+
+### Lista de nombres conocidos (2026-11-12)
+
+`utils/nombres_conocidos.dart`: ~550 nombres de Colombia como **texto**
+(sin logos: decisión tomada por derecho de autor/marcas y por F-Droid) en
+grupos (bancos, billeteras, tarjetas de tiendas, financieras, cooperativas,
+cajas de compensación, supermercados, tiendas, droguerías, ropa,
+gasolineras, operadores, servicios públicos por ciudad, transporte, viajes,
+suscripciones, restaurantes, salud, seguros, belleza, mascotas, giros y
+apuestas, entretenimiento), con alias, categoría de gasto y tipo de deuda
+por grupo, más ~140 palabras comunes ("café", "bus", "arriendo"). Usos:
+- `CampoNombreConSugerencias` en el nombre de la deuda: sugiere al
+  escribir y al elegir pone el tipo (y con él el ícono genérico).
+- `categoriaPorNombre` para la primera categoría de un gasto rápido.
+Para agregar un nombre basta sumarlo a su grupo; `nombres_conocidos_test`
+revisa que no se repitan y que sus categorías existan.
 
 ## Bloqueo de la app (PIN/biometría)
 

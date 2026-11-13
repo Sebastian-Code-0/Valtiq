@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_anotar_nombre">Anotar gasto</string>
+    <string name="widget_anotar_descripcion">Anota un gasto del día a día en una línea: café 5000.</string>
+    <string name="widget_deudas_nombre">Deudas activas</string>
+    <string name="widget_deudas_descripcion">Cuánto debes hoy y tus deudas más grandes.</string>
+    <string name="widget_prestamos_nombre">Préstamos activos</string>
+    <string name="widget_prestamos_descripcion">Cuánto te deben hoy y a quién.</string>
+</resources>

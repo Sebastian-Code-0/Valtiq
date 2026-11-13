@@ -100,6 +100,22 @@ En Android 13+ (API 33), el sistema muestra un diálogo pidiendo permiso de noti
 | Botón "atrás" | N/A | Funciona con `Navigator.pop` estándar de Flutter |
 | Teclado | N/A | `adjustResize` configurado en AndroidManifest |
 
+## Widgets de la pantalla de inicio
+
+Tres widgets (mantener presionada la pantalla de inicio → Widgets → Valtiq):
+
+| Widget | Qué hace |
+|--------|----------|
+| Anotar gasto | Abre `AnotarActivity` (Flutter con `anotarMain`, fondo transparente, tarea aparte) para escribir "café 5000" y guardarlo. No pide PIN. |
+| Deudas activas | Total de hoy, cuántas y las 3 mayores. Al tocarlo abre Valtiq en Deudas. |
+| Préstamos activos | Lo que te deben hoy, cuántos y los 3 mayores. Al tocarlo abre Valtiq en Préstamos. |
+
+Los de resumen se actualizan cuando Valtiq se abre (el interés cambia cada
+día; por eso muestran "Actualizado <fecha>"). Código: `ResumenWidgets.kt`,
+`AnotarActivity.kt`, `res/layout/widget_*.xml`, `res/xml/widget_*_info.xml`,
+`lib/services/widgets_service.dart`, `lib/screens/anotar/anotar_rapido.dart`.
+Paquete: `home_widget` (BSD-3, solo AndroidX: Glance, WorkManager).
+
 ## Limitaciones conocidas
 
 - **Notificaciones programadas:** los recordatorios se programan en el sistema (`zonedSchedule`) y suenan con la app cerrada, también tras reiniciar. Límites: "Forzar detención" cancela los avisos hasta volver a abrir la app, y los correos solo se envían al abrirla. Ver `docs/background-notifications-android.md`.

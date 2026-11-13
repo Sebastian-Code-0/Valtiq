@@ -1,5 +1,37 @@
 # Changelog
 
+## Migración v15: categorías editables, widgets y anotar en una línea (2026-11-12)
+
+- **Base de datos (schemaVersion 15):** tabla `Categorias` (nombre, ícono,
+  color, orden) sembrada con las de fábrica y las que ya usaban los gastos;
+  `Recordatorios.diaOriginal`; `PRAGMA busy_timeout`. Pruebas de migración
+  v13→v15 y v14→v15.
+- **Categorías editables** (Ajustes → Presupuestos): crear, cambiar nombre,
+  ícono y color, y tope mensual en una sola ventana. Renombrar cambia
+  también sus gastos y su presupuesto. Borrar explica antes todo lo que se
+  pierde (gastos de todos los meses y su límite; no hay papelera), ofrece
+  pasar los gastos a "Otros" y después dice lo que se borró. "Otros" no se
+  puede borrar ni renombrar. El formulario de gasto usa las categorías
+  actuales.
+- **Recordatorios mensuales:** recuerdan el día elegido; un 31 que pasa por
+  febrero vuelve a 31 (antes se quedaba en 28).
+- **Respaldo:** formato 2, con las categorías. Los respaldos viejos se
+  siguen leyendo (arman las de fábrica más las que usen sus gastos).
+  "Borrar todo" deja las categorías de fábrica.
+- **Widgets de Android:** "Anotar gasto", "Deudas activas" y "Préstamos
+  activos" (`home_widget`). El de anotar abre una ventana encima de la
+  pantalla de inicio, sin PIN: un renglón ("café 5mil"), categoría
+  propuesta, Guardar; "Deshacer" y "Anotar otro"; aviso si se pasa el
+  presupuesto. Los de resumen abren la sección al tocarlos.
+- **Escribir en una línea:** `leerGastoRapido` entiende 5000, 5.000, 5mil,
+  5k, 5 lucas, 2,5 mil, 15 mil 500, 1 millón, 2 palos… La categoría se
+  aprende del historial; la primera vez la sugiere la lista de nombres.
+- **Lista de nombres conocidos** (~550, sin logos) con sugerencias en el
+  nombre de la deuda, que además ponen el tipo solo.
+- **Inicio:** el saludo con un nombre largo pasa al renglón de abajo en vez
+  de cortarse con "…" (`EncabezadoPantalla.multilinea`).
+- Tests: 423.
+
 ## Celular: barra de secciones flotante (2026-11-12)
 
 - **Barra inferior nueva** (`BarraInferior`): píldora flotante separada de

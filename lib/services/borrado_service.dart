@@ -33,7 +33,10 @@ abstract class BorradoService {
       await db.delete(db.gastosFijos).go();
       await db.delete(db.gastosVariables).go();
       await db.delete(db.presupuestosCategorias).go();
+      await db.delete(db.categorias).go();
       await db.delete(db.configSmtps).go();
+      // Como recién instalada: vuelven las categorías de fábrica.
+      await db.sembrarCategorias();
     });
 
     await PerfilService.quitarFoto();
