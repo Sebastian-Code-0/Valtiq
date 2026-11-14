@@ -110,6 +110,47 @@ void main() {
     });
   });
 
+  group('leerGastoRapido: números escritos en letras', () {
+    test('el caso del pedido: "comida cincuenta mil pesos"', () {
+      espera('comida cincuenta mil pesos', 'Comida', 50000);
+      espera('comida cincuenta mil', 'Comida', 50000);
+      espera('Comida Cincuenta Mil Pesos', 'Comida', 50000);
+    });
+
+    test('miles, centenas y el "y" de las decenas', () {
+      espera('mercado treinta y cinco mil', 'Mercado', 35000);
+      espera('taxi doce mil quinientos', 'Taxi', 12500);
+      espera('almuerzo veintidós mil', 'Almuerzo', 22000);
+      espera('regalo ciento veinte mil', 'Regalo', 120000);
+      espera('zapatos doscientos cincuenta mil pesos', 'Zapatos', 250000);
+      espera('pan mil quinientos', 'Pan', 1500);
+      espera('mil quinientos pan', 'Pan', 1500);
+      espera('arepa dos mil', 'Arepa', 2000);
+      espera('chicle quinientos pesos', 'Chicle', 500);
+      espera('dulce cien pesos', 'Dulce', 100);
+    });
+
+    test('millones y apodos (lucas, palos)', () {
+      espera('moto un millón', 'Moto', 1000000);
+      espera('moto dos millones quinientos mil', 'Moto', 2500000);
+      espera('moto tres palos', 'Moto', 3000000);
+      espera('cena cincuenta lucas', 'Cena', 50000);
+    });
+
+    test('se puede mezclar con un número en cifras en el nombre', () {
+      espera('2 empanadas cinco mil', '2 empanadas', 5000);
+      espera('una empanada tres mil', 'Una empanada', 3000);
+    });
+
+    test('un número en letras que no es plata no cuenta', () {
+      // Sin "mil" ni "pesos", "dos" o "cinco" son cantidades, no el monto.
+      espera('dos empanadas 3000', 'Dos empanadas', 3000);
+      espera('cinco cafés 10000', 'Cinco cafés', 10000);
+      expect(leerGastoRapido('dos empanadas'), isNull);
+      expect(leerGastoRapido('pan y leche'), isNull);
+    });
+  });
+
   group('leerListaGastos', () {
     test('un gasto por renglón, y avisa de los que no traen monto', () {
       final r = leerListaGastos(

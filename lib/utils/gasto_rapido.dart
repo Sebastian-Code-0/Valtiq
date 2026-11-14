@@ -196,6 +196,18 @@ _Candidato? _leerMonto(List<RegExpMatch> f, int i) {
 
   double? n = _numero(f[j]);
   if (n == null) {
+    final letras = _leerEnLetras(f, j);
+    if (letras != null) {
+      return _cerrarMonto(
+        f,
+        desde,
+        letras.hasta,
+        letras.valor,
+        marcado || letras.marcado,
+        false,
+        conLetras: true,
+      );
+    }
     final p = _palabra(f[j]);
     final sigue = j + 1 < f.length ? _palabra(f[j + 1]) : '';
     if ((p == 'un' || p == 'una') &&
@@ -242,16 +254,173 @@ _Candidato? _leerMonto(List<RegExpMatch> f, int i) {
     total += n;
   }
 
-  // "5000 pesos", "5000$"
+  return _cerrarMonto(f, desde, hasta, total, marcado, suelto);
+}
+
+/// Suma al monto que termina en [hasta] la marca de moneda que lo siga
+/// ("5000 pesos", "5000$"). Un número en letras solo cuenta si es plata
+/// clara: con "mil"/"millón" o con "pesos"/`$` ("cinco cafés" no es un
+/// monto; "quinientos pesos" sí).
+_Candidato? _cerrarMonto(
+  List<RegExpMatch> f,
+  int desde,
+  int hasta,
+  double total,
+  bool marcado,
+  bool suelto, {
+  bool conLetras = false,
+}) {
   final despues = hasta + 1 < f.length ? f[hasta + 1] : null;
   if (despues != null &&
       (despues[0] == r'$' || _moneda.contains(_palabra(despues)))) {
     marcado = true;
     hasta += 1;
   }
+  if (conLetras && !marcado) return null;
   if (suelto) desde = hasta; // solo la palabra "mil"
   return _Candidato(desde, hasta, total, marcado, suelto);
 }
+
+/// Lee un número escrito en letras desde la ficha [i]: "cincuenta mil",
+/// "treinta y cinco mil", "mil quinientos", "dos millones quinientos mil",
+/// "ciento veinte lucas". [marcado] dice si trae "mil"/"millón" (o sus
+/// apodos: lucas, palos…). `null` si no empieza un número, o si es solo
+/// "un"/"una", "mil" o "millón" sueltos (esos los lee [_leerMonto]).
+({int hasta, double valor, bool marcado})? _leerEnLetras(
+  List<RegExpMatch> f,
+  int i,
+) {
+  final primera = _palabra(f[i]);
+  // Empieza con un número en letras, o con "mil"/"millón" seguidos de uno
+  // ("mil quinientos"). "lucas" o "palos" al principio no son un número.
+  if (!_numerosEnLetras.containsKey(primera) &&
+      primera != 'mil' &&
+      primera != 'millon') {
+    return null;
+  }
+  var total = 0.0;
+  var grupo = 0;
+  var marcado = false;
+  var hasta = i;
+  var palabras = 0;
+  int? anterior; // la última palabra-número del grupo, para validar el orden
+  var k = i;
+  while (k < f.length) {
+    final p = _palabra(f[k]);
+    final v = _numerosEnLetras[p];
+    if (v != null) {
+      // "cien cinco" sí (105); "veinte treinta" o "cinco seis" no.
+      if (anterior != null && !_seSuman(anterior, v)) break;
+      grupo += v;
+      anterior = v;
+    } else if (p == 'y' && anterior != null && _esDecena(anterior)) {
+      // "treinta y cinco": el "y" solo va entre decenas y unidades.
+      final sigue = k + 1 < f.length
+          ? _numerosEnLetras[_palabra(f[k + 1])]
+          : null;
+      if (sigue == null || sigue >= 10) break;
+      k++;
+      continue;
+    } else if (_unidadMil.contains(p) || _unidadMillon.contains(p)) {
+      // Un multiplicador solo vale tras un número ("dos mil") o al
+      // principio ("mil quinientos"); "dos millones mil" se corta.
+      if (palabras > 0 && anterior == null) break;
+      final base = grupo == 0 ? 1 : grupo;
+      if (_unidadMil.contains(p)) {
+        total += base * 1000;
+      } else {
+        total = (total + base) * 1000000;
+      }
+      grupo = 0;
+      anterior = null;
+      marcado = true;
+    } else {
+      break;
+    }
+    palabras++;
+    hasta = k;
+    k++;
+  }
+  // Una sola palabra suelta ("un", "una", "mil", "millón") la decide
+  // [_leerMonto] como siempre.
+  if (palabras == 1 &&
+      (_unidadMil.contains(primera) ||
+          _unidadMillon.contains(primera) ||
+          (_numerosEnLetras[primera] ?? 0) == 1)) {
+    return null;
+  }
+  return (hasta: hasta, valor: total + grupo, marcado: marcado);
+}
+
+bool _esDecena(int n) => n >= 20 && n < 100 && n % 10 == 0;
+
+/// Si [siguiente] puede ir detrás de [anterior] en el mismo grupo de tres
+/// cifras: centenas + lo que sea menor que cien ("ciento veinte"),
+/// decenas + unidades ("treinta cinco", con o sin "y").
+bool _seSuman(int anterior, int siguiente) =>
+    (anterior >= 100 && anterior % 100 == 0 && siguiente < 100) ||
+    (_esDecena(anterior) && siguiente < 10);
+
+const _numerosEnLetras = {
+  'un': 1,
+  'uno': 1,
+  'una': 1,
+  'dos': 2,
+  'tres': 3,
+  'cuatro': 4,
+  'cinco': 5,
+  'seis': 6,
+  'siete': 7,
+  'ocho': 8,
+  'nueve': 9,
+  'diez': 10,
+  'once': 11,
+  'doce': 12,
+  'trece': 13,
+  'catorce': 14,
+  'quince': 15,
+  'dieciseis': 16,
+  'diecisiete': 17,
+  'dieciocho': 18,
+  'diecinueve': 19,
+  'veinte': 20,
+  'veintiun': 21,
+  'veintiuno': 21,
+  'veintiuna': 21,
+  'veintidos': 22,
+  'veintitres': 23,
+  'veinticuatro': 24,
+  'veinticinco': 25,
+  'veintiseis': 26,
+  'veintisiete': 27,
+  'veintiocho': 28,
+  'veintinueve': 29,
+  'treinta': 30,
+  'cuarenta': 40,
+  'cincuenta': 50,
+  'sesenta': 60,
+  'setenta': 70,
+  'ochenta': 80,
+  'noventa': 90,
+  'cien': 100,
+  'ciento': 100,
+  'doscientos': 200,
+  'doscientas': 200,
+  'trescientos': 300,
+  'trescientas': 300,
+  'cuatrocientos': 400,
+  'cuatrocientas': 400,
+  'quinientos': 500,
+  'quinientas': 500,
+  'seiscientos': 600,
+  'seiscientas': 600,
+  'setecientos': 700,
+  'setecientas': 700,
+  'ochocientos': 800,
+  'ochocientas': 800,
+  'novecientos': 900,
+  'novecientas': 900,
+};
 
 final _bordes = RegExp(r'^[\s\-–—:=,;.+*]+|[\s\-–—:=,;.+*]+$');
 final _colaSobra = RegExp(

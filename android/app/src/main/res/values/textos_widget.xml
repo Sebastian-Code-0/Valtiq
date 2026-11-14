@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_anotar_nombre">Anotar gasto</string>
+    <string name="widget_anotar_corto">Anotar</string>
     <string name="widget_anotar_ejemplo">café 5000</string>
     <string name="widget_anotar_descripcion">Anota un gasto del día a día en una línea: café 5000.</string>
     <string name="widget_deudas_nombre">Deudas activas</string>
+    <string name="widget_deudas_corto">Deudas</string>
     <string name="widget_deudas_descripcion">Cuánto debes hoy, como en Inicio.</string>
     <string name="widget_prestamos_nombre">Prestado activo</string>
+    <string name="widget_prestamos_corto">Préstamos</string>
     <string name="widget_prestamos_descripcion">Cuánto te deben hoy, como en Inicio.</string>
-    <string name="widget_abrir_valtiq">Abre Valtiq para ver tus números al día</string>
+    <string name="widget_abrir_valtiq">Abre Valtiq para verlo</string>
 </resources>

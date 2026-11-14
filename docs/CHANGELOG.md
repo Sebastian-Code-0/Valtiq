@@ -1,5 +1,27 @@
 # Changelog
 
+## Widgets de una fila y montos escritos en letras (2026-11-14)
+
+- **Widgets de deudas y préstamos:** ahora son de una sola fila, del mismo
+  tamaño que "Anotar gasto" (2×1): ícono en un aro fino, título y total de
+  hoy. Ya no llevan nota debajo (no cabe), así que Valtiq deja de guardar
+  `{clave}_nota`. Siguen igual los totales precalculados de 90 días y abrir
+  la sección al tocarlos. Sin datos de hoy, el título dice "Abre Valtiq
+  para verlo".
+- **Ancho mínimo sin texto cortado:** en Android 12+ cada widget tiene una
+  versión compacta que Android elige sola por debajo de 180 dp
+  (`widget_*_compacto.xml`, `vistaSegunAncho` en `ResumenWidgets.kt`):
+  "Anotar" en vez de "Anotar gasto" + "café 5000", y en deudas/préstamos
+  el nombre corto ("Deudas"/"Préstamos", pequeño) encima del total. En Android 11 o antes, el texto se achica solo
+  (autoSize).
+- **Montos en letras:** "comida cincuenta mil pesos" ahora se entiende
+  ($50.000). `leerGastoRapido` lee números escritos en palabras (treinta y
+  cinco mil, mil quinientos, ciento veinte lucas, dos millones quinientos
+  mil…). Solo cuentan si son plata clara ("mil"/"millón" o "pesos"/$):
+  "dos empanadas 3000" sigue siendo 3000.
+- **Anotar gasto:** el "Guardado" se cierra solo a los 3 s (antes 4).
+- Tests: 433.
+
 ## Widgets que funcionan, anotar más rápido y borrar deudas manteniendo presionado (2026-11-12)
 
 - **Widgets de deudas y préstamos:** no se podían agregar ("no se pudo

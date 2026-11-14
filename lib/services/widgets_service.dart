@@ -12,25 +12,10 @@ import 'dashboard_service.dart';
 /// Qué muestra un widget de resumen (deudas o préstamos): lo mismo que la
 /// tarjeta de Inicio.
 enum TipoWidgetResumen {
-  deudas(
-    clave: 'deudas',
-    proveedor: 'com.valtiq.valtiq.DeudasWidget',
-    nota: 'Lo que debes hoy',
-    vacio: 'No tienes deudas activas',
-  ),
-  prestamos(
-    clave: 'prestamos',
-    proveedor: 'com.valtiq.valtiq.PrestamosWidget',
-    nota: 'Lo que te deben hoy',
-    vacio: 'Nadie te debe por ahora',
-  );
+  deudas(clave: 'deudas', proveedor: 'com.valtiq.valtiq.DeudasWidget'),
+  prestamos(clave: 'prestamos', proveedor: 'com.valtiq.valtiq.PrestamosWidget');
 
-  const TipoWidgetResumen({
-    required this.clave,
-    required this.proveedor,
-    required this.nota,
-    required this.vacio,
-  });
+  const TipoWidgetResumen({required this.clave, required this.proveedor});
 
   /// Prefijo de los datos guardados para el widget (los lee el código de
   /// Android en `android/app/src/main/kotlin/.../ResumenWidgets.kt`).
@@ -38,8 +23,6 @@ enum TipoWidgetResumen {
 
   /// Clase de Android del widget.
   final String proveedor;
-  final String nota;
-  final String vacio;
 }
 
 /// Cuántos días quedan calculados para el widget. El interés cambia cada
@@ -60,8 +43,10 @@ String _fechaWidget(DateTime d) =>
 /// probarlo sin Android:
 /// - `{clave}_desde`: el primer día calculado (hoy),
 /// - `{clave}_totales`: un total por renglón, de hoy en adelante
-///   ([diasWidgetResumen] renglones),
-/// - `{clave}_nota`: "Lo que debes hoy", o que no hay ninguna.
+///   ([diasWidgetResumen] renglones).
+///
+/// (Hasta 2026-11-14 también iba una nota; el widget ahora es de una sola
+/// fila y no la muestra.)
 Map<String, String> contenidoWidgetResumen(
   TipoWidgetResumen tipo,
   List<CuentaActiva> cuentas,
@@ -80,7 +65,6 @@ Map<String, String> contenidoWidgetResumen(
           ),
         ),
     ].join('\n'),
-    '${k}_nota': cuentas.isEmpty ? tipo.vacio : tipo.nota,
   };
 }
 

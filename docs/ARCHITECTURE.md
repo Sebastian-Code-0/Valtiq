@@ -632,8 +632,9 @@ botón de registro rápido dentro de la app.
   con el paquete `home_widget`, licencia BSD, solo dependencias AndroidX):
   - `AnotarWidget`: tarjeta con un círculo vino con "+", "Anotar gasto" y
     "café 5000". Abre `AnotarActivity`.
-  - `DeudasWidget` y `PrestamosWidget`: iguales a la tarjeta de Inicio
-    (ícono, título, total de hoy con interés y nota). Al tocarlos abren
+  - `DeudasWidget` y `PrestamosWidget`: una fila del mismo tamaño que el
+    de anotar (2×1): ícono en un aro, título y total de hoy con interés
+    (sin nota desde 2026-11-14: no cabe). Al tocarlos abren
     Valtiq en esa sección (`valtiq://deudas` / `valtiq://prestamos`,
     `ShellScreen._abrirDesdeWidget`), con el bloqueo de siempre.
   - Diseños en `res/layout/widget_*.xml`, colores del tema en
@@ -641,13 +642,20 @@ botón de registro rápido dentro de la app.
     Inicio, en PNG blanco teñido) en `res/drawable-nodpi/`. Solo vistas que
     acepta `RemoteViews` (LinearLayout, ImageView, TextView): una `View`
     suelta hace que Android no deje agregar el widget.
+  - **Versión compacta** (`widget_*_compacto.xml`): en Android 12+
+    `vistaSegunAncho` le pasa a Android las dos versiones y él usa la
+    compacta por debajo de `ANCHO_NORMAL` (180 dp), porque en el ancho
+    mínimo el texto se cortaba. Ojo: a un `RemoteViews` hecho con mapa de
+    tamaños no se le pueden poner textos después; se configuran las dos
+    versiones antes de juntarlas. En Android 11 o antes solo existe la
+    normal, con autoSize.
 - **Datos de los widgets de resumen:** `WidgetsService` escucha
   `DashboardService.watchDeudasActivas/PrestamosActivos` (cada
   `CuentaActiva` sabe calcular su saldo en cualquier día) mientras la app
   está abierta y guarda, ya formateados, los totales de hoy y de los
   próximos `diasWidgetResumen` (90) días (`contenidoWidgetResumen`, probado
   sin Android): `{clave}_desde`, `{clave}_totales` (uno por renglón) y
-  `{clave}_nota`. El widget (`totalDeHoy` en Kotlin) elige el renglón de la
+  (hasta 2026-11-14 también `{clave}_nota`). El widget (`totalDeHoy` en Kotlin) elige el renglón de la
   fecha del celular, así que el interés avanza aunque no se abra Valtiq;
   como los pagos solo se registran dentro de Valtiq, que recalcula todo,
   esos números son los reales. Pasados los 90 días muestra "—" y pide
@@ -666,11 +674,14 @@ botón de registro rápido dentro de la app.
   renglón ("café 5mil"), vista previa de lo entendido, categoría
   propuesta en píldoras (se puede cambiar) y Guardar/Enter. Después:
   "Guardado", aviso si se pasó el presupuesto del mes, "Deshacer" y
-  "Anotar otro"; se cierra sola a los 4 s. Sin nombre → "Sin nombre"; la
+  "Anotar otro"; se cierra sola a los 3 s. Sin nombre → "Sin nombre"; la
   fecha es hoy.
 - **Lectura de la línea:** `utils/gasto_rapido.dart` (`leerGastoRapido`):
   5000, 5.000, 5,000, $5.000, 5mil, 5 mil, 5k, 5 lucas, 2,5 mil, 15 mil 500,
-  1 millón, 2 palos, 2 millones 500 mil…; con varios números gana el
+  1 millón, 2 palos, 2 millones 500 mil… y en letras (`_leerEnLetras`:
+  "cincuenta mil pesos", "treinta y cinco mil", "mil quinientos", "dos
+  millones quinientos mil"; solo si trae mil/millón o pesos/$, para que
+  "dos empanadas" no sea un monto); con varios números gana el
   marcado como plata ($, mil, pesos) y si no el mayor. `leerListaGastos`
   ya lee listas enteras (para un "Pegar lista" futuro).
 - **Categoría propuesta** (`categoriaPropuesta`): 1) la que se usó antes

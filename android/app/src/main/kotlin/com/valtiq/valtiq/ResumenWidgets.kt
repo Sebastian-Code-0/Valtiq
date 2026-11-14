@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
+import android.util.SizeF
 import android.widget.RemoteViews
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
@@ -30,11 +32,10 @@ class AnotarWidget : HomeWidgetProvider() {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        for (id in appWidgetIds) {
-            val vista = RemoteViews(context.packageName, R.layout.widget_anotar)
-            vista.setOnClickPendingIntent(R.id.widget_raiz, abrir)
-            appWidgetManager.updateAppWidget(id, vista)
-        }
+        val vista = vistaSegunAncho(
+            context, R.layout.widget_anotar, R.layout.widget_anotar_compacto,
+        ) { v, _ -> v.setOnClickPendingIntent(R.id.widget_raiz, abrir) }
+        for (id in appWidgetIds) appWidgetManager.updateAppWidget(id, vista)
     }
 
     private companion object {
@@ -51,7 +52,8 @@ class DeudasWidget : HomeWidgetProvider() {
         widgetData: SharedPreferences,
     ) = pintarResumen(
         context, appWidgetManager, appWidgetIds, widgetData,
-        layout = R.layout.widget_deudas, clave = "deudas", seccion = "deudas",
+        layout = R.layout.widget_deudas, compacto = R.layout.widget_deudas_compacto,
+        clave = "deudas", seccion = "deudas",
     )
 }
 
@@ -64,7 +66,9 @@ class PrestamosWidget : HomeWidgetProvider() {
         widgetData: SharedPreferences,
     ) = pintarResumen(
         context, appWidgetManager, appWidgetIds, widgetData,
-        layout = R.layout.widget_prestamos, clave = "prestamos", seccion = "prestamos",
+        layout = R.layout.widget_prestamos,
+        compacto = R.layout.widget_prestamos_compacto,
+        clave = "prestamos", seccion = "prestamos",
     )
 }
 
@@ -90,13 +94,46 @@ private fun totalDeHoy(datos: SharedPreferences, clave: String): String? {
     return if (i < lista.size) lista[i.toInt()] else null
 }
 
-/** Pinta un widget de resumen y lo deja abriendo Valtiq en su sección. */
+/**
+ * Ancho (dp) desde el que cabe el diseño normal. Por debajo, en Android 12+,
+ * se usa el compacto: en el ancho mínimo el normal cortaba el texto.
+ */
+private const val ANCHO_NORMAL = 180f
+
+/**
+ * Las dos versiones de un widget (normal y compacta) para que Android 12+
+ * elija sola según el ancho que le dé el usuario. En Android 11 o antes
+ * solo existe la normal (allí el texto se achica solo con autoSize).
+ * [configurar] recibe cada versión y si es la compacta.
+ */
+private fun vistaSegunAncho(
+    context: Context,
+    normal: Int,
+    compacto: Int,
+    configurar: (RemoteViews, Boolean) -> Unit,
+): RemoteViews {
+    fun crear(layout: Int, esCompacto: Boolean) =
+        RemoteViews(context.packageName, layout).also { configurar(it, esCompacto) }
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return crear(normal, false)
+    return RemoteViews(
+        mapOf(
+            SizeF(0f, 0f) to crear(compacto, true),
+            SizeF(ANCHO_NORMAL, 0f) to crear(normal, false),
+        ),
+    )
+}
+
+/**
+ * Pinta un widget de resumen y lo deja abriendo Valtiq en su sección. Sin
+ * datos de hoy el total queda en "—" y el título invita a abrir Valtiq.
+ */
 private fun pintarResumen(
     context: Context,
     appWidgetManager: AppWidgetManager,
     appWidgetIds: IntArray,
     datos: SharedPreferences,
     layout: Int,
+    compacto: Int,
     clave: String,
     seccion: String,
 ) {
@@ -106,15 +143,12 @@ private fun pintarResumen(
         Uri.parse("valtiq://$seccion"),
     )
     val total = totalDeHoy(datos, clave)
-    for (id in appWidgetIds) {
-        val vista = RemoteViews(context.packageName, layout)
-        vista.setTextViewText(R.id.total, total ?: "—")
-        vista.setTextViewText(
-            R.id.nota,
-            if (total == null) context.getString(R.string.widget_abrir_valtiq)
-            else datos.getString("${clave}_nota", "") ?: "",
-        )
-        vista.setOnClickPendingIntent(R.id.widget_raiz, abrir)
-        appWidgetManager.updateAppWidget(id, vista)
+    val vista = vistaSegunAncho(context, layout, compacto) { v, esCompacto ->
+        v.setTextViewText(R.id.total, total ?: "—")
+        if (!esCompacto && total == null) {
+            v.setTextViewText(R.id.titulo, context.getString(R.string.widget_abrir_valtiq))
+        }
+        v.setOnClickPendingIntent(R.id.widget_raiz, abrir)
     }
+    for (id in appWidgetIds) appWidgetManager.updateAppWidget(id, vista)
 }

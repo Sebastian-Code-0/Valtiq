@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget "Anotar gasto", versión compacta para el ancho mínimo: el círculo
+     con "+" y solo "Anotar" (con el ejemplo "café 5000" no cabe y se cortaba).
+     Android 12+ la elige solo según el ancho (ver ResumenWidgets.kt). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_raiz"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_fondo"
+    android:gravity="center"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="10dp">
+
+    <ImageView
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:background="@drawable/widget_circulo"
+        android:contentDescription="@null"
+        android:padding="7dp"
+        android:src="@drawable/widget_mas" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:maxLines="1"
+        android:text="@string/widget_anotar_corto"
+        android:textColor="@color/widget_texto"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+</LinearLayout>

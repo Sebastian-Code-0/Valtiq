@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget de préstamos, versión compacta para el ancho mínimo: el ícono en
+     su aro, el nombre corto encima del total ("Préstamos") y el total. Android 12+ la elige solo.
+     Los textos los pone ResumenWidgets.kt. Solo vistas que acepta Android en
+     widgets: LinearLayout, ImageView y TextView (una View suelta hace que el
+     widget no se pueda agregar). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_raiz"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_fondo"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="10dp">
+
+    <ImageView
+        android:id="@+id/icono"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:background="@drawable/widget_circulo_borde"
+        android:contentDescription="@null"
+        android:padding="7dp"
+        android:src="@drawable/widget_icono_prestamos"
+        android:tint="@color/widget_acento_texto" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/widget_prestamos_corto"
+            android:textColor="@color/widget_texto_sec"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/total"
+            android:layout_width="match_parent"
+            android:layout_height="24dp"
+            android:autoSizeMaxTextSize="17sp"
+            android:autoSizeMinTextSize="9sp"
+            android:autoSizeTextType="uniform"
+            android:fontFamily="monospace"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:text="—"
+            android:textColor="@color/widget_texto"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

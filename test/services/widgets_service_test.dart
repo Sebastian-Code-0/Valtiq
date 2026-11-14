@@ -24,17 +24,16 @@ void main() {
     expect(totales[0], r'$150.000');
     expect(totales[1], r'$151.000');
     expect(totales[30], r'$180.000');
-    expect(datos['deudas_nota'], 'Lo que debes hoy');
+    expect(datos.containsKey('deudas_nota'), isFalse);
   });
 
-  test('widget de préstamos vacío: \$0 y "Nadie te debe por ahora"', () {
+  test('widget de préstamos vacío: \$0', () {
     final vacio = contenidoWidgetResumen(
       TipoWidgetResumen.prestamos,
       const [],
       hoy,
     );
     expect(vacio['prestamos_totales']!.split('\n').first, r'$0');
-    expect(vacio['prestamos_nota'], 'Nadie te debe por ahora');
   });
 
   test('con una deuda real con interés, el total de dentro de 30 días es el '

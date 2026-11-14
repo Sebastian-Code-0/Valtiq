@@ -47,7 +47,7 @@ class AnotarRapidoScreen extends StatefulWidget {
     required this.db,
     required this.alCerrar,
     this.ahora = DateTime.now,
-    this.cierreAutomatico = const Duration(seconds: 4),
+    this.cierreAutomatico = const Duration(seconds: 3),
     this.oscurecerFondo = true,
   });
 
