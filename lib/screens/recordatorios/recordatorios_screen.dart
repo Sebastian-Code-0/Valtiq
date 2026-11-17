@@ -103,7 +103,9 @@ class _RecordatoriosScreenState extends State<RecordatoriosScreen> {
     await NotificationService.showNotification(
       id: r.id,
       title: r.titulo,
-      body: '🔔 Prueba — ${fechaRelativa(fechaCivilGuardada(r.fechaAlerta))}',
+      body:
+          'Así se verá este aviso. Fecha: '
+          '${fechaRelativa(fechaCivilGuardada(r.fechaAlerta))}',
     );
     if (mounted) {
       mostrarInfo(context, 'Notificación enviada');

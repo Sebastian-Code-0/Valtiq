@@ -22,6 +22,14 @@ abstract class AppLockService {
   static const _kPinSalt = 'valtiq_lock_pin_salt';
   static const _kUseBiometric = 'valtiq_lock_use_biometric';
   static const _kTimeoutSeconds = 'valtiq_lock_timeout_seconds';
+  static const _kPinLargo = 'valtiq_lock_pin_largo';
+
+  /// Largo permitido de un PIN NUEVO. Al verificar se acepta hasta
+  /// [largoMaximoVerificar], por si alguien creó uno más largo antes de
+  /// que existiera este tope (el campo de texto viejo no tenía límite).
+  static const largoMinimo = 4;
+  static const largoMaximo = 8;
+  static const largoMaximoVerificar = 16;
 
   static const timeoutPorDefecto = Duration(seconds: 30);
 
@@ -95,6 +103,7 @@ abstract class AppLockService {
     final hash = await _hashPin(pin, salt);
     await prefs.setString(_kPinSalt, salt);
     await prefs.setString(_kPinHash, hash);
+    await prefs.setInt(_kPinLargo, pin.length);
     await prefs.setBool(_kEnabled, true);
     if (!prefs.containsKey(_kTimeoutSeconds)) {
       await prefs.setInt(_kTimeoutSeconds, timeoutPorDefecto.inSeconds);
@@ -108,6 +117,7 @@ abstract class AppLockService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kPinHash);
     await prefs.remove(_kPinSalt);
+    await prefs.remove(_kPinLargo);
     await prefs.setBool(_kEnabled, false);
   }
 
@@ -116,7 +126,21 @@ abstract class AppLockService {
     final hashGuardado = prefs.getString(_kPinHash);
     final salt = prefs.getString(_kPinSalt);
     if (hashGuardado == null || salt == null) return false;
-    return await _hashPin(pin, salt) == hashGuardado;
+    final ok = await _hashPin(pin, salt) == hashGuardado;
+    // PINs creados antes de guardar el largo: se aprende en el primer
+    // desbloqueo correcto, y desde ahí el teclado entra solo.
+    if (ok && !prefs.containsKey(_kPinLargo)) {
+      await prefs.setInt(_kPinLargo, pin.length);
+    }
+    return ok;
+  }
+
+  /// Cuántos dígitos tiene el PIN guardado, para que el teclado entre solo
+  /// al escribir el último. `null` si aún no se sabe (PIN de antes): ahí
+  /// se muestra el botón de entrar.
+  static Future<int?> largoPin() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_kPinLargo);
   }
 
   static Future<void> cambiarPin(String pinNuevo) async {
@@ -125,6 +149,7 @@ abstract class AppLockService {
     final hash = await _hashPin(pinNuevo, salt);
     await prefs.setString(_kPinSalt, salt);
     await prefs.setString(_kPinHash, hash);
+    await prefs.setInt(_kPinLargo, pinNuevo.length);
   }
 
   static String _generarSalt() {

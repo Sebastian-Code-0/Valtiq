@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -35,7 +36,7 @@ class NotificationService {
     if (Platform.isLinux) {
       final linux = LinuxInitializationSettings(
         defaultActionName: 'Abrir',
-        defaultIcon: AssetsLinuxIcon('assets/logo_icono.png'),
+        defaultIcon: AssetsLinuxIcon('assets/logo_app.png'),
       );
       settings = InitializationSettings(linux: linux);
     } else if (Platform.isAndroid) {
@@ -103,16 +104,7 @@ class NotificationService {
       );
       details = const NotificationDetails(linux: linuxDetails);
     } else if (Platform.isAndroid) {
-      const androidDetails = AndroidNotificationDetails(
-        'valtiq_recordatorios',
-        'Recordatorios',
-        channelDescription: 'Notificaciones de recordatorios de pagos',
-        importance: Importance.high,
-        priority: Priority.high,
-        icon: '@drawable/ic_stat_notif',
-        largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-      );
-      details = const NotificationDetails(android: androidDetails);
+      details = NotificationDetails(android: _detallesAndroidPara(body));
     } else {
       // Windows: basic toast notification; no extra details needed.
       details = const NotificationDetails(
@@ -355,15 +347,28 @@ class NotificationService {
   /// 8:00 p. m., en minutos desde medianoche.
   static const recordatorioDiarioPorDefecto = 20 * 60;
 
-  static const _detallesAndroid = AndroidNotificationDetails(
-    'valtiq_recordatorios',
-    'Recordatorios',
-    channelDescription: 'Notificaciones de recordatorios de pagos',
-    importance: Importance.high,
-    priority: Priority.high,
-    icon: '@drawable/ic_stat_notif',
-    largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-  );
+  /// Cómo se ve un aviso en Android: el ícono pequeño (silueta blanca del
+  /// logo, Android no permite colores ahí) teñido del vino de la marca, el
+  /// ícono de la app a la derecha y el texto completo al desplegarlo (sin
+  /// esto, un texto largo se corta con "…").
+  static AndroidNotificationDetails _detallesAndroidPara(String cuerpo) =>
+      AndroidNotificationDetails(
+        'valtiq_recordatorios',
+        'Recordatorios',
+        channelDescription: 'Notificaciones de recordatorios de pagos',
+        importance: Importance.high,
+        priority: Priority.high,
+        category: AndroidNotificationCategory.reminder,
+        icon: '@drawable/ic_stat_notif',
+        largeIcon: const DrawableResourceAndroidBitmap(
+          '@drawable/ic_notif_grande',
+        ),
+        color: _colorMarca,
+        styleInformation: BigTextStyleInformation(cuerpo),
+      );
+
+  /// Vino de la marca; se lee sobre la cortina clara y la oscura.
+  static const _colorMarca = Color(0xFFB8304C);
 
   static AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
       .resolvePlatformSpecificImplementation<
@@ -474,7 +479,6 @@ class NotificationService {
     );
 
     final modo = await _modoProgramacion(prefs);
-    const detalles = NotificationDetails(android: _detallesAndroid);
     final guardados = <String>[];
     for (var i = 0; i < plan.length; i++) {
       final aviso = plan[i];
@@ -483,7 +487,9 @@ class NotificationService {
         cuando: aviso.cuando,
         titulo: aviso.titulo,
         cuerpo: aviso.cuerpo,
-        detalles: detalles,
+        detalles: NotificationDetails(
+          android: _detallesAndroidPara(aviso.cuerpo),
+        ),
         modo: modo,
       );
       if (programado) {
@@ -510,8 +516,10 @@ class NotificationService {
         id: _idRecordatorioDiario,
         cuando: cuando,
         titulo: '¿Ya anotaste tus gastos de hoy?',
-        cuerpo: 'Te toma menos de un minuto registrarlos en Valtiq.',
-        detalles: detalles,
+        cuerpo: _cuerpoDiario,
+        detalles: NotificationDetails(
+          android: _detallesAndroidPara(_cuerpoDiario),
+        ),
         modo: modo,
         repetirCadaDia: true,
       );
@@ -522,6 +530,9 @@ class NotificationService {
   /// hace falta la base de datos de husos horarios ni otra dependencia. El
   /// plan se rehace cada vez que se abre la app, lo que corrige cualquier
   /// cambio de huso u horario de verano.
+  static const _cuerpoDiario =
+      'Te toma menos de un minuto registrarlos en Valtiq.';
+
   static Future<bool> _programar({
     required int id,
     required DateTime cuando,
@@ -755,7 +766,7 @@ class NotificationService {
     if (r.referenciaTabla == null || r.referenciaId == null) {
       return (
         sistema: estado,
-        email: '📋 Recordatorio: ${r.titulo}\n\n⏰ $estado',
+        email: 'Recordatorio: ${r.titulo}\n\nEstado: $estado',
       );
     }
 
@@ -775,7 +786,7 @@ class NotificationService {
       );
       return (
         sistema: estado,
-        email: '📋 Recordatorio: ${r.titulo}\n\n⏰ $estado',
+        email: 'Recordatorio: ${r.titulo}\n\nEstado: $estado',
       );
     }
   }
@@ -798,21 +809,23 @@ class NotificationService {
           return (sistema: msg, email: msg);
         }
         final monto = '${formatCOP(deuda.montoOriginal)} COP';
-        final sistema = 'Pago a ${deuda.acreedorNombre} — $monto — $estado';
+        final sistema =
+            '$estado · Pago a ${deuda.acreedorNombre} · '
+            '${formatCOP(deuda.montoOriginal)}';
 
         final buf = StringBuffer()
-          ..writeln('📋 Recordatorio: ${r.titulo}')
+          ..writeln('Recordatorio: ${r.titulo}')
           ..writeln()
-          ..writeln('💰 Monto original: $monto');
+          ..writeln('Monto original: $monto');
         if (deuda.fechaLimite != null) {
           buf.writeln(
-            '📅 Fecha límite: '
+            'Fecha límite: '
             '${formatFechaLegible(fechaCivilGuardada(deuda.fechaLimite!))}',
           );
         }
-        buf.writeln('⏰ Estado: $estado');
+        buf.writeln('Estado: $estado');
         if (deuda.cuotaMensual != null) {
-          buf.write('💳 Cuota mensual: ${formatCOP(deuda.cuotaMensual!)} COP');
+          buf.write('Cuota mensual: ${formatCOP(deuda.cuotaMensual!)} COP');
         }
 
         return (sistema: sistema, email: buf.toString().trimRight());
@@ -824,21 +837,23 @@ class NotificationService {
           return (sistema: msg, email: msg);
         }
         final monto = '${formatCOP(prestamo.montoPrestado)} COP';
-        final sistema = 'Cobro a ${prestamo.deudorNombre} — $monto — $estado';
+        final sistema =
+            '$estado · Cobro a ${prestamo.deudorNombre} · '
+            '${formatCOP(prestamo.montoPrestado)}';
 
         final buf = StringBuffer()
-          ..writeln('📋 Recordatorio: ${r.titulo}')
+          ..writeln('Recordatorio: ${r.titulo}')
           ..writeln()
-          ..writeln('💰 Monto prestado: $monto');
+          ..writeln('Monto prestado: $monto');
         if (prestamo.fechaPactadaPago != null) {
           buf.writeln(
-            '📅 Fecha pactada: '
+            'Fecha pactada: '
             '${formatFechaLegible(fechaCivilGuardada(prestamo.fechaPactadaPago!))}',
           );
         }
-        buf.writeln('⏰ Estado: $estado');
+        buf.writeln('Estado: $estado');
         if (prestamo.deudorContacto.isNotEmpty) {
-          buf.write('📞 Contacto: ${prestamo.deudorContacto}');
+          buf.write('Contacto: ${prestamo.deudorContacto}');
         }
 
         return (sistema: sistema, email: buf.toString().trimRight());
@@ -850,14 +865,15 @@ class NotificationService {
           return (sistema: msg, email: msg);
         }
         final monto = '${formatCOP(gasto.monto)} COP';
-        final sistema = '${gasto.concepto} — $monto — $estado';
+        final sistema =
+            '$estado · ${gasto.concepto} · ${formatCOP(gasto.monto)}';
 
         final buf = StringBuffer()
-          ..writeln('📋 Recordatorio: ${r.titulo}')
+          ..writeln('Recordatorio: ${r.titulo}')
           ..writeln()
-          ..writeln('💰 Monto: $monto')
-          ..writeln('🔄 Frecuencia: ${gasto.frecuencia}')
-          ..write('⏰ Estado: $estado');
+          ..writeln('Monto: $monto')
+          ..writeln('Frecuencia: ${gasto.frecuencia}')
+          ..write('Estado: $estado');
 
         return (sistema: sistema, email: buf.toString());
 
@@ -865,7 +881,7 @@ class NotificationService {
         final estado0 = _bodyParaRecordatorio(diasFaltantes);
         return (
           sistema: estado0,
-          email: '📋 Recordatorio: ${r.titulo}\n\n⏰ $estado0',
+          email: 'Recordatorio: ${r.titulo}\n\nEstado: $estado0',
         );
     }
   }

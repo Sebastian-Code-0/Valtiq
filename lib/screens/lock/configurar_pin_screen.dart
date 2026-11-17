@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../services/app_lock_service.dart';
 import '../../theme/theme.dart';
+import '../config/settings_screen.dart';
+import 'teclado_pin.dart';
 
 enum _Paso { pinActual, pinNuevo, confirmarPinNuevo }
 
@@ -21,105 +23,147 @@ class ConfigurarPinScreen extends StatefulWidget {
 
 class _ConfigurarPinScreenState extends State<ConfigurarPinScreen> {
   late _Paso _paso = widget.esCambio ? _Paso.pinActual : _Paso.pinNuevo;
-  final _ctrl = TextEditingController();
   String? _pinNuevoTemporal;
-  String? _error;
-  bool _procesando = false;
+  int? _largoActual;
 
-  static const _minLargo = 4;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.esCambio) {
+      AppLockService.largoPin().then((l) {
+        if (mounted) setState(() => _largoActual = l);
+      });
+    }
+  }
 
-  String get _titulo => switch (_paso) {
-    _Paso.pinActual => 'Ingresa tu PIN actual',
-    _Paso.pinNuevo => 'Elige un PIN nuevo',
-    _Paso.confirmarPinNuevo => 'Confirma el PIN nuevo',
-  };
+  String get _kicker {
+    final total = widget.esCambio ? 3 : 2;
+    final n = _paso.index + (widget.esCambio ? 1 : 0);
+    return 'Paso $n de $total';
+  }
 
-  Future<void> _continuar() async {
-    final valor = _ctrl.text;
-    setState(() => _error = null);
-
+  Future<String?> _enviar(String pin) async {
     switch (_paso) {
       case _Paso.pinActual:
-        if (valor.isEmpty) return;
-        setState(() => _procesando = true);
-        final ok = await AppLockService.verificarPin(valor);
-        if (!mounted) return;
-        setState(() => _procesando = false);
-        if (!ok) {
-          setState(() => _error = 'PIN incorrecto');
-          _ctrl.clear();
-          return;
-        }
-        _ctrl.clear();
-        setState(() => _paso = _Paso.pinNuevo);
+        if (!await AppLockService.verificarPin(pin)) return 'PIN incorrecto';
+        if (mounted) setState(() => _paso = _Paso.pinNuevo);
+        return null;
 
       case _Paso.pinNuevo:
-        if (valor.length < _minLargo) {
-          setState(() => _error = 'Mínimo $_minLargo dígitos');
-          return;
-        }
-        _pinNuevoTemporal = valor;
-        _ctrl.clear();
+        _pinNuevoTemporal = pin;
         setState(() => _paso = _Paso.confirmarPinNuevo);
+        return null;
 
       case _Paso.confirmarPinNuevo:
-        if (valor != _pinNuevoTemporal) {
-          setState(() => _error = 'No coincide con el PIN anterior');
-          _ctrl.clear();
-          return;
-        }
-        setState(() => _procesando = true);
+        if (pin != _pinNuevoTemporal) return 'No coincide, inténtalo otra vez';
         if (widget.esCambio) {
-          await AppLockService.cambiarPin(valor);
+          await AppLockService.cambiarPin(pin);
         } else {
-          await AppLockService.activarConPin(valor);
+          await AppLockService.activarConPin(pin);
         }
-        if (!mounted) return;
-        Navigator.pop(context, true);
+        if (mounted) Navigator.pop(context, true);
+        return null;
     }
   }
 
   @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    final (titulo, subtitulo) = switch (_paso) {
+      _Paso.pinActual => (
+        'Ingresa tu PIN actual',
+        'Para confirmar que eres tú.',
+      ),
+      _Paso.pinNuevo => (
+        widget.esCambio ? 'Elige tu PIN nuevo' : 'Crea tu PIN',
+        'De ${AppLockService.largoMinimo} a ${AppLockService.largoMaximo} '
+            'números. Valtiq te lo pedirá cada vez que la abras.',
+      ),
+      _Paso.confirmarPinNuevo => (
+        'Repite el PIN',
+        'Escríbelo otra vez para confirmar.',
+      ),
+    };
+    return Scaffold(
+      appBar: barraAjustes(
+        context,
+        widget.esCambio ? 'Cambiar PIN' : 'Activar bloqueo',
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: EntradaPin(
+            // Cada paso arranca con los puntos vacíos.
+            key: ValueKey(_paso),
+            kicker: _kicker,
+            titulo: titulo,
+            subtitulo: subtitulo,
+            largo: switch (_paso) {
+              _Paso.pinActual => _largoActual,
+              _Paso.pinNuevo => null,
+              _Paso.confirmarPinNuevo => _pinNuevoTemporal?.length,
+            },
+            largoMaximo: _paso == _Paso.pinActual
+                ? AppLockService.largoMaximoVerificar
+                : AppLockService.largoMaximo,
+            textoBoton: 'Continuar',
+            onEnviar: _enviar,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pide el PIN actual antes de algo delicado (desactivar el bloqueo). Hace
+/// `pop(true)` solo si el PIN es correcto.
+class VerificarPinScreen extends StatefulWidget {
+  const VerificarPinScreen({super.key, required this.titulo});
+
+  final String titulo;
+
+  @override
+  State<VerificarPinScreen> createState() => _VerificarPinScreenState();
+}
+
+class _VerificarPinScreenState extends State<VerificarPinScreen> {
+  bool _listo = false;
+  int? _largo;
+
+  @override
+  void initState() {
+    super.initState();
+    AppLockService.largoPin().then((l) {
+      if (mounted) {
+        setState(() {
+          _largo = l;
+          _listo = true;
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_titulo)),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _ctrl,
-              autofocus: true,
-              obscureText: true,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              style: const TextStyle(letterSpacing: 4),
-              decoration: InputDecoration(
-                labelText: 'PIN',
-                errorText: _error,
-                border: const OutlineInputBorder(),
-              ),
-              onSubmitted: (_) => _continuar(),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            FilledButton(
-              onPressed: _procesando ? null : _continuar,
-              child: _procesando
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Continuar'),
-            ),
-          ],
+      appBar: barraAjustes(context, widget.titulo),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: !_listo
+              ? const SizedBox.shrink()
+              : EntradaPin(
+                  titulo: 'Ingresa tu PIN',
+                  subtitulo: 'Para confirmar que eres tú.',
+                  largo: _largo,
+                  textoBoton: 'Confirmar',
+                  onEnviar: (pin) async {
+                    if (!await AppLockService.verificarPin(pin)) {
+                      return 'PIN incorrecto';
+                    }
+                    if (context.mounted) Navigator.pop(context, true);
+                    return null;
+                  },
+                ),
         ),
       ),
     );

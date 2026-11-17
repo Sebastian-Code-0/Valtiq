@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/app_lock_service.dart';
 import '../../theme/theme.dart';
+import 'teclado_pin.dart';
 
 /// Pantalla que bloquea el acceso a la app. Se muestra como overlay opaco
 /// sobre todo el contenido (ver `AppLockOverlay`) — cubre cualquier
@@ -20,159 +21,68 @@ class LockScreen extends StatefulWidget {
 }
 
 class _LockScreenState extends State<LockScreen> {
-  final _pinCtrl = TextEditingController();
-  final _focusNode = FocusNode();
-  String? _error;
-  bool _verificando = false;
+  bool _listo = false;
+  int? _largo;
   bool _biometriaDisponible = false;
 
   @override
   void initState() {
     super.initState();
-    _prepararBiometria();
+    _preparar();
   }
 
-  Future<void> _prepararBiometria() async {
+  Future<void> _preparar() async {
+    final largo = await AppLockService.largoPin();
     final usaBio = await AppLockService.usaBiometria();
-    if (!usaBio) return;
-    final disponible = await AppLockService.biometriaDisponible();
+    final disponible = usaBio && await AppLockService.biometriaDisponible();
     if (!mounted) return;
-    setState(() => _biometriaDisponible = disponible);
+    setState(() {
+      _largo = largo;
+      _biometriaDisponible = disponible;
+      _listo = true;
+    });
     if (disponible) {
       // Se dispara solo al entrar a la pantalla; si el usuario la cancela o
-      // falla, sigue viendo el campo de PIN sin ningún paso extra.
+      // falla, sigue viendo el teclado sin ningún paso extra.
       unawaited(_intentarBiometria());
     }
   }
 
   Future<void> _intentarBiometria() async {
     final ok = await AppLockService.autenticarConBiometria();
-    if (!mounted) return;
-    if (ok) {
-      widget.onUnlocked();
-    } else {
-      _focusNode.requestFocus();
-    }
+    if (ok && mounted) widget.onUnlocked();
   }
 
-  Future<void> _verificarPin() async {
-    final pin = _pinCtrl.text;
-    if (pin.isEmpty) return;
-    setState(() {
-      _verificando = true;
-      _error = null;
-    });
-    final ok = await AppLockService.verificarPin(pin);
-    if (!mounted) return;
-    if (ok) {
+  Future<String?> _verificar(String pin) async {
+    if (await AppLockService.verificarPin(pin)) {
       widget.onUnlocked();
-      return;
+      return null;
     }
-    setState(() {
-      _verificando = false;
-      _error = 'PIN incorrecto';
-      _pinCtrl.clear();
-    });
-  }
-
-  @override
-  void dispose() {
-    _pinCtrl.dispose();
-    _focusNode.dispose();
-    super.dispose();
+    return 'PIN incorrecto';
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: AppColors.fondoOscuro,
+        backgroundColor: context.colores.fondo,
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    'assets/logo_icono.png',
-                    width: 72,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    'Valtiq está bloqueado',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: AppColors.textoOscuro,
+              child: !_listo
+                  ? const SizedBox.shrink()
+                  : EntradaPin(
+                      encabezado: const IconoValtiq(),
+                      titulo: 'Ingresa tu PIN',
+                      subtitulo: 'Valtiq está bloqueado',
+                      largo: _largo,
+                      onBiometria: _biometriaDisponible
+                          ? _intentarBiometria
+                          : null,
+                      onEnviar: _verificar,
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 280),
-                    child: TextField(
-                      controller: _pinCtrl,
-                      focusNode: _focusNode,
-                      autofocus: !_biometriaDisponible,
-                      obscureText: true,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textoOscuro,
-                        letterSpacing: 4,
-                      ),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: AppColors.superficieOscuro,
-                        labelText: 'PIN',
-                        labelStyle: const TextStyle(color: AppColors.textoSecundarioOscuro),
-                        errorText: _error,
-                        enabledBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: AppColors.textoSecundarioOscuro),
-                        ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                      onSubmitted: (_) => _verificarPin(),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  SizedBox(
-                    width: 280,
-                    child: FilledButton(
-                      onPressed: _verificando ? null : _verificarPin,
-                      child: _verificando
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.textoOscuro,
-                              ),
-                            )
-                          : const Text('Desbloquear'),
-                    ),
-                  ),
-                  if (_biometriaDisponible) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    TextButton.icon(
-                      onPressed: _intentarBiometria,
-                      icon: const Icon(
-                        Icons.fingerprint,
-                        color: AppColors.textoSecundarioOscuro,
-                      ),
-                      label: const Text(
-                        'Usar biometría',
-                        style: TextStyle(color: AppColors.textoSecundarioOscuro),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
             ),
           ),
         ),

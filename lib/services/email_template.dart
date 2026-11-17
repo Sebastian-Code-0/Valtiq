@@ -17,7 +17,7 @@ abstract class EmailTemplate {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>$htmlAsunto</title>
 </head>
-<body style="margin:0;padding:0;background-color:#F0F4F8;font-family:Arial,Helvetica,sans-serif;">
+<body style="margin:0;padding:0;background-color:#EFE7DA;font-family:Arial,Helvetica,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
     <tr>
       <td align="center">
@@ -25,16 +25,15 @@ abstract class EmailTemplate {
 
           <!-- Header -->
           <tr>
-            <td style="background-color:#1E3A5F;border-radius:12px 12px 0 0;padding:28px 32px;">
-              <span style="font-size:30px;vertical-align:middle;">💰</span>
-              <span style="font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:bold;color:#FFFFFF;vertical-align:middle;margin-left:10px;letter-spacing:1px;">Valtiq</span>
+            <td style="background-color:#5A1222;border-radius:20px 20px 0 0;padding:24px 32px;">
+              <span style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#EFE7DA;letter-spacing:0.5px;">Valtiq</span>
             </td>
           </tr>
 
           <!-- Body -->
           <tr>
-            <td style="background-color:#FFFFFF;padding:32px;border-left:1px solid #E2E8F0;border-right:1px solid #E2E8F0;">
-              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.7;color:#1A1A2E;margin:0;">
+            <td style="background-color:#F4F0E8;padding:32px;border-left:1px solid #DCD2C2;border-right:1px solid #DCD2C2;">
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.7;color:#000000;margin:0;">
                 $htmlContenido
               </p>
             </td>
@@ -42,9 +41,9 @@ abstract class EmailTemplate {
 
           <!-- Footer -->
           <tr>
-            <td style="background-color:#F8FAFC;border:1px solid #E2E8F0;border-top:3px solid #2DD4A0;border-radius:0 0 12px 12px;padding:18px 32px;text-align:center;">
-              <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#6B7280;margin:0;">
-                Enviado desde <strong style="color:#2DD4A0;">Valtiq</strong> — Tu dinero, tu control
+            <td style="background-color:#F4F0E8;border:1px solid #DCD2C2;border-radius:0 0 20px 20px;padding:18px 32px;text-align:center;">
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#63554E;margin:0;">
+                Enviado desde <strong style="color:#5A1222;">Valtiq</strong> · Tu dinero, tu control
               </p>
             </td>
           </tr>

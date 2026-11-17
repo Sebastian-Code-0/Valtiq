@@ -1,5 +1,27 @@
 # Changelog
 
+## Logo con los colores nuevos, PIN rediseñado y avisos sin emojis (2026-11-17)
+
+- **Logo:** misma forma, colores de la marca: V vino (`#B8304C`) y flecha
+  beige (`#EFE7DA`) sobre negro, en vez de los verdes. Cambian el ícono de
+  la app, el splash de Android (normal y 12+), el logo del arranque,
+  `assets/logo_icono.png`/`logo_horizontal.png`/`splash_icon.png` y el
+  nuevo `assets/logo_app.png` (ícono con fondo, para el bloqueo y los
+  avisos de Linux).
+- **Ícono adaptable (Android 8+):** `mipmap-anydpi-v26/ic_launcher.xml` con
+  fondo negro, frente `ic_launcher_frente` y versión `monochrome` para los
+  íconos temáticos de Android 13. Antes era un cuadrado fijo que algunos
+  launchers metían dentro de un círculo blanco.
+- **Bloqueo con PIN:** pantalla nueva con puntos y teclado numérico propio
+  (`EntradaPin`), huella en el teclado, sacudida al fallar, entra sola al
+  escribir el último número (guarda el largo del PIN) y sigue el tema
+  claro/oscuro. Lo mismo al crear, cambiar y desactivar el PIN (antes era
+  un diálogo).
+- **Avisos:** sin emojis (ni en el celular ni en los correos), ícono de la
+  app nuevo, color vino, texto completo al desplegar y primero cuándo
+  vence. El correo usa los colores de la app.
+- Tests: 439.
+
 ## Widgets de una fila y montos escritos en letras (2026-11-14)
 
 - **Widgets de deudas y préstamos:** ahora son de una sola fila, del mismo

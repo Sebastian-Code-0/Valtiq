@@ -91,6 +91,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/logo_app.png
     - assets/logo_horizontal.png
     - assets/logo_icono.png
     - assets/splash_blank.png

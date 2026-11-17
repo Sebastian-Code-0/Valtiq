@@ -752,6 +752,18 @@ convención que `themeModeNotifier` — para que el primer
 frame ya sepa si debe arrancar bloqueada, sin parpadeo de contenido real
 mientras se resuelve el `Future` async.
 
+**Teclado de PIN (2026-11-17):** `LockScreen`, `ConfigurarPinScreen` y
+`VerificarPinScreen` (desactivar el bloqueo) usan `EntradaPin`
+(`screens/lock/teclado_pin.dart`): puntos + teclado numérico propio (no el
+del sistema), huella en la tecla de abajo a la izquierda, sacudida y
+vibración al fallar, y teclado físico en PC (`Focus.onKeyEvent`). Siguen el
+tema claro/oscuro (antes la pantalla de bloqueo era negra siempre). El largo
+del PIN se guarda (`valtiq_lock_pin_largo`) para entrar solo al escribir el
+último número; los PIN creados antes lo aprenden en el primer desbloqueo
+correcto (`verificarPin`) y, mientras tanto, se muestra el botón "Entrar".
+PIN nuevo: de 4 a 8 números; al verificar se aceptan hasta 16 por si había
+uno más largo de antes.
+
 ## Servicios
 
 **InteresCalculator** (`services/interes_calculator.dart`)
@@ -841,6 +853,15 @@ porque ya NO dispara una notificación del sistema, solo desactiva
 ingresos 'unico' vencidos y guarda los nombres para que `ShellScreen` los
 muestre con un SnackBar; ver la sección "Ingresos" más arriba para el
 detalle completo.
+
+Aspecto de los avisos en Android (`_detallesAndroidPara`): ícono pequeño
+`@drawable/ic_stat_notif` (silueta blanca, Android no admite color ahí)
+teñido con el vino de la marca, ícono grande `@drawable/ic_notif_grande`
+(el de la app) y `BigTextStyleInformation` para que el texto largo se vea
+completo. Texto: primero cuándo vence y luego qué es ("Mañana · Pago a
+Banco · $500.000"). Sin emojis ni en avisos ni en correos.
+`res/raw/keep.xml` evita que la reducción de recursos de la versión release
+borre esos dos íconos (solo se nombran desde Dart).
 
 **SmtpService** (`services/smtp_service.dart`)
 Envía correos usando mailer con la configuración de ConfigSmtps.

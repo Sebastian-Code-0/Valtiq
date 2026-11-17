@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícono adaptable (Android 8+): el launcher le da la forma (círculo,
+     cuadrado redondeado…). "monochrome" es para los íconos temáticos de
+     Android 13+. Android 7 y anteriores usan mipmap-*/ic_launcher.png. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_fondo" />
+    <foreground android:drawable="@drawable/ic_launcher_frente" />
+    <monochrome android:drawable="@drawable/ic_launcher_mono" />
+</adaptive-icon>

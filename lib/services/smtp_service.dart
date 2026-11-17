@@ -84,7 +84,7 @@ class SmtpService {
       );
     }
     const cuerpo =
-        '✅ Configuración exitosa — Tu cuenta de correo está conectada correctamente con Valtiq.\n\n'
+        'Configuración exitosa. Tu cuenta de correo está conectada correctamente con Valtiq.\n\n'
         'A partir de ahora recibirás recordatorios de tus deudas, préstamos y pagos en este correo.';
     return _enviarCon(
       config: config,

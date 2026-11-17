@@ -66,18 +66,17 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
   }
 
   Future<void> _desactivar() async {
-    final pin = await _pedirPinActual(
-      titulo: 'Ingresa tu PIN para desactivar el bloqueo',
+    final ok = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const VerificarPinScreen(titulo: 'Desactivar bloqueo'),
+      ),
     );
-    if (pin == null) return;
-    final ok = await AppLockService.verificarPin(pin);
-    if (!mounted) return;
-    if (!ok) {
-      mostrarAlerta(context, 'PIN incorrecto');
-      return;
-    }
+    if (ok != true) return;
     await AppLockService.desactivar();
     await _cargar();
+    if (!mounted) return;
+    mostrarInfo(context, 'Bloqueo desactivado');
   }
 
   Future<void> _cambiarPin() async {
@@ -90,33 +89,6 @@ class _SeguridadScreenState extends State<SeguridadScreen> {
     if (ok == true && mounted) {
       mostrarExito(context, 'PIN actualizado');
     }
-  }
-
-  Future<String?> _pedirPinActual({required String titulo}) {
-    final ctrl = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(titulo),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          obscureText: true,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'PIN'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text),
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
-    );
   }
 
   /// Texto corto para las píldoras.
