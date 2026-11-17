@@ -756,7 +756,8 @@ mientras se resuelve el `Future` async.
 `VerificarPinScreen` (desactivar el bloqueo) usan `EntradaPin`
 (`screens/lock/teclado_pin.dart`): puntos + teclado numérico propio (no el
 del sistema), huella en la tecla de abajo a la izquierda, sacudida y
-vibración al fallar, y teclado físico en PC (`Focus.onKeyEvent`). Siguen el
+vibración al fallar, ojito para ver los números, y teclado físico en PC
+(`Focus.onKeyEvent`). Siguen el
 tema claro/oscuro (antes la pantalla de bloqueo era negra siempre). El largo
 del PIN se guarda (`valtiq_lock_pin_largo`) para entrar solo al escribir el
 último número; los PIN creados antes lo aprenden en el primer desbloqueo
@@ -854,14 +855,16 @@ ingresos 'unico' vencidos y guarda los nombres para que `ShellScreen` los
 muestre con un SnackBar; ver la sección "Ingresos" más arriba para el
 detalle completo.
 
-Aspecto de los avisos en Android (`_detallesAndroidPara`): ícono pequeño
-`@drawable/ic_stat_notif` (silueta blanca, Android no admite color ahí)
-teñido con el vino de la marca, ícono grande `@drawable/ic_notif_grande`
-(el de la app) y `BigTextStyleInformation` para que el texto largo se vea
-completo. Texto: primero cuándo vence y luego qué es ("Mañana · Pago a
-Banco · $500.000"). Sin emojis ni en avisos ni en correos.
-`res/raw/keep.xml` evita que la reducción de recursos de la versión release
-borre esos dos íconos (solo se nombran desde Dart).
+Aspecto de los avisos en Android (`_detallesAndroidPara`): un solo ícono,
+el pequeño `@drawable/ic_stat_notif` (silueta del logo: Android usa solo
+el canal alfa, así que no puede llevar los dos colores) en un círculo negro
+(`color`; con vino se veía rosado en modo oscuro porque Android aclara el
+color para que contraste). Sin ícono grande a la derecha (repetía el logo).
+`BigTextStyleInformation` para que el texto largo se vea completo. Texto:
+primero cuándo vence y luego qué es ("Mañana · Pago a Banco · $500.000").
+Sin emojis ni en avisos ni en correos. `res/raw/keep.xml` evita que la
+reducción de recursos de la versión release borre ese ícono (solo se
+nombra desde Dart).
 
 **SmtpService** (`services/smtp_service.dart`)
 Envía correos usando mailer con la configuración de ConfigSmtps.

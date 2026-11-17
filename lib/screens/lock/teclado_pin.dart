@@ -72,6 +72,8 @@ class EntradaPin extends StatefulWidget {
 class _EntradaPinState extends State<EntradaPin>
     with SingleTickerProviderStateMixin {
   final _foco = FocusNode(debugLabel: 'EntradaPin');
+  // El teclado propio maneja el foco; el ojito no lo roba.
+  final _focoOjito = FocusNode(skipTraversal: true, canRequestFocus: false);
   late final _sacudida = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 420),
@@ -79,6 +81,9 @@ class _EntradaPinState extends State<EntradaPin>
   String _pin = '';
   String? _error;
   bool _enviando = false;
+
+  /// El ojito: muestra los números en vez de los puntos.
+  bool _visible = false;
 
   @override
   void initState() {
@@ -93,6 +98,7 @@ class _EntradaPinState extends State<EntradaPin>
   @override
   void dispose() {
     _foco.dispose();
+    _focoOjito.dispose();
     _sacudida.dispose();
     super.dispose();
   }
@@ -216,10 +222,33 @@ class _EntradaPinState extends State<EntradaPin>
                 final dx = math.sin(t * math.pi * 6) * 10 * (1 - t);
                 return Transform.translate(offset: Offset(dx, 0), child: child);
               },
-              child: _Puntos(
-                escritos: _pin.length,
-                total: widget.largo ?? math.max(4, _pin.length),
-                color: error != null ? c.alerta : c.acento,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Mismo ancho que el ojito, para que los puntos queden
+                  // centrados.
+                  const SizedBox(width: 48),
+                  Flexible(
+                    child: _Puntos(
+                      pin: _pin,
+                      visible: _visible,
+                      total: widget.largo ?? math.max(4, _pin.length),
+                      color: error != null ? c.alerta : c.acento,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => setState(() => _visible = !_visible),
+                    tooltip: _visible ? 'Ocultar PIN' : 'Ver PIN',
+                    focusNode: _focoOjito,
+                    color: c.textoSecundario,
+                    icon: Icon(
+                      _visible
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      size: 22,
+                    ),
+                  ),
+                ],
               ),
             ),
             SizedBox(
@@ -274,42 +303,63 @@ class _EntradaPinState extends State<EntradaPin>
 }
 
 /// Un punto por número: relleno los escritos, solo el borde los que faltan.
+/// Con [visible], los escritos se ven como números.
 class _Puntos extends StatelessWidget {
   const _Puntos({
-    required this.escritos,
+    required this.pin,
+    required this.visible,
     required this.total,
     required this.color,
   });
 
-  final int escritos;
+  final String pin;
+  final bool visible;
   final int total;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colores;
+    final escritos = pin.length;
     return Semantics(
       label: '$escritos de $total números escritos',
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           for (var i = 0; i < total; i++)
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 140),
-              margin: const EdgeInsets.symmetric(horizontal: 7),
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: i < escritos ? color : Colors.transparent,
-                border: Border.all(
-                  color: i < escritos
-                      ? color
-                      : c.textoSecundario.withValues(alpha: 0.5),
-                  width: 1.5,
+            if (visible && i < escritos)
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: Center(
+                  child: Text(
+                    pin[i],
+                    style: TextStyle(
+                      fontFamily: fuenteTexto,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
+                  ),
+                ),
+              )
+            else
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                margin: const EdgeInsets.symmetric(horizontal: 7),
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i < escritos ? color : Colors.transparent,
+                  border: Border.all(
+                    color: i < escritos
+                        ? color
+                        : c.textoSecundario.withValues(alpha: 0.5),
+                    width: 1.5,
+                  ),
                 ),
               ),
-            ),
         ],
       ),
     );

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Los íconos de los avisos solo se nombran desde Dart (como texto), así
-     que el reductor de recursos de la versión release no los ve usados y
-     podría borrarlos. Esto le dice que los conserve. -->
+<!-- El ícono de los avisos solo se nombra desde Dart (como texto), así
+     que el reductor de recursos de la versión release no lo ve usado y
+     podría borrarlo. Esto le dice que lo conserve. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/ic_stat_notif,@drawable/ic_notif_grande" />
+    tools:keep="@drawable/ic_stat_notif" />

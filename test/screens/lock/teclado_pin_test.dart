@@ -10,15 +10,24 @@ import 'package:valtiq/theme/theme.dart';
 
 Future<void> _teclear(WidgetTester tester, String pin) async {
   for (final d in pin.split('')) {
-    await tester.tap(find.text(d));
+    // La última de las teclas: con el mismo número a la vista (ojito),
+    // la del teclado es la de abajo.
+    final tecla = find.text(d).last;
+    await tester.ensureVisible(tecla);
+    await tester.tap(tecla);
     await tester.pump();
   }
 }
 
 /// El hash del PIN corre en otro isolate (`compute`): hay que dejar pasar
 /// tiempo real para que termine, el reloj falso de los tests no lo mueve.
-Future<void> _esperarHash(WidgetTester tester) async {
-  await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 2)));
+Future<void> _esperarHash(WidgetTester tester, bool Function() listo) async {
+  for (var i = 0; i < 150 && !listo(); i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
+    await tester.pump();
+  }
   await tester.pumpAndSettle();
 }
 
@@ -144,7 +153,11 @@ void main() {
     expect(find.text('Repite el PIN'), findsOneWidget);
     // Confirmar entra solo al llegar a 4 números.
     await _teclear(tester, '2468');
-    await _esperarHash(tester);
+    // Al guardar, la pantalla se cierra sola.
+    await _esperarHash(
+      tester,
+      () => find.text('Repite el PIN').evaluate().isEmpty,
+    );
 
     await tester.runAsync(() async {
       expect(await AppLockService.verificarPin('2468'), isTrue);
@@ -171,9 +184,37 @@ void main() {
     final entrar = find.widgetWithText(FilledButton, 'Entrar');
     await tester.ensureVisible(entrar);
     await tester.tap(entrar);
-    await _esperarHash(tester);
+    await _esperarHash(tester, () => desbloqueado);
 
     expect(desbloqueado, isTrue);
     expect(await tester.runAsync(AppLockService.largoPin), 6);
+  });
+
+  testWidgets('el ojito muestra y vuelve a ocultar los números', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        Scaffold(
+          body: EntradaPin(
+            titulo: 'Ingresa tu PIN',
+            largo: 6,
+            onEnviar: (_) async => null,
+          ),
+        ),
+      ),
+    );
+    await _teclear(tester, '58');
+    // Ocultos: "5" y "8" solo existen como teclas.
+    expect(find.text('5'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Ver PIN'));
+    await tester.pump();
+    expect(find.text('5'), findsNWidgets(2));
+    expect(find.text('8'), findsNWidgets(2));
+
+    await tester.tap(find.byTooltip('Ocultar PIN'));
+    await tester.pump();
+    expect(find.text('5'), findsOneWidget);
   });
 }

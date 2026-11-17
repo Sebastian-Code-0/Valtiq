@@ -17,10 +17,12 @@
   escribir el último número (guarda el largo del PIN) y sigue el tema
   claro/oscuro. Lo mismo al crear, cambiar y desactivar el PIN (antes era
   un diálogo).
-- **Avisos:** sin emojis (ni en el celular ni en los correos), ícono de la
-  app nuevo, color vino, texto completo al desplegar y primero cuándo
-  vence. El correo usa los colores de la app.
-- Tests: 439.
+- **Avisos:** sin emojis (ni en el celular ni en los correos), un solo
+  logo (el redondo de la izquierda, sobre negro; se quitó el ícono repetido
+  de la derecha), texto completo al desplegar y primero cuándo vence. El
+  correo usa los colores de la app.
+- **PIN:** ojito para ver los números que se van escribiendo.
+- Tests: 440.
 
 ## Widgets de una fila y montos escritos en letras (2026-11-14)
 

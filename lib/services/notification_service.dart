@@ -347,10 +347,12 @@ class NotificationService {
   /// 8:00 p. m., en minutos desde medianoche.
   static const recordatorioDiarioPorDefecto = 20 * 60;
 
-  /// Cómo se ve un aviso en Android: el ícono pequeño (silueta blanca del
-  /// logo, Android no permite colores ahí) teñido del vino de la marca, el
-  /// ícono de la app a la derecha y el texto completo al desplegarlo (sin
-  /// esto, un texto largo se corta con "…").
+  /// Cómo se ve un aviso en Android: solo el logo redondo de la izquierda
+  /// (sin ícono repetido a la derecha) y el texto completo al desplegarlo
+  /// (sin esto, un texto largo se corta con "…"). Ese logo es una silueta
+  /// de UN color (regla de Android: usa solo la forma, no los colores) en
+  /// un círculo del color [_colorMarca]; Android puede aclararlo u
+  /// oscurecerlo para que se distinga del fondo de la cortina.
   static AndroidNotificationDetails _detallesAndroidPara(String cuerpo) =>
       AndroidNotificationDetails(
         'valtiq_recordatorios',
@@ -360,15 +362,13 @@ class NotificationService {
         priority: Priority.high,
         category: AndroidNotificationCategory.reminder,
         icon: '@drawable/ic_stat_notif',
-        largeIcon: const DrawableResourceAndroidBitmap(
-          '@drawable/ic_notif_grande',
-        ),
         color: _colorMarca,
         styleInformation: BigTextStyleInformation(cuerpo),
       );
 
-  /// Vino de la marca; se lee sobre la cortina clara y la oscura.
-  static const _colorMarca = Color(0xFFB8304C);
+  /// Fondo del círculo: el negro del ícono de la app (con vino se veía
+  /// rosado en modo oscuro).
+  static const _colorMarca = Color(0xFF000000);
 
   static AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
       .resolvePlatformSpecificImplementation<
