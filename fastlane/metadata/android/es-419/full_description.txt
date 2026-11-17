@@ -1,19 +1,30 @@
-Valtiq es una app de finanzas personales pensada para Colombia, enfocada en algo que casi ninguna otra cubre bien: deudas y préstamos con interés real.
+Valtiq es una app de finanzas personales hecha en Colombia para llevar tus gastos, tus deudas y la plata que prestas, sin crear cuenta y sin que tus datos salgan de tu celular.
 
-Qué hace:
+ANOTA UN GASTO EN SEGUNDOS
+Pon el widget "Anotar gasto" en la pantalla de inicio y escribe como le escribirías a un amigo: "café 5000", "almuerzo 12 mil", "mercado 85.500" o "comida cincuenta mil pesos". Valtiq separa el nombre del monto, pone la fecha de hoy y recuerda la categoría que usaste la última vez.
 
-Deudas y préstamos con interés real. Simple o compuesto, sobre saldo original o saldo insoluto (el capital baja con cada abono, como un crédito bancario real). Cada cálculo tiene una tarjeta "¿Cómo se calculó?" que muestra la fórmula completa, tramo por tramo, para que nunca sea una caja negra.
+DEUDAS CLARAS, CON EL INTERÉS REAL
+Registra tarjetas, créditos o lo que le debes a alguien. Valtiq calcula el interés del día (simple o compuesto, sobre lo prestado al inicio o sobre lo que falta por pagar) y te muestra paso a paso cómo llegó a cada número, para que nunca sea una caja negra.
+El Plan de pago te dice en qué orden pagar para salir antes de deudas: primero la más cara (Avalancha) o primero la más pequeña (Bola de nieve), y cuánto suma un extra al mes.
 
-Presupuestos por categoría, con aviso cuando te estás acercando o pasando del límite.
+PRÉSTAMOS: QUIÉN TE DEBE Y CUÁNTO
+Lleva lo que prestaste o lo que te prestaron, con o sin interés, registra cada abono y mira lo que falta por cobrar.
 
-Ingresos y gastos, fijos y variables, con comparativos mensuales.
+TU MES EN ORDEN
+- Ingresos, gastos fijos y gastos del día a día, separados.
+- Presupuestos por categoría con aviso cuando te acercas al límite.
+- Categorías que puedes crear, renombrar y borrar.
+- Recordatorios de pagos que llegan a la hora que elijas, aunque la app esté cerrada o hayas reiniciado el celular.
 
-Recordatorios con notificación local y, si configuras tu propio correo SMTP, aviso también por email.
+WIDGETS
+Además de "Anotar gasto", tienes widgets con el total de tus deudas y de lo que te deben hoy. Al tocarlos, abren la sección.
 
-Bloqueo de la app con PIN o biometría (huella/rostro), opcional.
+PRIVADA DE VERDAD
+- Todo se guarda solo en tu dispositivo: sin cuenta, sin nube, sin publicidad y sin rastreo.
+- Bloqueo opcional con PIN, huella o rostro.
+- Copia de seguridad que tú exportas e importas cuando cambies de celular, y opción de borrar todo.
 
-Todo 100% local. Sin cuenta, sin nube, sin analítica ni SDKs de terceros. Tus datos viven solo en tu dispositivo — hay una función de respaldo para exportarlos e importarlos tú mismo cuando cambies de celular.
+A TU GUSTO
+Tema claro, oscuro o el del sistema. También funciona en computador (Linux).
 
-Código abierto bajo licencia GPLv3.
-
-Valtiq usa pesos colombianos y una convención de cálculo de interés explicada dentro de la propia app (Ajustes → Cómo funciona Valtiq), pensada para que cualquiera pueda verificar el número a mano si quiere.
+Valtiq es de código abierto (licencia GPLv3). En Ajustes → Cómo funciona Valtiq está explicado, sin letra pequeña, cómo se calcula cada cosa.
