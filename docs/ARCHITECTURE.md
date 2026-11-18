@@ -608,19 +608,39 @@ nunca muestran cifras distintas:
   - `liquidacionEstimada(hoy)`: simula mes a mes (interés del mes, luego el
     pago al ritmo actual) hasta saldo cero. Por eso pagar de más adelanta la
     fecha y pagar de menos o saltarse un mes la atrasa. Si el pago no cubre
-    el interés devuelve `noBaja`. Tope: 600 meses.
+    el interés devuelve `noBaja`. Tope: 600 meses. El mes en curso es el
+    mes 0 (misma regla que el plan, ver abajo).
+  - `costoMensualPct`: interés del próximo mes ÷ saldo de hoy, en %. En
+    `saldo_insoluto` es la tasa; en `saldo_original` es mayor (el interés
+    sigue sobre lo prestado aunque falte poco).
+  - `pendienteEsteMes(hoy, pago)` / `pagadoDeMasEsteMes(hoy)`: lo que falta
+    pagar este mes descontando los abonos del mes, y lo abonado por encima
+    de la cuota. Una deuda que empezó este mes (`empezoEsteMes`) no debe
+    nada este mes.
   - `interesDelMes(k, saldo)`: respeta la configuración de la deuda
     (`saldo_insoluto`: sobre el saldo; `saldo_original` simple: sobre el
     monto original; `saldo_original` compuesto: sobre el original
     capitalizado). Aproximación: en `saldo_insoluto` todo el saldo se toma
     como capital, así que con interés atrasado el estimado queda un poco por
     encima del real, nunca por debajo.
-- `PlanPago.simular`: cada mes suma el interés de cada deuda, paga el mínimo
-  de todas y manda lo que sobra (el "extra al mes" más los mínimos de las
-  deudas ya terminadas) a la prioritaria. `EstrategiaPago.avalancha` ordena
-  por tasa mensual más alta; `bolaDeNieve` por saldo más pequeño. Devuelve
-  meses, fecha libre de deudas, intereses totales y el orden con la fecha de
-  cada deuda. La estrategia y el extra se guardan en `SharedPreferences`
+- `PlanPago.simular`: el mes 0 (el mes en curso) no suma interés (el
+  causado hasta hoy ya está en el saldo) y paga lo que falte de cada cuota
+  más lo que falte del extra (`extra − pagado de más este mes`). Desde el
+  mes 1, cada mes suma el interés de cada deuda, paga el mínimo de todas y
+  manda lo que sobra (el "extra al mes" más los mínimos de las deudas ya
+  terminadas) a la prioritaria. `EstrategiaPago.avalancha` ordena por
+  `costoMensualPct` más alto; `bolaDeNieve` por saldo más pequeño. Devuelve
+  meses (0 = este mes), fecha libre de deudas, intereses totales y el orden;
+  cada `PasoPlan` trae su fecha (aunque otra deuda no termine), lo que se
+  le paga este mes y el siguiente (`proximosPagos`) y los meses hasta su
+  fecha límite (`tarde`, `limiteVencido`). Además:
+  - `soloMinimos`: la misma simulación sin extra y sin pasar lo liberado a
+    otra deuda (`_correr(cascada: false)`), para comparar.
+  - `paraTerminar` (si no alcanza) y `paraLimites` (si alguna queda
+    `tarde`): el extra mínimo, de a $1.000, con el que se cumple, buscado
+    por mitades (con el orden fijo, más extra nunca atrasa ninguna deuda).
+    Solo se calculan cuando hay algo que arreglar.
+  La estrategia y el extra se guardan en `SharedPreferences`
   (`valtiq_plan_estrategia`, `valtiq_plan_extra`).
 
 ### Widgets de Android y "Anotar gasto" (2026-11-12)

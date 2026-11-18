@@ -180,13 +180,65 @@ class ResumenDeuda {
     return deuda.montoOriginal * i;
   }
 
+  /// Interés del próximo mes como porcentaje de lo que se debe HOY: lo que
+  /// de verdad cuesta cada peso de esta deuda. En `saldo_insoluto` es la
+  /// tasa del mes; en `saldo_original` es más alto que la tasa, porque el
+  /// interés se sigue cobrando sobre todo lo prestado aunque ya falte poco.
+  /// Avalancha ordena por esto, no por la tasa escrita.
+  double get costoMensualPct =>
+      saldo <= 0 ? 0 : interesDelMes(1, saldo.toDouble()) / saldo * 100;
+
+  /// La deuda empezó en el mes de [hoy]: su primer pago es el mes que viene.
+  bool empezoEsteMes(DateTime hoy) {
+    final inicio = fechaCivilGuardada(deuda.fechaPrestamo);
+    return inicio.year == hoy.year && inicio.month == hoy.month;
+  }
+
+  /// Suma de los pagos registrados en el mes de [hoy].
+  int pagadoEsteMes(DateTime hoy) {
+    var suma = 0;
+    for (final a in abonos) {
+      final f = fechaCivilGuardada(a.fecha);
+      if (f.year == hoy.year && f.month == hoy.month) suma += a.monto;
+    }
+    return suma;
+  }
+
+  /// Lo que todavía falta pagar este mes para cumplir con [pagoDelMes]
+  /// (lo ya pagado este mes se descuenta). Cero si la deuda empezó este mes.
+  int pendienteEsteMes(DateTime hoy, int? pagoDelMes) {
+    if (pagoDelMes == null || pagoDelMes <= 0 || saldo <= 0) return 0;
+    if (empezoEsteMes(hoy)) return 0;
+    return math.max(0, math.min(pagoDelMes, saldo) - pagadoEsteMes(hoy));
+  }
+
+  /// Lo pagado este mes por encima de la cuota: ya cuenta como el extra
+  /// del mes en el plan de pago.
+  int pagadoDeMasEsteMes(DateTime hoy) {
+    final debido = empezoEsteMes(hoy) ? 0 : (deuda.cuotaMensual ?? 0);
+    return math.max(0, pagadoEsteMes(hoy) - math.max(0, debido));
+  }
+
   /// Cuándo se termina de pagar esta deuda si se sigue pagando al
   /// [ritmoMensual] de hoy.
+  ///
+  /// El mes en curso cuenta (mes 0): si el pago de este mes todavía no se
+  /// hizo, se descuenta ya, sin sumar interés (el causado hasta hoy ya está
+  /// en el saldo). Es la misma regla de [PlanPago.simular], así que con el
+  /// mismo pago las dos fechas coinciden.
   LiquidacionEstimada liquidacionEstimada(DateTime hoy) {
     if (saldo <= 0) return const LiquidacionEstimada.sinDatos();
     final ritmo = ritmoMensual(hoy);
     if (ritmo == null) return const LiquidacionEstimada.sinDatos();
-    var restante = saldo.toDouble();
+    var restante = saldo - pendienteEsteMes(hoy, ritmo).toDouble();
+    if (restante < 0.5) {
+      return LiquidacionEstimada._(
+        fecha: DateTime(hoy.year, hoy.month, 1),
+        meses: 0,
+        noBaja: false,
+        ritmo: ritmo,
+      );
+    }
     for (var k = 1; k <= mesesMaximosSimulacion; k++) {
       restante += interesDelMes(k, restante);
       restante -= math.min(ritmo.toDouble(), restante);
@@ -297,13 +349,62 @@ class PasoPlan {
     required this.resumen,
     required this.meses,
     required this.fecha,
+    this.pagoEsteMes = 0,
+    this.pagoMesSiguiente = 0,
+    this.mesLimite,
   });
 
   final ResumenDeuda resumen;
 
-  /// Meses desde hoy hasta dejarla en cero; `null` si el plan no alcanza.
+  /// Meses desde hoy hasta dejarla en cero (0 = este mes); `null` si con
+  /// este plan no se termina nunca.
   final int? meses;
+
+  /// Mes en que queda en cero (día 1 de ese mes).
   final DateTime? fecha;
+
+  /// Lo que el plan le paga en el mes en curso (lo que falta, descontando
+  /// lo ya pagado este mes) y en el siguiente.
+  final int pagoEsteMes;
+  final int pagoMesSiguiente;
+
+  /// Meses desde hoy hasta su fecha límite (0 = este mes, negativo = ya
+  /// pasó); `null` si no tiene fecha límite.
+  final int? mesLimite;
+
+  bool get termina => meses != null;
+
+  /// La fecha límite ya pasó y la deuda sigue sin pagarse.
+  bool get limiteVencido => mesLimite != null && mesLimite! < 0;
+
+  /// Con este plan se termina después de la fecha límite (o nunca). No
+  /// incluye las de límite vencido: esas ya no tienen arreglo.
+  bool get tarde =>
+      mesLimite != null &&
+      !limiteVencido &&
+      (meses == null || meses! > mesLimite!);
+}
+
+/// Cuánto extra al mes hace falta para algo (terminar, o llegar a tiempo a
+/// las fechas límite) y en qué mes se quedaría libre con ese extra.
+class SugerenciaExtra {
+  const SugerenciaExtra({required this.extra, required this.fechaLibre});
+
+  /// Extra TOTAL al mes (no lo que hay que sumar al que ya se puso).
+  final int extra;
+  final DateTime fechaLibre;
+}
+
+/// Qué pasaría pagando solo la cuota de cada deuda, sin extra y sin pasar
+/// a otra deuda lo que se libera al terminar una.
+class SoloMinimos {
+  const SoloMinimos({required this.meses, required this.interesesTotales});
+
+  /// `null` si así no se termina nunca (o alguna deuda no tiene cuota).
+  final int? meses;
+  final int interesesTotales;
+
+  bool get termina => meses != null;
 }
 
 class PlanPago {
@@ -314,6 +415,9 @@ class PlanPago {
     required this.fechaLibre,
     required this.interesesTotales,
     required this.orden,
+    required this.soloMinimos,
+    this.paraTerminar,
+    this.paraLimites,
   });
 
   final EstrategiaPago estrategia;
@@ -323,8 +427,8 @@ class PlanPago {
   /// total del mes no baja).
   final int presupuestoMensual;
 
-  /// Meses hasta quedar libre de deudas; `null` si con ese presupuesto no
-  /// se termina nunca (o no hay nada que pagar al mes).
+  /// Meses hasta quedar libre de deudas (0 = este mes); `null` si con ese
+  /// presupuesto no se termina nunca (o no hay nada que pagar al mes).
   final int? meses;
   final DateTime? fechaLibre;
 
@@ -334,14 +438,55 @@ class PlanPago {
   /// Deudas en orden de prioridad según la estrategia.
   final List<PasoPlan> orden;
 
+  /// Lo mismo pagando solo los mínimos, para comparar.
+  final SoloMinimos soloMinimos;
+
+  /// Si el plan no alcanza: el extra mínimo con el que sí se termina.
+  final SugerenciaExtra? paraTerminar;
+
+  /// Si alguna deuda queda después de su fecha límite: el extra mínimo con
+  /// el que todas llegan a tiempo (con esta misma estrategia).
+  final SugerenciaExtra? paraLimites;
+
   bool get alcanza => meses != null;
+
+  /// Deudas que con este plan nunca llegan a cero.
+  List<PasoPlan> get sinTerminar => [
+    for (final p in orden)
+      if (!p.termina) p,
+  ];
+
+  /// Deudas que terminan después de su fecha límite.
+  List<PasoPlan> get tarde => [
+    for (final p in orden)
+      if (p.tarde) p,
+  ];
+
+  /// Lo que hay que pagarle a cada deuda: este mes si todavía falta algo;
+  /// si lo de este mes ya está pago, el mes siguiente. `esteMes` dice cuál.
+  ({bool esteMes, List<(ResumenDeuda, int)> pagos}) get proximosPagos {
+    final esteMes = orden.any((p) => p.pagoEsteMes > 0);
+    return (
+      esteMes: esteMes,
+      pagos: [
+        for (final p in orden)
+          if ((esteMes ? p.pagoEsteMes : p.pagoMesSiguiente) > 0)
+            (p.resumen, esteMes ? p.pagoEsteMes : p.pagoMesSiguiente),
+      ],
+    );
+  }
 
   /// Simula el plan mes a mes.
   ///
-  /// Cada mes: (1) a cada deuda se le suma su interés, (2) se paga el mínimo
-  /// de todas, (3) lo que sobra del presupuesto (el extra más los mínimos de
-  /// las deudas ya terminadas) va completo a la deuda prioritaria y, si
-  /// alcanza para liquidarla, sigue con la siguiente.
+  /// Mes 0 (el mes en curso): el interés causado hasta hoy ya está en el
+  /// saldo; se paga lo que falte de la cuota de este mes (lo ya pagado se
+  /// descuenta; una deuda que empezó este mes paga desde el siguiente) y lo
+  /// que falte del extra.
+  ///
+  /// Cada mes siguiente: (1) a cada deuda se le suma su interés, (2) se paga
+  /// el mínimo de todas, (3) lo que sobra del presupuesto (el extra más los
+  /// mínimos de las deudas ya terminadas) va completo a la deuda prioritaria
+  /// y, si alcanza para liquidarla, sigue con la siguiente.
   static PlanPago simular({
     required List<ResumenDeuda> deudas,
     required EstrategiaPago estrategia,
@@ -349,85 +494,229 @@ class PlanPago {
     required DateTime hoy,
   }) {
     final activas = deudas.where((r) => r.saldo > 0).toList();
-    // Prioridad fija desde hoy, que es como se explica cada método.
+    // Prioridad fija desde hoy, que es como se explica cada método. Para
+    // avalancha cuenta lo que cuesta de verdad cada deuda, no la tasa
+    // escrita (ver [ResumenDeuda.costoMensualPct]).
     activas.sort((a, b) {
       if (estrategia == EstrategiaPago.avalancha) {
-        final porTasa = b.tasaMensualPct.compareTo(a.tasaMensualPct);
-        return porTasa != 0 ? porTasa : a.saldo.compareTo(b.saldo);
+        final porCosto = b.costoMensualPct.compareTo(a.costoMensualPct);
+        return porCosto != 0 ? porCosto : a.saldo.compareTo(b.saldo);
       }
       final porSaldo = a.saldo.compareTo(b.saldo);
       return porSaldo != 0
           ? porSaldo
-          : b.tasaMensualPct.compareTo(a.tasaMensualPct);
+          : b.costoMensualPct.compareTo(a.costoMensualPct);
     });
 
+    final extra = math.max<int>(0, extraMensual);
     final presupuesto =
-        activas.fold<int>(0, (s, r) => s + (r.pagoMinimo ?? 0)) +
-        math.max<int>(0, extraMensual);
-    final saldos = [for (final r in activas) r.saldo.toDouble()];
-    final mesFin = List<int?>.filled(activas.length, null);
-    var intereses = 0.0;
-    int? mesesTotales;
+        activas.fold<int>(0, (s, r) => s + (r.pagoMinimo ?? 0)) + extra;
+    final corrida = _correr(activas, extra, hoy);
+    final minimos = _correr(activas, 0, hoy, cascada: false);
 
-    if (activas.isEmpty) {
-      mesesTotales = 0;
-    } else if (presupuesto > 0) {
-      for (var k = 1; k <= mesesMaximosSimulacion; k++) {
-        for (var i = 0; i < activas.length; i++) {
-          if (mesFin[i] != null) continue;
-          final interes = activas[i].interesDelMes(k, saldos[i]);
-          saldos[i] += interes;
-          intereses += interes;
-        }
-        var disponible = presupuesto.toDouble();
-        // Mínimos primero…
-        for (var i = 0; i < activas.length; i++) {
-          if (mesFin[i] != null) continue;
-          final pago = math.min(
-            (activas[i].pagoMinimo ?? 0).toDouble(),
-            saldos[i],
-          );
-          saldos[i] -= pago;
-          disponible -= pago;
-        }
-        // …y lo que sobra, a la prioritaria (y a las que sigan).
-        for (var i = 0; i < activas.length && disponible > 0.5; i++) {
-          if (mesFin[i] != null) continue;
-          final pago = math.min(disponible, saldos[i]);
-          saldos[i] -= pago;
-          disponible -= pago;
-        }
-        for (var i = 0; i < activas.length; i++) {
-          if (mesFin[i] == null && saldos[i] < 0.5) mesFin[i] = k;
-        }
-        if (mesFin.every((m) => m != null)) {
-          mesesTotales = k;
-          break;
-        }
-      }
+    final limites = [
+      for (final r in activas)
+        if (r.deuda.fechaLimite case final l?)
+          _mesesHasta(hoy, fechaCivilGuardada(l))
+        else
+          null,
+    ];
+    final orden = [
+      for (var i = 0; i < activas.length; i++)
+        PasoPlan(
+          resumen: activas[i],
+          meses: corrida.mesFin[i],
+          fecha: _fechaDe(hoy, corrida.mesFin[i]),
+          pagoEsteMes: InteresCalculator.aPesos(corrida.pagosEsteMes[i]),
+          pagoMesSiguiente: InteresCalculator.aPesos(
+            corrida.pagosMesSiguiente[i],
+          ),
+          mesLimite: limites[i],
+        ),
+    ];
+
+    // Las búsquedas de extra solo se hacen cuando hay algo que arreglar.
+    final tope = 2 * activas.fold<int>(0, (s, r) => s + r.saldo) + 1000;
+    SugerenciaExtra? sugerir(bool Function(_Corrida c) cumple) {
+      final x = _extraMinimo(
+        (x) => cumple(_correr(activas, x, hoy)),
+        desde: extra,
+        tope: tope,
+      );
+      if (x == null) return null;
+      return SugerenciaExtra(
+        extra: x,
+        fechaLibre: _fechaDe(hoy, _correr(activas, x, hoy).meses)!,
+      );
     }
 
-    DateTime? fechaDe(int? meses) =>
-        meses == null ? null : DateTime(hoy.year, hoy.month + meses, 1);
+    bool llegaATiempo(_Corrida c) {
+      for (var i = 0; i < activas.length; i++) {
+        final l = limites[i];
+        if (l == null || l < 0) continue;
+        final fin = c.mesFin[i];
+        if (fin == null || fin > l) return false;
+      }
+      return true;
+    }
 
+    final mesesTotales = corrida.meses;
     return PlanPago(
       estrategia: estrategia,
       presupuestoMensual: presupuesto,
       meses: mesesTotales,
-      fechaLibre: activas.isEmpty ? null : fechaDe(mesesTotales),
+      fechaLibre: activas.isEmpty ? null : _fechaDe(hoy, mesesTotales),
       interesesTotales: mesesTotales == null
           ? 0
-          : InteresCalculator.aPesos(intereses),
-      orden: [
-        for (var i = 0; i < activas.length; i++)
-          PasoPlan(
-            resumen: activas[i],
-            // Si el plan completo no alcanza, las fechas parciales no son
-            // de fiar: no se muestran.
-            meses: mesesTotales == null ? null : mesFin[i],
-            fecha: mesesTotales == null ? null : fechaDe(mesFin[i]),
-          ),
-      ],
+          : InteresCalculator.aPesos(corrida.intereses),
+      orden: orden,
+      soloMinimos: SoloMinimos(
+        meses: minimos.meses,
+        interesesTotales: minimos.meses == null
+            ? 0
+            : InteresCalculator.aPesos(minimos.intereses),
+      ),
+      paraTerminar: activas.isEmpty || corrida.termina
+          ? null
+          : sugerir((c) => c.termina),
+      paraLimites: orden.any((p) => p.tarde) ? sugerir(llegaATiempo) : null,
     );
   }
+
+  static DateTime? _fechaDe(DateTime hoy, int? meses) =>
+      meses == null ? null : DateTime(hoy.year, hoy.month + meses, 1);
+
+  /// Meses calendario de [hoy] a [fecha] (0 = mismo mes, negativo = antes).
+  static int _mesesHasta(DateTime hoy, DateTime fecha) =>
+      (fecha.year - hoy.year) * 12 + fecha.month - hoy.month;
+
+  /// El extra más pequeño (en múltiplos de $1.000, mayor que [desde]) con
+  /// el que [cumple] es cierto; `null` si ni con [tope] se cumple. Más extra
+  /// nunca atrasa ninguna deuda (el orden es fijo), así que se puede buscar
+  /// por mitades.
+  static int? _extraMinimo(
+    bool Function(int extra) cumple, {
+    required int desde,
+    required int tope,
+  }) {
+    const paso = 1000;
+    var bajo = desde ~/ paso + 1;
+    var alto = (tope + paso - 1) ~/ paso;
+    if (bajo > alto || !cumple(alto * paso)) return null;
+    while (bajo < alto) {
+      final medio = (bajo + alto) ~/ 2;
+      if (cumple(medio * paso)) {
+        alto = medio;
+      } else {
+        bajo = medio + 1;
+      }
+    }
+    return bajo * paso;
+  }
+
+  /// La simulación en sí, con las deudas ya en orden. Con `cascada: false`
+  /// cada deuda recibe solo su cuota (lo que se libera al terminar una no
+  /// pasa a otra) y [extra] se ignora: es "pagar solo los mínimos".
+  static _Corrida _correr(
+    List<ResumenDeuda> orden,
+    int extra,
+    DateTime hoy, {
+    bool cascada = true,
+  }) {
+    final n = orden.length;
+    final saldos = [for (final r in orden) r.saldo.toDouble()];
+    final mesFin = List<int?>.filled(n, null);
+    final pagosEsteMes = List<double>.filled(n, 0);
+    final pagosMesSiguiente = List<double>.filled(n, 0);
+    final minimos = [for (final r in orden) (r.pagoMinimo ?? 0).toDouble()];
+    final sumaMinimos = minimos.fold<double>(0, (s, m) => s + m);
+    var intereses = 0.0;
+
+    void pagarMes(
+      int mes,
+      List<double> minimosMes,
+      double disponible,
+      List<double>? registro,
+    ) {
+      // Mínimos primero…
+      for (var i = 0; i < n; i++) {
+        if (mesFin[i] != null) continue;
+        final pago = math.min(minimosMes[i], saldos[i]);
+        saldos[i] -= pago;
+        disponible -= pago;
+        registro?[i] += pago;
+      }
+      // …y lo que sobra, a la prioritaria (y a las que sigan).
+      for (var i = 0; cascada && i < n && disponible > 0.5; i++) {
+        if (mesFin[i] != null) continue;
+        final pago = math.min(disponible, saldos[i]);
+        saldos[i] -= pago;
+        disponible -= pago;
+        registro?[i] += pago;
+      }
+      for (var i = 0; i < n; i++) {
+        if (mesFin[i] == null && saldos[i] < 0.5) mesFin[i] = mes;
+      }
+    }
+
+    // Mes 0: lo que falte de este mes.
+    final pendientes = [
+      for (final r in orden) r.pendienteEsteMes(hoy, r.pagoMinimo).toDouble(),
+    ];
+    final extraYaPagado = orden.fold<int>(
+      0,
+      (s, r) => s + r.pagadoDeMasEsteMes(hoy),
+    );
+    final extraPendiente = cascada ? math.max(0, extra - extraYaPagado) : 0;
+    pagarMes(
+      0,
+      pendientes,
+      pendientes.fold<double>(0, (s, p) => s + p) + extraPendiente,
+      pagosEsteMes,
+    );
+
+    for (var k = 1; k <= mesesMaximosSimulacion; k++) {
+      if (mesFin.every((m) => m != null)) break;
+      for (var i = 0; i < n; i++) {
+        if (mesFin[i] != null) continue;
+        final interes = orden[i].interesDelMes(k, saldos[i]);
+        saldos[i] += interes;
+        intereses += interes;
+      }
+      pagarMes(
+        k,
+        minimos,
+        sumaMinimos + (cascada ? extra : 0),
+        k == 1 ? pagosMesSiguiente : null,
+      );
+    }
+    return _Corrida(
+      mesFin: mesFin,
+      intereses: intereses,
+      pagosEsteMes: pagosEsteMes,
+      pagosMesSiguiente: pagosMesSiguiente,
+    );
+  }
+}
+
+class _Corrida {
+  _Corrida({
+    required this.mesFin,
+    required this.intereses,
+    required this.pagosEsteMes,
+    required this.pagosMesSiguiente,
+  });
+
+  /// Mes en que cada deuda queda en cero (0 = este mes); `null` = nunca.
+  final List<int?> mesFin;
+  final double intereses;
+  final List<double> pagosEsteMes;
+  final List<double> pagosMesSiguiente;
+
+  bool get termina => mesFin.every((m) => m != null);
+
+  /// Meses hasta terminar todas; 0 si no hay deudas; `null` si alguna no
+  /// termina.
+  int? get meses =>
+      !termina ? null : mesFin.fold<int>(0, (s, m) => math.max(s, m!));
 }

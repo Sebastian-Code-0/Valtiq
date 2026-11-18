@@ -1,5 +1,30 @@
 # Changelog
 
+## Plan de pago: cálculo corregido y más completo (2026-11-17)
+
+- **Avalancha ordena por lo que cuesta de verdad:** en las deudas con
+  interés sobre lo prestado (`saldo_original`) el interés no baja aunque
+  falte poco, así que cada peso que se debe cuesta más que la tasa escrita.
+  Ahora se ordena por `costoMensualPct` (interés del próximo mes ÷ saldo
+  de hoy), no por la tasa.
+- **El mes en curso cuenta:** si el pago de este mes todavía no se ha hecho,
+  el plan lo descuenta ya (antes empezaba el mes siguiente y todas las
+  fechas salían un mes tarde). Lo ya pagado este mes se descuenta de la
+  cuota y lo pagado de más, del extra; una deuda que empezó este mes paga
+  desde el siguiente. La "Liquidación estimada" del detalle usa la misma
+  regla, así que con el mismo pago las dos fechas coinciden.
+- **Fecha límite:** el plan marca las deudas que terminarían después de su
+  fecha límite y calcula el extra mínimo para llegar a tiempo; las de
+  límite ya vencido se marcan aparte.
+- **Una deuda que no baja ya no esconde las demás:** las que sí terminan
+  conservan su fecha, se dice cuál no termina y el extra mínimo (de a
+  $1.000) con el que sí se termina todo.
+- **Comparación con pagar solo los mínimos** (sin extra y sin pasar lo que
+  se libera a otra deuda): meses e intereses, para mostrar lo que se gana.
+- **Lo que hay que pagar este mes** a cada deuda (o el próximo, si lo de
+  este mes ya está pago).
+- Tests: 449.
+
 ## Logo con los colores nuevos, PIN rediseñado y avisos sin emojis (2026-11-17)
 
 - **Logo:** misma forma, colores de la marca: V vino (`#B8304C`) y flecha

@@ -429,8 +429,8 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
       final meses = plan.meses!;
       grande = formatMesAnio(plan.fechaLibre!);
       detalle =
-          'En $meses ${meses == 1 ? 'mes' : 'meses'}, pagando '
-          '${formatCOP(plan.presupuestoMensual)} al mes entre todas.';
+          '${meses == 0 ? 'Este mismo mes' : 'En $meses ${meses == 1 ? 'mes' : 'meses'}'}, '
+          'pagando ${formatCOP(plan.presupuestoMensual)} al mes entre todas.';
     } else if (plan.presupuestoMensual == 0) {
       grande = 'Sin fecha';
       detalle =

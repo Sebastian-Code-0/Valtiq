@@ -206,9 +206,11 @@ void main() {
 
       expect(cumplido.ritmoMensual(hoy), 100000);
       expect(generoso.ritmoMensual(hoy), 300000);
-      // 1.700.000 a 100.000 → 17 meses; 1.100.000 a 300.000 → 4 meses.
-      expect(cumplido.liquidacionEstimada(hoy).meses, 17);
-      expect(generoso.liquidacionEstimada(hoy).meses, 4);
+      // 1.700.000 a 100.000 → 17 pagos; 1.100.000 a 300.000 → 4 pagos. El
+      // primero es el de este mes (noviembre aún no se paga), así que el
+      // último cae 16 y 3 meses después.
+      expect(cumplido.liquidacionEstimada(hoy).meses, 16);
+      expect(generoso.liquidacionEstimada(hoy).meses, 3);
     });
 
     test('quien se salta un mes o paga menos termina después', () {
@@ -223,7 +225,8 @@ void main() {
         _abono(2026, 10, 15, 50000),
       ], hoy: hoy);
       expect(r.ritmoMensual(hoy), 50000); // 150.000 / 3 meses
-      expect(r.liquidacionEstimada(hoy).meses, 37); // 1.850.000 / 50.000
+      // 1.850.000 / 50.000 = 37 pagos, el primero este mes.
+      expect(r.liquidacionEstimada(hoy).meses, 36);
     });
 
     test('los pagos del mes en curso no cambian el ritmo (evita saltos)', () {
@@ -248,7 +251,9 @@ void main() {
         hoy: hoy,
       );
       expect(r.ritmoMensual(hoy), 100000);
-      expect(r.liquidacionEstimada(hoy).meses, 6);
+      // 6 pagos, el primero este mes (todavía no se ha pagado noviembre).
+      expect(r.liquidacionEstimada(hoy).meses, 5);
+      expect(r.liquidacionEstimada(hoy).fecha, DateTime(2027, 4, 1));
     });
 
     test('con interés sobre saldo: coincide con la amortización a mano', () {
@@ -401,9 +406,10 @@ void main() {
 
     test('lo pagado en total = capital + intereses (no se pierde plata)', () {
       final p = plan(EstrategiaPago.avalancha);
-      // Se paga el presupuesto completo todos los meses menos el último.
-      final pagadoMaximo = p.presupuestoMensual * p.meses!;
-      final pagadoMinimo = p.presupuestoMensual * (p.meses! - 1);
+      // Las dos empezaron este mes: este mes solo va el extra (100.000) y
+      // después el presupuesto completo todos los meses menos el último.
+      final pagadoMaximo = 100000 + p.presupuestoMensual * p.meses!;
+      final pagadoMinimo = 100000 + p.presupuestoMensual * (p.meses! - 1);
       final debe = 1300000 + p.interesesTotales;
       expect(debe <= pagadoMaximo, isTrue);
       expect(debe > pagadoMinimo, isTrue);
@@ -482,6 +488,223 @@ void main() {
       );
       expect(p.orden, isEmpty);
       expect(p.fechaLibre, isNull);
+    });
+    // Una deuda vieja (julio) sin interés: 600.000 con cuota de 100.000.
+    Deuda vieja({DateTime? limite}) => _deuda(
+      id: 7,
+      nombre: 'Vieja',
+      monto: 600000,
+      inicio: DateTime.utc(2026, 7, 15),
+      cuota: 100000,
+      limite: limite,
+    );
+
+    PlanPago uno(ResumenDeuda r, {int extra = 0}) => PlanPago.simular(
+      deudas: [r],
+      estrategia: EstrategiaPago.avalancha,
+      extraMensual: extra,
+      hoy: hoy,
+    );
+
+    test('avalancha ordena por lo que cuesta cada deuda, no por la tasa '
+        'escrita', () {
+      // Prestaron 1.000.000 al 5 % sobre lo prestado y ya casi se paga: el
+      // interés sigue siendo 50.000 al mes sobre un saldo pequeño.
+      final casiPaga = ResumenDeuda.calcular(
+        _deuda(
+          id: 1,
+          nombre: 'Casi paga',
+          monto: 1000000,
+          tasa: 5,
+          tipoInteres: 'mensual',
+          inicio: DateTime.utc(2026, 7, 11),
+          cuota: 100000,
+        ),
+        [
+          _abono(2026, 8, 11, 400000),
+          _abono(2026, 9, 11, 400000),
+          _abono(2026, 10, 11, 200000),
+        ],
+        hoy: hoy,
+      );
+      final banco = ResumenDeuda.calcular(
+        _deuda(
+          id: 2,
+          nombre: 'Banco',
+          monto: 1000000,
+          tasa: 6,
+          tipoInteres: 'mensual',
+          amortizacion: 'saldo_insoluto',
+          inicio: DateTime.utc(2026, 11, 11),
+          cuota: 100000,
+        ),
+        const [],
+        hoy: hoy,
+      );
+      expect(casiPaga.tasaMensualPct, 5);
+      expect(casiPaga.costoMensualPct, greaterThan(6));
+      expect(banco.costoMensualPct, closeTo(6, 1e-9));
+      final p = PlanPago.simular(
+        deudas: [banco, casiPaga],
+        estrategia: EstrategiaPago.avalancha,
+        extraMensual: 100000,
+        hoy: hoy,
+      );
+      expect(p.orden.map((x) => x.resumen.deuda.acreedorNombre), [
+        'Casi paga',
+        'Banco',
+      ]);
+    });
+
+    test('el pago de este mes cuenta si todavía no se hace', () {
+      final r = ResumenDeuda.calcular(vieja(), const [], hoy: hoy);
+      final p = uno(r);
+      // 6 pagos: noviembre (este mes) a abril.
+      expect(p.meses, 5);
+      expect(p.fechaLibre, DateTime(2027, 4, 1));
+      expect(p.orden.single.pagoEsteMes, 100000);
+      expect(p.proximosPagos.esteMes, isTrue);
+      // La tarjeta de la deuda da la misma fecha con el mismo pago.
+      expect(r.liquidacionEstimada(hoy).fecha, p.fechaLibre);
+    });
+
+    test('registrar el pago de este mes no mueve la fecha ni lo cobra dos '
+        'veces', () {
+      final r = ResumenDeuda.calcular(vieja(), [
+        _abono(2026, 11, 5, 100000),
+      ], hoy: hoy);
+      final p = uno(r);
+      expect(p.fechaLibre, DateTime(2027, 4, 1));
+      expect(p.orden.single.pagoEsteMes, 0);
+      expect(p.orden.single.pagoMesSiguiente, 100000);
+      // Lo de este mes ya está: lo próximo es diciembre.
+      expect(p.proximosPagos.esteMes, isFalse);
+      expect(p.proximosPagos.pagos.single.$2, 100000);
+      expect(r.liquidacionEstimada(hoy).fecha, DateTime(2027, 4, 1));
+    });
+
+    test('el extra de este mes descuenta lo ya pagado de más', () {
+      final sinPagar = ResumenDeuda.calcular(vieja(), const [], hoy: hoy);
+      expect(uno(sinPagar, extra: 50000).orden.single.pagoEsteMes, 150000);
+      // Pagó 130.000 este mes: la cuota y 30.000 del extra.
+      final pagoDeMas = ResumenDeuda.calcular(vieja(), [
+        _abono(2026, 11, 5, 130000),
+      ], hoy: hoy);
+      expect(uno(pagoDeMas, extra: 50000).orden.single.pagoEsteMes, 20000);
+    });
+
+    test('avisa si una deuda termina después de su fecha límite y dice el '
+        'extra que hace falta', () {
+      // Empieza hoy, sin interés: 600.000 a 100.000 → 6 meses (mayo), pero
+      // la fecha límite es febrero (3 meses).
+      final r = ResumenDeuda.calcular(
+        _deuda(
+          monto: 600000,
+          inicio: DateTime.utc(2026, 11, 11),
+          cuota: 100000,
+          limite: DateTime.utc(2027, 2, 15),
+        ),
+        const [],
+        hoy: hoy,
+      );
+      final p = uno(r);
+      expect(p.orden.single.mesLimite, 3);
+      expect(p.tarde, hasLength(1));
+      // Este mes x + 3 meses de (100.000 + x) = 600.000 → x = 75.000.
+      expect(p.paraLimites?.extra, 75000);
+      expect(p.paraLimites?.fechaLibre, DateTime(2027, 2, 1));
+
+      final conExtra = uno(r, extra: 75000);
+      expect(conExtra.tarde, isEmpty);
+      expect(conExtra.paraLimites, isNull);
+    });
+
+    test('una fecha límite que ya pasó se marca aparte, sin sugerir extra', () {
+      final r = ResumenDeuda.calcular(
+        vieja(limite: DateTime.utc(2026, 10, 1)),
+        const [],
+        hoy: hoy,
+      );
+      final p = uno(r);
+      expect(p.orden.single.limiteVencido, isTrue);
+      expect(p.tarde, isEmpty);
+      expect(p.paraLimites, isNull);
+    });
+
+    test('una deuda que no baja no esconde las fechas de las demás y se dice '
+        'cuánto extra hace falta', () {
+      final chica = ResumenDeuda.calcular(
+        _deuda(
+          id: 1,
+          nombre: 'Chica',
+          monto: 300000,
+          inicio: DateTime.utc(2026, 11, 11),
+          cuota: 10000,
+        ),
+        const [],
+        hoy: hoy,
+      );
+      // 5 % sobre 1.000.000 = 50.000 de interés; las dos cuotas juntas son
+      // 40.000: ni pasándole todo a esta termina.
+      final crece = ResumenDeuda.calcular(
+        _deuda(
+          id: 2,
+          nombre: 'Crece',
+          monto: 1000000,
+          tasa: 5,
+          tipoInteres: 'mensual',
+          amortizacion: 'saldo_insoluto',
+          inicio: DateTime.utc(2026, 11, 11),
+          cuota: 30000,
+        ),
+        const [],
+        hoy: hoy,
+      );
+      PlanPago con(int extra) => PlanPago.simular(
+        deudas: [chica, crece],
+        estrategia: EstrategiaPago.avalancha,
+        extraMensual: extra,
+        hoy: hoy,
+      );
+      final p = con(0);
+      expect(p.alcanza, isFalse);
+      expect(p.sinTerminar.single.resumen.deuda.acreedorNombre, 'Crece');
+      final paso = p.orden.firstWhere((x) => x.resumen.deuda.id == 1);
+      expect(paso.meses, 30);
+      expect(paso.fecha, DateTime(2029, 5, 1));
+
+      final sugerido = p.paraTerminar!;
+      expect(sugerido.extra % 1000, 0);
+      expect(con(sugerido.extra).alcanza, isTrue);
+      expect(con(sugerido.extra).fechaLibre, sugerido.fechaLibre);
+      expect(con(sugerido.extra - 1000).alcanza, isFalse);
+    });
+
+    test('compara contra pagar solo los mínimos', () {
+      final p = plan(EstrategiaPago.avalancha);
+      expect(p.soloMinimos.termina, isTrue);
+      expect(p.meses! < p.soloMinimos.meses!, isTrue);
+      expect(p.interesesTotales < p.soloMinimos.interesesTotales, isTrue);
+      // Sin extra igual se gana: lo que se libera pasa a la otra deuda.
+      final sinExtra = plan(EstrategiaPago.avalancha, extra: 0);
+      expect(sinExtra.meses! < sinExtra.soloMinimos.meses!, isTrue);
+    });
+
+    test('solo los mínimos no termina si alguna deuda no tiene cuota', () {
+      final p = PlanPago.simular(
+        deudas: [
+          ResumenDeuda.calcular(
+            _deuda(monto: 100000, inicio: DateTime.utc(2026, 11, 11)),
+            const [],
+            hoy: hoy,
+          ),
+        ],
+        estrategia: EstrategiaPago.avalancha,
+        extraMensual: 50000,
+        hoy: hoy,
+      );
+      expect(p.alcanza, isTrue);
+      expect(p.soloMinimos.termina, isFalse);
     });
   });
 }
