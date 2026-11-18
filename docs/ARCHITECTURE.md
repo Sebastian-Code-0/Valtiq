@@ -640,8 +640,19 @@ nunca muestran cifras distintas:
     `tarde`): el extra mínimo, de a $1.000, con el que se cumple, buscado
     por mitades (con el orden fijo, más extra nunca atrasa ninguna deuda).
     Solo se calculan cuando hay algo que arreglar.
+  - `saldoPorMes`: total adeudado hoy y al cerrar cada mes, para la
+    gráfica.
   La estrategia y el extra se guardan en `SharedPreferences`
   (`valtiq_plan_estrategia`, `valtiq_plan_extra`).
+- `PlanPagoTab` (pantalla): en celular el orden es tarjeta "Libre de deudas
+  en" (con la comparación contra `soloMinimos`) → avisos (sin mínimo, no
+  baja, tarde, límite vencido; los de `paraTerminar`/`paraLimites` traen
+  botón "Usar $X de extra") → "Este mes paga" (`proximosPagos`) →
+  controles (estrategia con la nota de cuál ahorra, extra con botones
+  rápidos `extrasRapidos` que simulan antes de tocarlos, orden de pago) →
+  gráfica (`_PintorSaldo`, `CustomPainter`, sin paquetes) → intereses. En
+  PC (≥ 720 de ancho útil): controles y gráfica a la izquierda, lo demás a
+  la derecha.
 
 ### Widgets de Android y "Anotar gasto" (2026-11-12)
 

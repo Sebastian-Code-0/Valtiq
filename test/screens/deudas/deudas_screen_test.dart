@@ -15,6 +15,7 @@ import 'package:valtiq/screens/deudas/deuda_form.dart';
 import 'package:valtiq/screens/deudas/deudas_screen.dart';
 import 'package:valtiq/screens/deudas/plan_pago_tab.dart';
 import 'package:valtiq/theme/theme.dart';
+import 'package:valtiq/utils/currency_input.dart';
 import 'package:valtiq/utils/fecha_civil.dart';
 import 'package:valtiq/utils/form_widgets.dart';
 import 'package:valtiq/utils/format.dart';
@@ -370,7 +371,14 @@ void main() {
     await tester.tap(find.text('Plan de pago'));
     await tester.pumpAndSettle();
 
-    double arriba(String texto) => tester.getTopLeft(find.text(texto).last).dy;
+    double arriba(String texto) => tester
+        .getTopLeft(
+          find.descendant(
+            of: find.byKey(const ValueKey('plan-orden')),
+            matching: find.text(texto),
+          ),
+        )
+        .dy;
 
     // Avalancha (por defecto): Nu (2 % mensual) va antes que Juan (0 %).
     expect(find.textContaining('tasa más alta'), findsOneWidget);
@@ -389,6 +397,74 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString(PlanPagoTab.claveEstrategia), 'bola_de_nieve');
     expect(prefs.getInt(PlanPagoTab.claveExtra), 5000000);
+    await _cerrar(tester);
+  });
+
+  testWidgets('Plan de pago en celular: primero la respuesta; este mes, '
+      'gráfica, comparación con los mínimos y botones de extra', (
+    tester,
+  ) async {
+    await sembrar();
+    await montar(tester, const Size(360, 640));
+    await tester.tap(find.text('Plan de pago'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    // "Libre de deudas en" va arriba de los controles.
+    final libre = tester.getTopLeft(find.byKey(const ValueKey('plan-libre')));
+    final extra = tester.getTopLeft(find.byKey(const ValueKey('plan-extra')));
+    expect(libre.dy < extra.dy, isTrue);
+    expect(find.byKey(const ValueKey('plan-vs-minimos')), findsOneWidget);
+    expect(find.byKey(const ValueKey('plan-este-mes')), findsOneWidget);
+    expect(find.byKey(const ValueKey('plan-grafica')), findsOneWidget);
+    await captura(tester, 'plan-celular');
+
+    // "+$100.000" suma al extra, se ve en el campo y se recuerda.
+    final boton = find.byKey(const ValueKey('plan-extra-mas-100000'));
+    await tester.ensureVisible(boton);
+    await tester.pumpAndSettle();
+    await tester.tap(boton);
+    await tester.pumpAndSettle();
+    expect(find.text(formatCOPInput(100000)), findsOneWidget);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt(PlanPagoTab.claveExtra), 100000);
+    expect(tester.takeException(), isNull);
+    await _cerrar(tester);
+  });
+
+  testWidgets('Plan de pago: una deuda que no baja se avisa y "Usar" pone '
+      'el extra con el que sí se termina', (tester) async {
+    await sembrar();
+    await db.deudasDao.insertDeuda(
+      DeudasCompanion.insert(
+        acreedorNombre: 'Gota a gota',
+        montoOriginal: 300000000,
+        tasaInteres: const Value(5),
+        tipoInteres: const Value('mensual'),
+        tipoAmortizacion: const Value('saldo_insoluto'),
+        fechaPrestamo: normalizarFechaCivil(hoy),
+        cuotaMensual: const Value(100000),
+      ),
+    );
+    await montar(tester, const Size(1366, 768));
+    await tester.tap(find.text('Plan de pago'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('plan-no-baja')), findsOneWidget);
+    expect(find.text('Gota a gota no baja'), findsOneWidget);
+    expect(find.text('Sin fecha'), findsOneWidget);
+    await captura(tester, 'plan-no-baja');
+
+    final usar = find.byKey(const ValueKey('plan-no-baja-usar'));
+    await tester.ensureVisible(usar);
+    await tester.pumpAndSettle();
+    await tester.tap(usar);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('plan-no-baja')), findsNothing);
+    expect(find.text('Sin fecha'), findsNothing);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt(PlanPagoTab.claveExtra), greaterThan(0));
+    expect(tester.takeException(), isNull);
     await _cerrar(tester);
   });
 

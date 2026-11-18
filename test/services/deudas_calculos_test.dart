@@ -619,6 +619,50 @@ void main() {
       expect(conExtra.paraLimites, isNull);
     });
 
+    test('el extra para llegar a tiempo también termina las que no bajan', () {
+      final conLimite = ResumenDeuda.calcular(
+        _deuda(
+          id: 1,
+          monto: 600000,
+          inicio: DateTime.utc(2026, 11, 11),
+          cuota: 100000,
+          limite: DateTime.utc(2027, 2, 15),
+        ),
+        const [],
+        hoy: hoy,
+      );
+      final crece = ResumenDeuda.calcular(
+        _deuda(
+          id: 2,
+          monto: 10000000,
+          tasa: 5,
+          tipoInteres: 'mensual',
+          amortizacion: 'saldo_insoluto',
+          inicio: DateTime.utc(2026, 11, 11),
+          cuota: 10000,
+        ),
+        const [],
+        hoy: hoy,
+      );
+      final p = PlanPago.simular(
+        deudas: [conLimite, crece],
+        estrategia: EstrategiaPago.bolaDeNieve,
+        extraMensual: 0,
+        hoy: hoy,
+      );
+      expect(p.alcanza, isFalse);
+      expect(p.tarde, isNotEmpty);
+      final s = p.paraLimites!;
+      final con = PlanPago.simular(
+        deudas: [conLimite, crece],
+        estrategia: EstrategiaPago.bolaDeNieve,
+        extraMensual: s.extra,
+        hoy: hoy,
+      );
+      expect(con.alcanza, isTrue);
+      expect(con.tarde, isEmpty);
+    });
+
     test('una fecha límite que ya pasó se marca aparte, sin sugerir extra', () {
       final r = ResumenDeuda.calcular(
         vieja(limite: DateTime.utc(2026, 10, 1)),

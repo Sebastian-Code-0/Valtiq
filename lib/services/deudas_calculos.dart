@@ -418,6 +418,7 @@ class PlanPago {
     required this.soloMinimos,
     this.paraTerminar,
     this.paraLimites,
+    this.saldoPorMes = const [],
   });
 
   final EstrategiaPago estrategia;
@@ -447,6 +448,11 @@ class PlanPago {
   /// Si alguna deuda queda después de su fecha límite: el extra mínimo con
   /// el que todas llegan a tiempo (con esta misma estrategia).
   final SugerenciaExtra? paraLimites;
+
+  /// Lo que se debe entre todas: hoy (posición 0) y al cerrar cada mes del
+  /// plan (posición k + 1 = después del mes k; el mes 0 es el actual). Para
+  /// la gráfica; vacío si no hay deudas.
+  final List<int> saldoPorMes;
 
   bool get alcanza => meses != null;
 
@@ -550,7 +556,10 @@ class PlanPago {
       );
     }
 
+    // También exige terminar todo: un extra que deja a tiempo las deudas
+    // con fecha límite pero con otra que nunca baja no es una solución.
     bool llegaATiempo(_Corrida c) {
+      if (!c.termina) return false;
       for (var i = 0; i < activas.length; i++) {
         final l = limites[i];
         if (l == null || l < 0) continue;
@@ -580,6 +589,9 @@ class PlanPago {
           ? null
           : sugerir((c) => c.termina),
       paraLimites: orden.any((p) => p.tarde) ? sugerir(llegaATiempo) : null,
+      saldoPorMes: activas.isEmpty
+          ? const []
+          : [for (final v in corrida.saldoTotal) InteresCalculator.aPesos(v)],
     );
   }
 
@@ -631,6 +643,8 @@ class PlanPago {
     final minimos = [for (final r in orden) (r.pagoMinimo ?? 0).toDouble()];
     final sumaMinimos = minimos.fold<double>(0, (s, m) => s + m);
     var intereses = 0.0;
+    double total() => saldos.fold<double>(0, (s, v) => s + math.max(0, v));
+    final saldoTotal = [total()];
 
     void pagarMes(
       int mes,
@@ -657,6 +671,7 @@ class PlanPago {
       for (var i = 0; i < n; i++) {
         if (mesFin[i] == null && saldos[i] < 0.5) mesFin[i] = mes;
       }
+      saldoTotal.add(total());
     }
 
     // Mes 0: lo que falte de este mes.
@@ -695,6 +710,7 @@ class PlanPago {
       intereses: intereses,
       pagosEsteMes: pagosEsteMes,
       pagosMesSiguiente: pagosMesSiguiente,
+      saldoTotal: saldoTotal,
     );
   }
 }
@@ -705,6 +721,7 @@ class _Corrida {
     required this.intereses,
     required this.pagosEsteMes,
     required this.pagosMesSiguiente,
+    required this.saldoTotal,
   });
 
   /// Mes en que cada deuda queda en cero (0 = este mes); `null` = nunca.
@@ -712,6 +729,9 @@ class _Corrida {
   final double intereses;
   final List<double> pagosEsteMes;
   final List<double> pagosMesSiguiente;
+
+  /// Total adeudado hoy y al cerrar cada mes simulado.
+  final List<double> saldoTotal;
 
   bool get termina => mesFin.every((m) => m != null);
 

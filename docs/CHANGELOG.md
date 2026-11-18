@@ -1,5 +1,31 @@
 # Changelog
 
+## Plan de pago: pantalla nueva (2026-11-17)
+
+- **Primero la respuesta:** en celular, "Libre de deudas en" va arriba,
+  luego los avisos y lo de este mes; los controles quedan debajo. En PC,
+  controles y gráfica a la izquierda, respuesta a la derecha.
+- **Frente a pagar solo los mínimos:** "N meses antes y $X menos en
+  intereses" (o "no terminarías nunca") dentro de la tarjeta grande.
+- **"Este mes paga":** cuánto pagarle a cada deuda (mínimo, extra o
+  mínimo + extra) y el total; si lo de este mes ya está pago, muestra el
+  mes siguiente.
+- **Avisos con solución:** deuda que no baja y deudas que terminan después
+  de su fecha límite, cada uno con el extra que hace falta y un botón
+  "Usar $X de extra"; aparte, las de fecha límite ya vencida.
+- **Gráfica "Cómo baja tu deuda":** total adeudado mes a mes (dibujada a
+  mano, sin paquetes nuevos) con un círculo numerado en el mes en que
+  termina cada deuda del orden de pago.
+- **Cuál estrategia ahorra:** debajo de las píldoras, "Es la que menos
+  intereses te cobra" o "Avalancha te ahorraría $X" con botón "Cambiar".
+- **Botones rápidos de extra** (+$50.000, +$100.000, +$200.000) que dicen
+  antes de tocarlos cuántos meses antes terminas.
+- **Orden de pago:** "No baja" y "después del límite" en rojo; en avalancha,
+  "Te cuesta X % al mes de lo que debes" cuando es distinto de la tasa.
+- Arreglo: el extra para llegar a tiempo a las fechas límite ahora también
+  exige terminar todas las deudas.
+- Tests: 452.
+
 ## Plan de pago: cálculo corregido y más completo (2026-11-17)
 
 - **Avalancha ordena por lo que cuesta de verdad:** en las deudas con
