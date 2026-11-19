@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:drift/drift.dart' show Value;
@@ -5,10 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
+import '../../services/deudas_calculos.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/campo_nombre_sugerencias.dart';
+import '../../utils/date_format.dart';
+import '../../utils/dialogo_meses.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/fecha_civil.dart';
@@ -59,6 +63,10 @@ class _DeudaFormState extends State<DeudaForm>
   late DateTime _fechaPrestamo;
   DateTime? _fechaLimite;
 
+  /// Pagos ya registrados (al editar): sin ellos las sugerencias de pago
+  /// mínimo se calcularían sobre lo prestado y no sobre lo que se debe hoy.
+  List<AbonoInteres> _abonos = const [];
+
   @override
   void initState() {
     super.initState();
@@ -86,10 +94,72 @@ class _DeudaFormState extends State<DeudaForm>
     _fechaLimite = d?.fechaLimite == null
         ? null
         : fechaCivilGuardada(d!.fechaLimite!);
+    // Las sugerencias y el aviso del pago mínimo se recalculan al escribir.
+    for (final ctrl in [_montoCtrl, _tasaCtrl, _cuotaCtrl]) {
+      ctrl.addListener(_refrescar);
+    }
+    if (d != null) _cargarAbonos(d.id);
     if (widget.irAPagoMinimo) {
       // Espera a que termine la animación de entrada de la página.
       _timers.add(Timer(const Duration(milliseconds: 350), _irAPagoMinimo));
     }
+  }
+
+  void _refrescar() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _cargarAbonos(int deudaId) async {
+    final pagos = await widget.db.pagosDeudaDao.getPagosDeDeuda(deudaId);
+    if (!mounted) return;
+    setState(() {
+      _abonos = [
+        for (final p in pagos)
+          AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
+      ];
+    });
+  }
+
+  /// La deuda tal como está escrita en el formulario ahora mismo (con sus
+  /// pagos, si se está editando), para calcular sugerencias. `null` si
+  /// falta el monto o la tasa no tiene tipo (mensual/anual).
+  ResumenDeuda? _resumenFormulario() {
+    final monto = parseCOP(_montoCtrl.text);
+    if (monto == null || monto <= 0 || _faltaTipoInteres) return null;
+    final tasa = parseTasa(_tasaCtrl.text);
+    final conInteres = tasa > 0;
+    final ahora = DateTime.now();
+    final d = widget.deuda;
+    final deuda = Deuda(
+      id: d?.id ?? 0,
+      acreedorNombre: _acreedorCtrl.text,
+      descripcion: '',
+      tipo: _tipo,
+      diaPago: int.tryParse(_diaPagoCtrl.text.trim()),
+      montoOriginal: monto,
+      tasaInteres: tasa,
+      tipoInteres: conInteres ? _tipoInteres : 'ninguno',
+      modalidadCalculo: conInteres ? _modalidadCalculo : 'simple',
+      tipoAmortizacion: conInteres ? _tipoAmortizacion : 'saldo_original',
+      fechaPrestamo: normalizarFechaCivil(_fechaPrestamo),
+      fechaLimite: _fechaLimite == null
+          ? null
+          : normalizarFechaCivil(_fechaLimite!),
+      cuotaMensual: parseCOP(_cuotaCtrl.text),
+      notas: '',
+      estado: 'activa',
+      creadoEn: d?.creadoEn ?? ahora,
+      actualizadoEn: ahora,
+    );
+    return ResumenDeuda.calcular(deuda, _abonos, hoy: ahora);
+  }
+
+  void _ponerCuota(int cuota) {
+    final texto = formatCOPInput(cuota);
+    _cuotaCtrl.value = TextEditingValue(
+      text: texto,
+      selection: TextSelection.collapsed(offset: texto.length),
+    );
   }
 
   Future<void> _irAPagoMinimo() async {
@@ -158,56 +228,39 @@ class _DeudaFormState extends State<DeudaForm>
     if (f != null) setState(() => _fechaLimite = f);
   }
 
+  /// Calculadora del campo: el usuario dice en cuántos meses quiere
+  /// terminar y se calcula la cuota con lo que debe HOY (no con lo que le
+  /// prestaron) y con el mismo motor de intereses de toda la app (respeta
+  /// interés sobre lo que falta o sobre lo prestado). Sirve también para
+  /// deudas sin interés.
   Future<void> _calcularCuotaSugerida() async {
     final monto = parseCOP(_montoCtrl.text);
     if (monto == null || monto <= 0) {
       mostrarAlerta(context, 'Ingresa primero el monto original.');
       return;
     }
-    if (!_tieneInteres) {
-      mostrarAlerta(context, 'Ingresa primero una tasa de interés mayor a 0.');
+    if (_faltaTipoInteres) {
+      mostrarAlerta(context, 'Elige primero si la tasa es mensual o anual.');
       return;
     }
-    final cuotasCtrl = TextEditingController();
     final numeroCuotas = await showDialog<int>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Calcular cuota sugerida'),
-        content: TextField(
-          controller: cuotasCtrl,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(3),
-          ],
-          decoration: const InputDecoration(labelText: '¿En cuántos meses?'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, int.tryParse(cuotasCtrl.text)),
-            child: const Text('Calcular'),
-          ),
-        ],
-      ),
+      builder: (_) => const DialogoMeses(),
     );
-    if (numeroCuotas == null || numeroCuotas <= 0) return;
-    final tasa = parseTasa(_tasaCtrl.text);
-    final cuota = InteresCalculator.calcularCuotaFijaDesdeTasa(
-      capital: monto,
-      tasaInteres: tasa,
-      tipoInteres: _tipoInteres == 'anual' ? 'anual' : 'mensual',
-      numeroCuotas: numeroCuotas,
-    );
-    if (!mounted) return;
-    setState(() => _cuotaCtrl.text = formatCOPInput(cuota));
+    if (numeroCuotas == null || numeroCuotas <= 0 || !mounted) return;
+    final r = _resumenFormulario();
+    final hoy = DateTime.now();
+    final cuota = r?.cuotaParaTerminarEn(numeroCuotas, hoy);
+    if (r == null || cuota == null) {
+      mostrarInfo(context, 'Esta deuda ya no tiene saldo por pagar.');
+      return;
+    }
+    _ponerCuota(cuota);
+    final fin = r.liquidacionCon(cuota, hoy).fecha;
     mostrarExito(
       context,
-      'Cuota fija sugerida a $numeroCuotas meses: ${formatCOP(cuota)}.',
+      'Pagando ${formatCOP(cuota)} al mes terminas '
+      '${fin == null ? 'en $numeroCuotas meses' : 'en ${formatMesAnio(fin)}'}.',
     );
   }
 
@@ -285,6 +338,168 @@ class _DeudaFormState extends State<DeudaForm>
         );
       }
     });
+  }
+
+  /// Debajo de "Pago mínimo al mes": las dos cuotas que sugiere la app
+  /// (se tocan para usarlas) y, si hay un monto escrito, qué pasa con él:
+  /// cuándo terminas, o un aviso si así la deuda nunca baja o terminas
+  /// después de la fecha límite. Nunca bloquea el guardado.
+  Widget? _ayudaPagoMinimo(BuildContext context) {
+    final r = _resumenFormulario();
+    if (r == null || r.saldo <= 0) return null;
+    final hoy = DateTime.now();
+    final sugerencias = r.sugerirCuotas(hoy);
+    if (sugerencias == null) return null;
+    final c = context.colores;
+    final theme = Theme.of(context);
+    final gris = theme.textTheme.bodySmall?.copyWith(
+      fontSize: 12.5,
+      height: 1.4,
+      color: c.textoSecundario,
+    );
+
+    String plazo(SugerenciaCuota s) => s.meses == 0
+        ? 'terminas este mes'
+        : 'terminas en ${formatMesAnioCorto(s.fecha)}';
+
+    Widget opcion(String llave, String titulo, SugerenciaCuota s) {
+      final elegida = parseCOP(_cuotaCtrl.text) == s.cuota;
+      return Material(
+        color: elegida ? c.acentoSuave : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: elegida ? c.acento : c.divisor,
+            width: AppSpacing.borde,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: ValueKey(llave),
+          onTap: () => _ponerCuota(s.cuota),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  titulo,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: c.textoSecundario,
+                  ),
+                ),
+                Text(
+                  formatCOP(s.cuota),
+                  style: monoStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
+                Text(plazo(s), style: gris?.copyWith(fontSize: 11.5)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Qué pasa con lo que está escrito.
+    Widget? efecto;
+    final cuota = parseCOP(_cuotaCtrl.text);
+    if (cuota != null && cuota > 0) {
+      final l = r.liquidacionCon(cuota, hoy);
+      final limite = r.deuda.fechaLimite == null
+          ? null
+          : fechaCivilGuardada(r.deuda.fechaLimite!);
+      final mesLimite = limite == null
+          ? null
+          : (limite.year - hoy.year) * 12 + limite.month - hoy.month;
+      final String texto;
+      var alerta = false;
+      if (l.noBaja) {
+        alerta = true;
+        final interes = r.interesProximoMes;
+        texto = cuota <= interes
+            ? 'Con ${formatCOP(cuota)} al mes esta deuda nunca se termina: '
+                  'solo el interés es de ${formatCOP(interes)} al mes, así '
+                  'que lo que debes crece en vez de bajar.'
+            : 'Con ${formatCOP(cuota)} al mes esta deuda no se termina en '
+                  'menos de 50 años: el interés se come casi todo el pago.';
+      } else if (l.meses != null &&
+          mesLimite != null &&
+          mesLimite >= 0 &&
+          l.meses! > mesLimite) {
+        alerta = true;
+        texto =
+            'Con este pago terminas en ${formatMesAnio(l.fecha!)}, después '
+            'de tu fecha límite (${formatMesAnio(limite!)}).';
+      } else if (l.fecha != null) {
+        texto = l.meses == 0
+            ? 'Con este pago terminas este mes.'
+            : 'Con este pago terminas en ${formatMesAnio(l.fecha!)} '
+                  '(${l.meses} ${l.meses == 1 ? 'mes' : 'meses'}).';
+      } else {
+        texto = '';
+      }
+      if (texto.isNotEmpty) {
+        efecto = Row(
+          key: const ValueKey('cuota-efecto'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Icon(
+                alerta ? Icons.warning_amber_rounded : Icons.event_available,
+                size: 17,
+                color: alerta ? c.alerta : c.positivo,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                texto,
+                style: gris?.copyWith(
+                  color: alerta ? c.alerta : c.texto,
+                  fontWeight: alerta ? FontWeight.w600 : null,
+                ),
+              ),
+            ),
+          ],
+        );
+      }
+    }
+
+    final limite = r.deuda.fechaLimite;
+    return Padding(
+      key: const ValueKey('cuota-sugerencias'),
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ?efecto,
+          if (efecto != null) const SizedBox(height: 12),
+          Text(
+            sugerencias.porLimite && limite != null
+                ? 'Sugerencias para pagarla antes de tu fecha límite '
+                      '(${formatMesAnio(fechaCivilGuardada(limite))}), según lo '
+                      'que debes hoy:'
+                : 'Sugerencias según lo que debes hoy '
+                      '(${formatCOP(r.saldo)}) y tu tasa:',
+            style: gris,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              opcion('cuota-minima', 'Mínimo', sugerencias.minimo),
+              if (sugerencias.rapido != null)
+                opcion('cuota-rapida', 'Más rápido', sugerencias.rapido!),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -563,8 +778,9 @@ class _DeudaFormState extends State<DeudaForm>
               child: CampoEtiquetado(
                 etiqueta: 'Pago mínimo al mes (opcional)',
                 ayuda:
-                    'La cuota que pactaste. El botón de la calculadora te '
-                    'sugiere una según la tasa y los meses.',
+                    'La cuota que pactaste o la que piensas pagar. Abajo te '
+                    'sugerimos una; con la calculadora eliges en cuántos '
+                    'meses terminar.',
                 child: TextFormField(
                   controller: _cuotaCtrl,
                   focusNode: _focoPagoMinimo,
@@ -574,7 +790,7 @@ class _DeudaFormState extends State<DeudaForm>
                     prefixText: r'$ ',
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.calculate_outlined),
-                      tooltip: 'Calcular cuota sugerida',
+                      tooltip: 'Calcular la cuota para terminar en N meses',
                       onPressed: _calcularCuotaSugerida,
                     ),
                   ),
@@ -587,15 +803,21 @@ class _DeudaFormState extends State<DeudaForm>
                     if (v == null || v.trim().isEmpty) return null;
                     final cuota = parseCOP(v);
                     if (cuota == null) return 'Monto inválido';
-                    final monto = parseCOP(_montoCtrl.text) ?? 0;
+                    // Tope: lo prestado o lo que se debe hoy (con intereses
+                    // puede ser más), para atajar un cero de más.
+                    final monto = math.max(
+                      parseCOP(_montoCtrl.text) ?? 0,
+                      _resumenFormulario()?.saldo ?? 0,
+                    );
                     if (monto > 0 && cuota > monto) {
-                      return 'La cuota no puede superar el monto total';
+                      return 'La cuota no puede superar lo que debes';
                     }
                     return null;
                   },
                 ),
               ),
             ),
+            ?_ayudaPagoMinimo(context),
             espacio,
             CampoEtiquetado(
               etiqueta: 'Notas (opcional)',

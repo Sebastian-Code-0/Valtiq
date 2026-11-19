@@ -21,6 +21,7 @@ class RegistrarPagoDialog extends StatefulWidget {
     required this.nombre,
     required this.saldoPendiente,
     this.pagoMinimo,
+    this.pagoDelPlan,
   });
 
   final AppDatabase db;
@@ -35,6 +36,10 @@ class RegistrarPagoDialog extends StatefulWidget {
   /// Pago mínimo del mes; `null` si la deuda no lo tiene definido.
   final int? pagoMinimo;
 
+  /// Lo que el Plan de pago dice pagarle este mes (mínimo + extra, menos lo
+  /// ya pagado este mes); resuelve a `null` si este mes no le toca nada.
+  final Future<int?>? pagoDelPlan;
+
   @override
   State<RegistrarPagoDialog> createState() => _RegistrarPagoDialogState();
 }
@@ -43,6 +48,15 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
     with FormularioGuardadoMixin<RegistrarPagoDialog> {
   final _montoCtrl = TextEditingController();
   DateTime _fecha = DateTime.now();
+  int? _delPlan;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.pagoDelPlan?.then((v) {
+      if (mounted) setState(() => _delPlan = v);
+    }, onError: (_) {});
+  }
 
   @override
   void dispose() {
@@ -109,6 +123,13 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
         _fecha.month == hoy.month &&
         _fecha.day == hoy.day;
     final minimo = widget.pagoMinimo;
+    // Solo si dice algo distinto de "Mínimo" y "Liquidar".
+    final delPlan = _delPlan;
+    final mostrarPlan =
+        delPlan != null &&
+        delPlan > 0 &&
+        delPlan != minimo &&
+        delPlan < widget.saldoPendiente;
 
     return Dialog(
       child: ConstrainedBox(
@@ -184,6 +205,12 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
                       ActionChip(
                         label: Text('Mínimo ${formatCOP(minimo)}'),
                         onPressed: () => _ponerMonto(minimo),
+                      ),
+                    if (mostrarPlan)
+                      ActionChip(
+                        key: const ValueKey('pago-del-plan'),
+                        label: Text('Lo del plan ${formatCOP(delPlan)}'),
+                        onPressed: () => _ponerMonto(delPlan),
                       ),
                     ActionChip(
                       label: Text(

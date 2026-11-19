@@ -159,6 +159,26 @@ class _DeudasScreenState extends State<DeudasScreen> {
     );
   }
 
+  /// Guarda una cuota sugerida (desde los avisos del Plan de pago) como
+  /// pago mínimo de la deuda.
+  Future<void> _ponerCuota(Deuda deuda, int cuota) async {
+    try {
+      await widget.db.deudasDao.updateDeuda(
+        deuda.copyWith(
+          cuotaMensual: Value(cuota),
+          actualizadoEn: DateTime.now(),
+        ),
+      );
+      if (!mounted) return;
+      mostrarExito(
+        context,
+        'Pago mínimo de ${deuda.acreedorNombre}: ${formatCOP(cuota)} al mes.',
+      );
+    } catch (_) {
+      if (mounted) mostrarAlerta(context, 'No se pudo guardar el pago mínimo.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -247,6 +267,7 @@ class _DeudasScreenState extends State<DeudasScreen> {
                               ),
                             ),
                           ),
+                          onPonerCuota: _ponerCuota,
                         ),
                         _ => _Pagadas(
                           pagadas: pagadas,

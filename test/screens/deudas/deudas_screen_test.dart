@@ -284,6 +284,31 @@ void main() {
     await _cerrar(tester);
   });
 
+  testWidgets('Registrar pago: "Lo del plan" llena el mínimo más el extra del '
+      'Plan de pago', (tester) async {
+    await sembrar();
+    // Bola de nieve con 50.000 de extra: Juan (el saldo más chico) recibe
+    // el extra. Nu y el carro empezaron este mes: no tienen pago este mes.
+    SharedPreferences.setMockInitialValues({
+      PlanPagoTab.claveEstrategia: 'bola_de_nieve',
+      PlanPagoTab.claveExtra: 50000,
+    });
+    await montar(tester, const Size(1366, 768));
+    await tester.tap(find.text('Juan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Registrar pago'));
+    await tester.pumpAndSettle();
+
+    final chip = find.byKey(const ValueKey('pago-del-plan'));
+    expect(chip, findsOneWidget);
+    expect(find.text('Lo del plan ${formatCOP(150000)}'), findsOneWidget);
+    await tester.tap(chip);
+    await tester.pump();
+    final campo = find.byType(TextFormField);
+    expect(tester.widget<TextFormField>(campo).controller!.text, '150.000');
+    await _cerrar(tester);
+  });
+
   testWidgets('Registrar pago: "Mínimo" y "Liquidar" llenan el monto, no deja '
       'pagar de más y al guardar el mínimo baja el saldo', (tester) async {
     final ids = await sembrar();
@@ -380,7 +405,12 @@ void main() {
         )
         .dy;
 
-    // Avalancha (por defecto): Nu (2 % mensual) va antes que Juan (0 %).
+    // Por defecto Valtiq elige sola y dice cuál eligió.
+    expect(find.textContaining('Valtiq eligió'), findsOneWidget);
+
+    // Avalancha: Nu (2 % mensual) va antes que Juan (0 %).
+    await tester.tap(find.text('Avalancha'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('tasa más alta'), findsOneWidget);
     expect(arriba('Tarjeta Nu') < arriba('Juan'), isTrue);
 
@@ -397,6 +427,12 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString(PlanPagoTab.claveEstrategia), 'bola_de_nieve');
     expect(prefs.getInt(PlanPagoTab.claveExtra), 5000000);
+
+    // Volver a "Automática" se recuerda también.
+    await tester.tap(find.text('Automática'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Valtiq eligió'), findsOneWidget);
+    expect(prefs.getString(PlanPagoTab.claveEstrategia), 'automatica');
     await _cerrar(tester);
   });
 
@@ -514,7 +550,7 @@ void main() {
     expect(find.byKey(const ValueKey('plan-sin-minimo')), findsOneWidget);
     expect(find.text('A 1 deuda le falta el pago mínimo'), findsOneWidget);
     await captura(tester, 'plan-sin-minimo');
-    await tester.tap(find.text('Poner pago mínimo a Sin cuota'));
+    await tester.tap(find.text('Otro monto'));
     await tester.pumpAndSettle();
     expect(find.byType(DeudaForm), findsOneWidget);
     // El formulario baja solo hasta "Pago mínimo", lo resalta un momento y
@@ -532,6 +568,53 @@ void main() {
     expect(editable.focusNode.hasFocus, isTrue);
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await _cerrar(tester);
+  });
+
+  testWidgets('Plan de pago: la cuota sugerida del aviso se guarda como '
+      'pago mínimo', (tester) async {
+    await sembrar();
+    final id = await db.deudasDao.insertDeuda(
+      DeudasCompanion.insert(
+        acreedorNombre: 'Sin cuota',
+        montoOriginal: 360000,
+        fechaPrestamo: normalizarFechaCivil(hoy),
+      ),
+    );
+    await montar(tester, const Size(1366, 768));
+    await tester.tap(find.text('Plan de pago'));
+    await tester.pumpAndSettle();
+
+    final boton = find.byKey(ValueKey('plan-sin-minimo-minima-$id'));
+    await tester.ensureVisible(boton);
+    await tester.pumpAndSettle();
+    await tester.tap(boton);
+    await tester.pumpAndSettle();
+    // Sin interés, empieza hoy: 360.000 en 36 meses = 10.000 al mes.
+    expect((await db.deudasDao.getDeudaById(id))!.cuotaMensual, 10000);
+    expect(find.byKey(const ValueKey('plan-sin-minimo')), findsNothing);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    await _cerrar(tester);
+  });
+
+  testWidgets('Plan de pago con una sola deuda: sin elegir estrategia', (
+    tester,
+  ) async {
+    await db.deudasDao.insertDeuda(
+      DeudasCompanion.insert(
+        acreedorNombre: 'Única',
+        montoOriginal: 600000,
+        fechaPrestamo: normalizarFechaCivil(hoy),
+        cuotaMensual: const Value(100000),
+      ),
+    );
+    await montar(tester, const Size(360, 640));
+    await tester.tap(find.text('Plan de pago'));
+    await tester.pumpAndSettle();
+    expect(find.text('Automática'), findsNothing);
+    expect(find.byKey(const ValueKey('plan-cual-ahorra')), findsNothing);
     expect(tester.takeException(), isNull);
     await _cerrar(tester);
   });

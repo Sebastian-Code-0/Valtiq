@@ -2,10 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../db/database.dart';
 import '../../services/deudas_calculos.dart';
+import '../../services/plan_pago_preferencias.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
 import '../../utils/date_format.dart';
@@ -26,6 +26,7 @@ class PlanPagoTab extends StatefulWidget {
     required this.activas,
     required this.margen,
     this.onEditar,
+    this.onPonerCuota,
   });
 
   final List<ResumenDeuda> activas;
@@ -35,9 +36,13 @@ class PlanPagoTab extends StatefulWidget {
   /// falta). Sin esto, el aviso se muestra con los botones apagados.
   final ValueChanged<Deuda>? onEditar;
 
+  /// Guarda [cuota] como pago mínimo de la deuda (botones de cuota
+  /// sugerida de los avisos). Sin esto, esos botones no se muestran.
+  final Future<void> Function(Deuda deuda, int cuota)? onPonerCuota;
+
   /// Preferencias donde se recuerda lo elegido (solo en este dispositivo).
-  static const claveEstrategia = 'valtiq_plan_estrategia';
-  static const claveExtra = 'valtiq_plan_extra';
+  static const claveEstrategia = PreferenciasPlan.claveEstrategia;
+  static const claveExtra = PreferenciasPlan.claveExtra;
 
   /// Botones rápidos para sumar al extra del mes.
   static const extrasRapidos = [50000, 100000, 200000];
@@ -48,8 +53,12 @@ class PlanPagoTab extends StatefulWidget {
 
 class _PlanPagoTabState extends State<PlanPagoTab> {
   final _extraCtrl = TextEditingController();
-  EstrategiaPago _estrategia = EstrategiaPago.avalancha;
+
+  /// Lo que eligió el usuario; `null` = "Automática" (Valtiq usa la
+  /// recomendada).
+  EstrategiaPago? _elegida;
   int _extra = 0;
+  bool _verComoFunciona = false;
 
   @override
   void initState() {
@@ -64,33 +73,24 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
   }
 
   Future<void> _cargar() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await PreferenciasPlan.leer();
     if (!mounted) return;
-    final extra = prefs.getInt(PlanPagoTab.claveExtra) ?? 0;
     setState(() {
-      _estrategia = EstrategiaPago.desdeClave(
-        prefs.getString(PlanPagoTab.claveEstrategia),
-      );
-      _extra = extra;
-      _extraCtrl.text = extra > 0 ? formatCOPInput(extra) : '';
+      _elegida = prefs.estrategia;
+      _extra = prefs.extra;
+      _extraCtrl.text = prefs.extra > 0 ? formatCOPInput(prefs.extra) : '';
     });
   }
 
-  Future<void> _elegirEstrategia(EstrategiaPago e) async {
-    setState(() => _estrategia = e);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(PlanPagoTab.claveEstrategia, e.clave);
-  }
-
-  Future<void> _guardarExtra() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(PlanPagoTab.claveExtra, _extra);
+  Future<void> _elegirEstrategia(EstrategiaPago? e) async {
+    setState(() => _elegida = e);
+    await PreferenciasPlan.guardarEstrategia(e);
   }
 
   Future<void> _cambiarExtra(String texto) async {
     final extra = parseCOP(texto) ?? 0;
     setState(() => _extra = extra < 0 ? 0 : extra);
-    await _guardarExtra();
+    await PreferenciasPlan.guardarExtra(_extra);
   }
 
   /// Pone el extra desde un botón (rápido o "Usar este extra").
@@ -99,16 +99,15 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
       _extra = extra;
       _extraCtrl.text = extra > 0 ? formatCOPInput(extra) : '';
     });
-    await _guardarExtra();
+    await PreferenciasPlan.guardarExtra(_extra);
   }
 
-  PlanPago _simular(EstrategiaPago e, DateTime hoy, {int? extra}) =>
-      PlanPago.simular(
-        deudas: widget.activas,
-        estrategia: e,
-        extraMensual: extra ?? _extra,
-        hoy: hoy,
-      );
+  PlanElegido _elegir(DateTime hoy, {int? extra}) => PlanPago.elegir(
+    deudas: widget.activas,
+    elegida: _elegida,
+    extraMensual: extra ?? _extra,
+    hoy: hoy,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -130,12 +129,10 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     }
 
     final hoy = DateTime.now();
-    final plan = _simular(_estrategia, hoy);
-    final otra = _estrategia == EstrategiaPago.avalancha
-        ? EstrategiaPago.bolaDeNieve
-        : EstrategiaPago.avalancha;
-    final planOtra = _simular(otra, hoy);
-    final avisos = _avisos(context, plan);
+    final elegido = _elegir(hoy);
+    final plan = elegido.plan;
+    final planOtra = elegido.otra;
+    final avisos = _avisos(context, plan, hoy);
     final esteMes = _tarjetaEsteMes(context, plan, hoy);
     final grafica = _tarjetaGrafica(context, plan);
 
@@ -156,9 +153,14 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final ancho = constraints.maxWidth - 2 * widget.margen;
-        final controles = _tarjetaControles(context, plan, planOtra, hoy);
+        final controles = _tarjetaControles(context, elegido, hoy);
         final libre = _tarjetaLibre(context, plan);
-        final intereses = _tarjetaIntereses(context, plan, planOtra);
+        final intereses = _tarjetaIntereses(
+          context,
+          plan,
+          // Con una sola deuda las dos estrategias son lo mismo.
+          plan.orden.length > 1 ? planOtra : null,
+        );
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             widget.margen,
@@ -219,13 +221,15 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
   /// Avisos discretos (se ven como una tarjeta más, solo el ícono lleva el
   /// color de marca): deudas sin pago mínimo, deudas que no bajan, deudas
   /// que terminarían después de su fecha límite.
-  List<Widget> _avisos(BuildContext context, PlanPago plan) {
+  List<Widget> _avisos(BuildContext context, PlanPago plan, DateTime hoy) {
     final avisos = <Widget>[];
     final sinMinimo = [
       for (final p in plan.orden)
-        if (p.resumen.pagoMinimo == null) p.resumen.deuda,
+        if (p.resumen.pagoMinimo == null) p.resumen,
     ];
-    if (sinMinimo.isNotEmpty) avisos.add(_avisoSinMinimo(context, sinMinimo));
+    if (sinMinimo.isNotEmpty) {
+      avisos.add(_avisoSinMinimo(context, sinMinimo, hoy));
+    }
 
     // Si ninguna tiene pago ni hay extra, la tarjeta grande ya lo explica.
     final noBajan = plan.presupuestoMensual == 0
@@ -245,9 +249,15 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
           titulo: una ? '$nombres no baja' : '$nombres no bajan',
           texto:
               'Con lo que se paga al mes, el interés crece más rápido que '
-              'los pagos. '
-              '${s == null ? 'Sube el pago mínimo o el extra al mes.' : 'Con ${formatCOP(s.extra)} de extra al mes sí terminas todo, en ${formatMesAnio(s.fechaLibre)}.'}',
+              'los pagos. Puedes subir su pago mínimo'
+              '${s == null ? '.' : ' o poner ${formatCOP(s.extra)} de extra al mes (terminas todo en ${formatMesAnio(s.fechaLibre)}).'}',
           extra: s?.extra,
+          cuotas: [
+            for (final p in noBajan)
+              if (p.resumen.pagoMinimo != null)
+                if (p.resumen.sugerirCuotas(hoy)?.minimo case final m?)
+                  (p.resumen.deuda, m),
+          ],
         ),
       );
     }
@@ -356,7 +366,9 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     required String titulo,
     required String texto,
     int? extra,
+    List<(Deuda, SugerenciaCuota)> cuotas = const [],
   }) {
+    final ponerCuota = widget.onPonerCuota;
     return _cajaAviso(
       context,
       key: ValueKey(llave),
@@ -366,16 +378,32 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
           _tituloAviso(context, icono, titulo),
           const SizedBox(height: 6),
           Text(texto, style: _gris(context)),
-          if (extra != null) ...[
+          if (extra != null || (cuotas.isNotEmpty && ponerCuota != null)) ...[
             const SizedBox(height: 12),
-            OutlinedButton(
-              key: ValueKey('$llave-usar'),
-              onPressed: () => _ponerExtra(extra),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 38),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-              ),
-              child: Text('Usar ${formatCOP(extra)} de extra'),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                if (ponerCuota != null)
+                  for (final (d, s) in cuotas)
+                    OutlinedButton(
+                      key: ValueKey('$llave-cuota-${d.id}'),
+                      onPressed: () => ponerCuota(d, s.cuota),
+                      style: _estiloBoton,
+                      child: Text(
+                        'Subir el mínimo de ${d.acreedorNombre} a '
+                        '${formatCOP(s.cuota)}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                if (extra != null)
+                  OutlinedButton(
+                    key: ValueKey('$llave-usar'),
+                    onPressed: () => _ponerExtra(extra),
+                    style: _estiloBoton,
+                    child: Text('Usar ${formatCOP(extra)} de extra'),
+                  ),
+              ],
             ),
           ],
         ],
@@ -386,8 +414,19 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
   /// Aviso de las deudas que no tienen pago mínimo. Sin ese dato el plan no
   /// sabe cuánto se les paga cada mes: solo reciben "lo que sobra", y si
   /// ninguna lo tiene, el plan no puede dar fecha.
-  Widget _avisoSinMinimo(BuildContext context, List<Deuda> faltan) {
+  static final _estiloBoton = OutlinedButton.styleFrom(
+    minimumSize: const Size(0, 38),
+    padding: const EdgeInsets.symmetric(horizontal: 14),
+  );
+
+  Widget _avisoSinMinimo(
+    BuildContext context,
+    List<ResumenDeuda> faltan,
+    DateTime hoy,
+  ) {
+    final theme = Theme.of(context);
     final una = faltan.length == 1;
+    final ponerCuota = widget.onPonerCuota;
     return _cajaAviso(
       context,
       key: const ValueKey('plan-sin-minimo'),
@@ -403,34 +442,62 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
           ),
           const SizedBox(height: 6),
           Text(
-            'El pago mínimo es lo que pagas cada mes por esa deuda. Sin ese '
-            'dato el plan no puede calcular bien cuándo terminas: '
-            '${una ? 'esa deuda' : 'esas deudas'} solo '
-            '${una ? 'recibe' : 'reciben'} lo que sobra de las demás.',
+            'Sin ese dato el plan no sabe cuánto pagarle cada mes. Elige una '
+            'de las cuotas que te sugerimos o escribe la tuya.',
             style: _gris(context),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              for (final d in faltan)
-                OutlinedButton.icon(
+          for (final r in faltan) ...[
+            const SizedBox(height: 14),
+            Text(
+              r.deuda.acreedorNombre,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                if (ponerCuota != null)
+                  if (r.sugerirCuotas(hoy) case final s?) ...[
+                    OutlinedButton(
+                      key: ValueKey('plan-sin-minimo-minima-${r.deuda.id}'),
+                      onPressed: () => ponerCuota(r.deuda, s.minimo.cuota),
+                      style: _estiloBoton,
+                      child: Text(
+                        'Mínimo ${formatCOP(s.minimo.cuota)} · '
+                        '${formatMesAnioCorto(s.minimo.fecha)}',
+                      ),
+                    ),
+                    if (s.rapido case final rapido?)
+                      OutlinedButton(
+                        key: ValueKey('plan-sin-minimo-rapida-${r.deuda.id}'),
+                        onPressed: () => ponerCuota(r.deuda, rapido.cuota),
+                        style: _estiloBoton,
+                        child: Text(
+                          'Más rápido ${formatCOP(rapido.cuota)} · '
+                          '${formatMesAnioCorto(rapido.fecha)}',
+                        ),
+                      ),
+                  ],
+                TextButton.icon(
                   onPressed: widget.onEditar == null
                       ? null
-                      : () => widget.onEditar!(d),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 38),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                  ),
+                      : () => widget.onEditar!(r.deuda),
                   icon: const Icon(Icons.edit_outlined, size: 16),
                   label: Text(
-                    'Poner pago mínimo a ${d.acreedorNombre}',
+                    ponerCuota == null
+                        ? 'Poner pago mínimo a ${r.deuda.acreedorNombre}'
+                        : 'Otro monto',
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -697,13 +764,14 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
   /// Tarjeta grande: estrategia, extra al mes y el orden de pago.
   Widget _tarjetaControles(
     BuildContext context,
-    PlanPago plan,
-    PlanPago planOtra,
+    PlanElegido elegido,
     DateTime hoy,
   ) {
     final theme = Theme.of(context);
     final c = context.colores;
-    final cualAhorra = _cualAhorra(context, plan, planOtra);
+    final plan = elegido.plan;
+    // Con una sola deuda el orden no cambia nada: no hay qué elegir.
+    final variasDeudas = plan.orden.length > 1;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -711,24 +779,29 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _rotulo(context, 'Estrategia'),
-            const SizedBox(height: 10),
-            GrupoPildoras<EstrategiaPago>(
-              opciones: {for (final e in EstrategiaPago.values) e: e.nombre},
-              valor: _estrategia,
-              onElegir: _elegirEstrategia,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              _estrategia.resumen,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontSize: 13,
-                height: 1.5,
-                color: c.textoSecundario,
+            if (variasDeudas) ...[
+              _rotulo(context, 'Estrategia'),
+              const SizedBox(height: 10),
+              GrupoPildoras<EstrategiaPago?>(
+                opciones: {
+                  null: 'Automática',
+                  for (final e in EstrategiaPago.values) e: e.nombre,
+                },
+                valor: _elegida,
+                onElegir: _elegirEstrategia,
               ),
-            ),
-            ?cualAhorra,
-            const SizedBox(height: 26),
+              const SizedBox(height: 10),
+              Text(
+                plan.estrategia.resumen,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: c.textoSecundario,
+                ),
+              ),
+              _notaEstrategia(context, elegido),
+              const SizedBox(height: 26),
+            ],
             _rotulo(context, 'Extra al mes'),
             const SizedBox(height: 10),
             Align(
@@ -766,14 +839,6 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
                   _botonExtra(context, plan, hoy, monto),
               ],
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Lo que puedes pagar además de los pagos mínimos. Entre más '
-              'pongas, antes terminas y menos intereses pagas.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: c.textoSecundario,
-              ),
-            ),
             const SizedBox(height: 26),
             _rotulo(context, 'Orden de pago'),
             const SizedBox(height: AppSpacing.xs),
@@ -782,53 +847,105 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final (i, paso) in plan.orden.indexed)
-                  _filaOrden(context, i, paso),
+                  _filaOrden(context, i, paso, plan.estrategia),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'Cada mes pagas el mínimo de todas y lo que sobra va completo a '
-              'la primera de la lista. Cuando terminas una, lo que le pagabas '
-              'pasa a la siguiente. Las fechas son un estimado con las tasas '
-              'de hoy.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: c.textoSecundario,
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const ValueKey('plan-como-funciona'),
+                onPressed: () =>
+                    setState(() => _verComoFunciona = !_verComoFunciona),
+                icon: Icon(
+                  _verComoFunciona ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                ),
+                label: const Text('¿Cómo funciona?'),
               ),
             ),
+            if (_verComoFunciona)
+              Text(
+                'Cada mes pagas el mínimo de todas las deudas y lo que sobra '
+                '(el extra) va completo a la primera de la lista. Cuando '
+                'terminas una, lo que le pagabas pasa a la siguiente, así que '
+                'lo que pagas al mes no baja pero cada vez rinde más.\n\n'
+                'Avalancha ataca primero la deuda que más te cuesta: pagas '
+                'menos intereses. Bola de nieve, la más pequeña: terminas '
+                'deudas antes y eso anima. En "Automática" Valtiq elige la '
+                'que menos intereses te cobra; si las dos cuestan casi lo '
+                'mismo, elige bola de nieve.\n\n'
+                'Las fechas son un estimado con las tasas de hoy y cuentan el '
+                'pago de este mes si todavía no lo has hecho.',
+                style: _gris(context),
+              ),
           ],
         ),
       ),
     );
   }
 
-  /// Debajo de las píldoras: cuál de las dos estrategias cobra menos
-  /// intereses y cuánto. `null` si no se pueden comparar o cuestan igual.
-  Widget? _cualAhorra(BuildContext context, PlanPago plan, PlanPago otra) {
-    if (!plan.alcanza || !otra.alcanza) return null;
-    final diferencia = otra.interesesTotales - plan.interesesTotales;
-    if (diferencia == 0) return null;
+  /// Debajo de las píldoras: qué eligió Valtiq y por qué (en
+  /// "Automática"), o si la elegida a mano es la recomendada; si no lo es,
+  /// cuánto se ahorraría con la recomendada y un botón para volver a
+  /// "Automática".
+  Widget _notaEstrategia(BuildContext context, PlanElegido e) {
     final c = context.colores;
-    final esta = diferencia > 0;
-    final texto = esta
-        ? 'Es la que menos intereses te cobra: ${formatCOP(diferencia)} '
-              'menos que ${otra.estrategia.nombre.toLowerCase()}.'
-        : '${otra.estrategia.nombre} te ahorraría ${formatCOP(-diferencia)} '
-              'en intereses.';
+    final plan = e.plan;
+    final otra = e.otra;
+    final reco = e.recomendada;
+    final nombreOtra = otra.estrategia.nombre.toLowerCase();
+    final ahorro = (otra.interesesTotales - plan.interesesTotales).abs();
+    final comparables = plan.alcanza && otra.alcanza;
+    final String texto;
+    final bool bien;
+    if (e.automatica) {
+      bien = true;
+      final nombre = plan.estrategia.nombre.toLowerCase();
+      if (!comparables) {
+        texto = plan.alcanza
+            ? 'Valtiq eligió $nombre: con ella sí terminas de pagar.'
+            : 'Valtiq usa $nombre mientras el plan no alcance para terminar.';
+      } else if (e.casiIgual) {
+        texto =
+            'Valtiq eligió $nombre: las dos te cobran casi lo mismo y así '
+            'terminas deudas más pronto.';
+      } else {
+        texto =
+            'Valtiq eligió $nombre: te cobra ${formatCOP(ahorro)} menos en '
+            'intereses que $nombreOtra.';
+      }
+    } else if (plan.estrategia == reco) {
+      bien = true;
+      texto = 'Es la que Valtiq recomienda para tus deudas.';
+    } else {
+      bien = false;
+      texto = !comparables
+          ? 'Con ${reco.nombre.toLowerCase()} sí terminas de pagar.'
+          : e.casiIgual
+          ? '${reco.nombre} cuesta casi lo mismo y terminas deudas más '
+                'pronto: es la que Valtiq recomienda.'
+          : '${reco.nombre} te ahorraría ${formatCOP(ahorro)} en intereses.';
+    }
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Container(
         key: const ValueKey('plan-cual-ahorra'),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: esta ? c.positivo.withValues(alpha: 0.12) : c.relieve,
+          color: bien ? c.positivo.withValues(alpha: 0.12) : c.relieve,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
           children: [
             Icon(
-              esta ? Icons.check_circle_outline : Icons.savings_outlined,
+              e.automatica
+                  ? Icons.auto_awesome_outlined
+                  : bien
+                  ? Icons.check_circle_outline
+                  : Icons.savings_outlined,
               size: 17,
-              color: esta ? c.positivo : c.acento,
+              color: bien ? c.positivo : c.acento,
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
@@ -840,10 +957,11 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
                 ),
               ),
             ),
-            if (!esta)
+            if (!bien)
               TextButton(
-                onPressed: () => _elegirEstrategia(otra.estrategia),
-                child: const Text('Cambiar'),
+                key: const ValueKey('plan-usar-automatica'),
+                onPressed: () => _elegirEstrategia(null),
+                child: const Text('Que elija Valtiq'),
               ),
           ],
         ),
@@ -859,7 +977,7 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     int monto,
   ) {
     final c = context.colores;
-    final con = _simular(_estrategia, hoy, extra: _extra + monto);
+    final con = _elegir(hoy, extra: _extra + monto).plan;
     final String efecto;
     if (!con.alcanza) {
       efecto = 'aún sin fecha';
@@ -909,7 +1027,12 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     );
   }
 
-  Widget _filaOrden(BuildContext context, int i, PasoPlan paso) {
+  Widget _filaOrden(
+    BuildContext context,
+    int i,
+    PasoPlan paso,
+    EstrategiaPago estrategia,
+  ) {
     final theme = Theme.of(context);
     final c = context.colores;
     final pequeno = theme.textTheme.bodySmall?.copyWith(
@@ -919,7 +1042,7 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     // En avalancha se explica por qué una deuda va antes que otra con más
     // tasa: lo que cuesta de verdad cada peso que se debe.
     final costoDistinto =
-        _estrategia == EstrategiaPago.avalancha &&
+        estrategia == EstrategiaPago.avalancha &&
         (r.costoMensualPct - r.tasaMensualPct).abs() >= 0.05;
     final String fecha;
     final String? nota;
@@ -1055,8 +1178,7 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
             TextoKicker('Cómo baja tu deuda', color: c.acento),
             const SizedBox(height: 6),
             Text(
-              'Lo que debes entre todas, mes a mes. Cada número es el mes '
-              'en que terminas esa deuda del orden de pago.',
+              'Cada número es el mes en que terminas esa deuda.',
               style: _gris(context),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -1099,14 +1221,19 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
 
   /// Tarjeta de intereses: lo que cuesta este plan, lo que costaría con la
   /// otra estrategia y la diferencia.
-  Widget _tarjetaIntereses(BuildContext context, PlanPago plan, PlanPago otra) {
+  /// [otra] es `null` con una sola deuda (no hay con qué comparar).
+  Widget _tarjetaIntereses(
+    BuildContext context,
+    PlanPago plan,
+    PlanPago? otra,
+  ) {
     final theme = Theme.of(context);
     final c = context.colores;
-    final comparable = plan.alcanza && otra.alcanza;
+    final comparable = otra != null && plan.alcanza && otra.alcanza;
     final diferencia = comparable
         ? otra.interesesTotales - plan.interesesTotales
         : 0;
-    final nombreOtra = otra.estrategia.nombre.toLowerCase();
+    final nombreOtra = otra?.estrategia.nombre.toLowerCase() ?? '';
 
     Widget fila(
       String nombre,

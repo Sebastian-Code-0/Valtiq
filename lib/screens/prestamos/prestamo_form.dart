@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
+import '../../services/deudas_calculos.dart';
 import '../../services/interes_calculator.dart';
 import '../../theme/theme.dart';
 import '../../utils/currency_input.dart';
+import '../../utils/date_format.dart';
+import '../../utils/dialogo_meses.dart';
 import '../../utils/form_widgets.dart';
 import '../../utils/format.dart';
 import '../../utils/fecha_civil.dart';
@@ -102,55 +105,66 @@ class _PrestamoFormState extends State<PrestamoForm>
     if (f != null) setState(() => _fechaPactada = f);
   }
 
+  /// Calculadora de cuota: en cuántos meses quieres que te terminen de
+  /// pagar → cuánto deberían pagarte al mes. Usa lo que te deben HOY (con
+  /// los pagos ya recibidos) y el mismo motor de intereses de toda la app,
+  /// así que respeta interés sobre lo que falta o sobre lo prestado. Sirve
+  /// también sin interés.
   Future<void> _calcularCuotaSugerida() async {
     final monto = parseCOP(_montoCtrl.text);
     if (monto == null || monto <= 0) {
       mostrarAlerta(context, 'Ingresa primero el monto prestado.');
       return;
     }
-    if (!_tieneInteres) {
-      mostrarAlerta(context, 'Ingresa primero una tasa de interés mayor a 0.');
+    if (_faltaTipoInteres) {
+      mostrarAlerta(context, 'Elige primero si la tasa es mensual o anual.');
       return;
     }
-    final cuotasCtrl = TextEditingController();
     final numeroCuotas = await showDialog<int>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Calcular cuota sugerida'),
-        content: TextField(
-          controller: cuotasCtrl,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(3),
-          ],
-          decoration: const InputDecoration(labelText: '¿En cuántos meses?'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, int.tryParse(cuotasCtrl.text)),
-            child: const Text('Calcular'),
-          ),
-        ],
-      ),
+      builder: (_) => const DialogoMeses(),
     );
-    if (numeroCuotas == null || numeroCuotas <= 0) return;
-    final tasa = parseTasa(_tasaCtrl.text);
-    final cuota = InteresCalculator.calcularCuotaFijaDesdeTasa(
-      capital: monto,
-      tasaInteres: tasa,
-      tipoInteres: _tipoInteres == 'anual' ? 'anual' : 'mensual',
-      numeroCuotas: numeroCuotas,
-    );
+    if (numeroCuotas == null || numeroCuotas <= 0 || !mounted) return;
+    final p = widget.prestamo;
+    final pagos = p == null
+        ? const <PagosRecibido>[]
+        : await widget.db.prestamosDao.getPagosDelPrestamo(p.id);
     if (!mounted) return;
+    final tasa = parseTasa(_tasaCtrl.text);
+    final conInteres = tasa > 0;
+    final ahora = DateTime.now();
+    // El préstamo visto como una deuda: el cálculo es el mismo.
+    final comoDeuda = Deuda(
+      id: p?.id ?? 0,
+      acreedorNombre: _deudorCtrl.text,
+      descripcion: '',
+      tipo: 'persona',
+      montoOriginal: monto,
+      tasaInteres: tasa,
+      tipoInteres: conInteres ? _tipoInteres : 'ninguno',
+      modalidadCalculo: conInteres ? _modalidadCalculo : 'simple',
+      tipoAmortizacion: conInteres ? _tipoAmortizacion : 'saldo_original',
+      fechaPrestamo: normalizarFechaCivil(_fechaPrestamo),
+      notas: '',
+      estado: 'activa',
+      creadoEn: ahora,
+      actualizadoEn: ahora,
+    );
+    final r = ResumenDeuda.calcular(comoDeuda, [
+      for (final pago in pagos)
+        AbonoInteres(fecha: pago.fechaPago, monto: pago.montoAbonado),
+    ], hoy: ahora);
+    final cuota = r.cuotaParaTerminarEn(numeroCuotas, ahora);
+    if (cuota == null) {
+      mostrarInfo(context, 'Este préstamo ya no tiene saldo por cobrar.');
+      return;
+    }
+    final fin = r.liquidacionCon(cuota, ahora).fecha;
     mostrarExito(
       context,
-      'Cuota fija sugerida a $numeroCuotas meses: ${formatCOP(cuota)}.',
+      'Para que te terminen de pagar '
+      '${fin == null ? 'en $numeroCuotas meses' : 'en ${formatMesAnio(fin)}'}'
+      ', la cuota sería de ${formatCOP(cuota)} al mes.',
     );
   }
 
@@ -387,7 +401,7 @@ class _PrestamoFormState extends State<PrestamoForm>
                 child: OutlinedButton.icon(
                   onPressed: _calcularCuotaSugerida,
                   icon: const Icon(Icons.calculate_outlined, size: 18),
-                  label: const Text('Calcular cuota fija sugerida'),
+                  label: const Text('Calcular la cuota para N meses'),
                 ),
               ),
             ],

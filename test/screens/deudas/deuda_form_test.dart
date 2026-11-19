@@ -9,7 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/screens/deudas/deuda_form.dart';
 import 'package:valtiq/theme/theme.dart';
+import 'package:valtiq/utils/currency_input.dart';
 import 'package:valtiq/utils/fecha_civil.dart';
+import 'package:valtiq/utils/form_widgets.dart';
 import 'package:valtiq/utils/tasa_input.dart';
 
 void main() {
@@ -149,6 +151,67 @@ void main() {
     expect(deudas.single.tasaInteres, 2);
     expect(deudas.single.tipoInteres, 'mensual');
     expect(deudas.single.modalidadCalculo, 'compuesto');
+  });
+
+  Finder campoCuota() => find.descendant(
+    of: find.widgetWithText(CampoEtiquetado, 'Pago mínimo al mes (opcional)'),
+    matching: find.byType(TextFormField),
+  );
+
+  String textoCuota(WidgetTester tester) =>
+      tester.widget<TextFormField>(campoCuota()).controller!.text;
+
+  testWidgets('pago mínimo: sugiere dos cuotas, avisa si el pago no alcanza '
+      'ni para el interés y al tocar una sugerencia la pone', (tester) async {
+    await montar(tester, const Size(1366, 768));
+    await tester.enterText(find.byType(TextFormField).at(0), 'Banco');
+    await tester.enterText(find.byType(TextFormField).at(2), '5000000');
+    await tester.enterText(find.byType(TextFormField).at(3), '1');
+    await tester.pump();
+    await irA(tester, find.text('Mensual'));
+    await tester.tap(find.text('Mensual'));
+    await tester.pump();
+
+    await irA(tester, campoCuota());
+    await tester.enterText(campoCuota(), '1000');
+    await tester.pump();
+    expect(find.byKey(const ValueKey('cuota-sugerencias')), findsOneWidget);
+    expect(find.textContaining('nunca se termina'), findsOneWidget);
+    expect(find.textContaining('50.000 al mes'), findsOneWidget);
+    await captura(tester, 'form-cuota-aviso');
+
+    await irA(tester, find.byKey(const ValueKey('cuota-minima')));
+    await tester.tap(find.byKey(const ValueKey('cuota-minima')));
+    await tester.pump();
+    expect(textoCuota(tester), isNot('1.000'));
+    expect(find.textContaining('nunca se termina'), findsNothing);
+    expect(find.textContaining('Con este pago terminas en'), findsOneWidget);
+
+    // El aviso no bloquea: con un pago que no alcanza igual se guarda.
+    await irA(tester, campoCuota());
+    await tester.enterText(campoCuota(), '1000');
+    await irA(tester, find.text('Guardar deuda'));
+    await tester.tap(find.text('Guardar deuda'));
+    await tester.pumpAndSettle();
+    expect((await db.deudasDao.getAllDeudas()).single.cuotaMensual, 1000);
+  });
+
+  testWidgets('calculadora del pago mínimo: sin interés también funciona y '
+      'calcula con lo que se debe', (tester) async {
+    await montar(tester, const Size(1366, 768));
+    await tester.enterText(find.byType(TextFormField).at(2), '360000');
+    await tester.pump();
+    final boton = find.byTooltip('Calcular la cuota para terminar en N meses');
+    await irA(tester, boton);
+    await tester.tap(boton);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '12');
+    await tester.tap(find.text('Calcular'));
+    await tester.pumpAndSettle();
+    // Empieza hoy, sin interés: 360.000 en 12 meses.
+    expect(textoCuota(tester), formatCOPInput(30000));
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('el nombre sugiere nombres conocidos y al elegir uno pone su '

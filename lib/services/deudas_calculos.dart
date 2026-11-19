@@ -209,7 +209,9 @@ class ResumenDeuda {
   int pendienteEsteMes(DateTime hoy, int? pagoDelMes) {
     if (pagoDelMes == null || pagoDelMes <= 0 || saldo <= 0) return 0;
     if (empezoEsteMes(hoy)) return 0;
-    return math.max(0, math.min(pagoDelMes, saldo) - pagadoEsteMes(hoy));
+    // Lo pagado este mes ya bajó el saldo: lo que falta es el resto del
+    // pago del mes, sin pasarse de lo que se debe.
+    return math.max(0, math.min(pagoDelMes - pagadoEsteMes(hoy), saldo));
   }
 
   /// Lo pagado este mes por encima de la cuota: ya cuenta como el extra
@@ -230,24 +232,31 @@ class ResumenDeuda {
     if (saldo <= 0) return const LiquidacionEstimada.sinDatos();
     final ritmo = ritmoMensual(hoy);
     if (ritmo == null) return const LiquidacionEstimada.sinDatos();
-    var restante = saldo - pendienteEsteMes(hoy, ritmo).toDouble();
+    return liquidacionCon(ritmo, hoy);
+  }
+
+  /// Cuándo se termina de pagar esta deuda pagando [pago] cada mes, con la
+  /// misma regla del mes en curso de [liquidacionEstimada].
+  LiquidacionEstimada liquidacionCon(int pago, DateTime hoy) {
+    if (saldo <= 0 || pago <= 0) return const LiquidacionEstimada.sinDatos();
+    var restante = saldo - pendienteEsteMes(hoy, pago).toDouble();
     if (restante < 0.5) {
       return LiquidacionEstimada._(
         fecha: DateTime(hoy.year, hoy.month, 1),
         meses: 0,
         noBaja: false,
-        ritmo: ritmo,
+        ritmo: pago,
       );
     }
     for (var k = 1; k <= mesesMaximosSimulacion; k++) {
       restante += interesDelMes(k, restante);
-      restante -= math.min(ritmo.toDouble(), restante);
+      restante -= math.min(pago.toDouble(), restante);
       if (restante < 0.5) {
         return LiquidacionEstimada._(
           fecha: DateTime(hoy.year, hoy.month + k, 1),
           meses: k,
           noBaja: false,
-          ritmo: ritmo,
+          ritmo: pago,
         );
       }
     }
@@ -255,9 +264,128 @@ class ResumenDeuda {
       fecha: null,
       meses: null,
       noBaja: true,
-      ritmo: ritmo,
+      ritmo: pago,
     );
   }
+
+  /// Interés que se cobra el próximo mes con lo que se debe hoy: un pago
+  /// que no lo supera no hace bajar la deuda.
+  int get interesProximoMes =>
+      InteresCalculator.aPesos(interesDelMes(1, saldo.toDouble()));
+
+  /// La cuota más baja (en múltiplos de $1.000) con la que esta deuda
+  /// queda en cero a más tardar en el mes [meses] contando desde hoy
+  /// (0 = este mes). Usa el mismo motor que todo lo demás, así que respeta
+  /// si el interés es sobre lo que falta o sobre lo prestado al inicio.
+  /// `null` si ya no se debe nada.
+  int? cuotaParaTerminarEn(int meses, DateTime hoy) {
+    if (saldo <= 0) return null;
+    // Una deuda que empezó este mes no tiene pago este mes: lo antes que
+    // puede terminar es el mes que viene.
+    final objetivo = math.max(meses, empezoEsteMes(hoy) ? 1 : 0);
+    bool alcanza(int unidades) {
+      final l = liquidacionCon(unidades * _pasoCuota, hoy);
+      return l.meses != null && l.meses! <= objetivo;
+    }
+
+    var alto = math.max(1, (saldo / _pasoCuota).ceil());
+    // Con interés, pagar el saldo de hoy puede no alcanzar en el primer
+    // mes: se dobla hasta que alcance.
+    while (!alcanza(alto)) {
+      if (alto > 1 << 40) return null; // no debería pasar; por si acaso.
+      alto *= 2;
+    }
+    var bajo = 1;
+    while (bajo < alto) {
+      final medio = (bajo + alto) ~/ 2;
+      if (alcanza(medio)) {
+        alto = medio;
+      } else {
+        bajo = medio + 1;
+      }
+    }
+    return bajo * _pasoCuota;
+  }
+
+  static const _pasoCuota = 1000;
+
+  /// Las dos cuotas que la app sugiere para esta deuda:
+  /// - **mínimo**: terminar en [plazoMinimoSugerido] meses, o antes de la
+  ///   fecha límite si esta llega primero;
+  /// - **más rápido**: terminar en [plazoRapidoSugerido] meses (o en la
+  ///   mitad del plazo, si la fecha límite está a un año o menos). `null`
+  ///   si saldría igual que el mínimo.
+  ///
+  /// Una fecha límite que ya pasó no cuenta (se usan los plazos normales).
+  /// `null` si no se debe nada.
+  SugerenciasCuota? sugerirCuotas(DateTime hoy) {
+    if (saldo <= 0) return null;
+    var plazo = plazoMinimoSugerido;
+    var porLimite = false;
+    final limite = deuda.fechaLimite;
+    if (limite != null) {
+      final l = fechaCivilGuardada(limite);
+      final meses = (l.year - hoy.year) * 12 + l.month - hoy.month;
+      if (meses >= 0 && meses <= plazo) {
+        plazo = meses;
+        porLimite = true;
+      }
+    }
+    SugerenciaCuota sugerencia(int meses) {
+      final cuota = cuotaParaTerminarEn(meses, hoy) ?? saldo;
+      final l = liquidacionCon(cuota, hoy);
+      return SugerenciaCuota(
+        cuota: cuota,
+        meses: l.meses ?? meses,
+        fecha: l.fecha ?? DateTime(hoy.year, hoy.month + meses, 1),
+      );
+    }
+
+    final minimo = sugerencia(plazo);
+    final plazoRapido = plazo > plazoRapidoSugerido
+        ? plazoRapidoSugerido
+        : (plazo / 2).floor();
+    final rapido = plazoRapido < plazo ? sugerencia(plazoRapido) : null;
+    return SugerenciasCuota(
+      minimo: minimo,
+      rapido: rapido == null || rapido.cuota <= minimo.cuota ? null : rapido,
+      porLimite: porLimite,
+    );
+  }
+}
+
+/// Plazos de las cuotas que sugiere la app (ver
+/// [ResumenDeuda.sugerirCuotas]).
+const plazoMinimoSugerido = 36;
+const plazoRapidoSugerido = 12;
+
+class SugerenciaCuota {
+  const SugerenciaCuota({
+    required this.cuota,
+    required this.meses,
+    required this.fecha,
+  });
+
+  final int cuota;
+
+  /// Meses desde hoy hasta quedar en cero (0 = este mes) y ese mes.
+  final int meses;
+  final DateTime fecha;
+}
+
+class SugerenciasCuota {
+  const SugerenciasCuota({
+    required this.minimo,
+    required this.rapido,
+    required this.porLimite,
+  });
+
+  final SugerenciaCuota minimo;
+  final SugerenciaCuota? rapido;
+
+  /// El mínimo está calculado para terminar antes de la fecha límite (y no
+  /// a [plazoMinimoSugerido] meses).
+  final bool porLimite;
 }
 
 /// Tope de la simulación mes a mes (50 años): más allá de eso se considera
@@ -341,6 +469,32 @@ enum EstrategiaPago {
 
   static EstrategiaPago desdeClave(String? clave) =>
       values.firstWhere((e) => e.clave == clave, orElse: () => avalancha);
+}
+
+/// Las dos estrategias simuladas y cuál se usa. Ver [PlanPago.elegir].
+class PlanElegido {
+  const PlanElegido({
+    required this.plan,
+    required this.otra,
+    required this.recomendada,
+    required this.automatica,
+  });
+
+  /// El plan con la estrategia que se usa (la elegida, o la recomendada si
+  /// el usuario dejó "Automática").
+  final PlanPago plan;
+
+  /// El mismo plan con la otra estrategia, para comparar.
+  final PlanPago otra;
+
+  final EstrategiaPago recomendada;
+
+  /// El usuario no eligió: Valtiq usa la recomendada.
+  final bool automatica;
+
+  /// La recomendada cuesta casi lo mismo que la otra (ver
+  /// [PlanPago.casiIgual]).
+  bool get casiIgual => PlanPago.casiIgual(plan, otra);
 }
 
 /// Una deuda dentro del plan, en el orden en que se ataca.
@@ -593,6 +747,55 @@ class PlanPago {
           ? const []
           : [for (final v in corrida.saldoTotal) InteresCalculator.aPesos(v)],
     );
+  }
+
+  /// Simula las dos estrategias y usa [elegida], o la recomendada si es
+  /// `null` ("Automática").
+  static PlanElegido elegir({
+    required List<ResumenDeuda> deudas,
+    required EstrategiaPago? elegida,
+    required int extraMensual,
+    required DateTime hoy,
+  }) {
+    PlanPago con(EstrategiaPago e) => simular(
+      deudas: deudas,
+      estrategia: e,
+      extraMensual: extraMensual,
+      hoy: hoy,
+    );
+    final avalancha = con(EstrategiaPago.avalancha);
+    final bola = con(EstrategiaPago.bolaDeNieve);
+    final recomendada = recomendar(avalancha, bola);
+    final usada = elegida ?? recomendada;
+    return PlanElegido(
+      plan: usada == EstrategiaPago.avalancha ? avalancha : bola,
+      otra: usada == EstrategiaPago.avalancha ? bola : avalancha,
+      recomendada: recomendada,
+      automatica: elegida == null,
+    );
+  }
+
+  /// La estrategia que más conviene con estas deudas: la que termina (si
+  /// solo una termina) o la que cobra menos intereses. Si cuestan casi lo
+  /// mismo gana bola de nieve: terminar deudas pronto anima y no cuesta más.
+  static EstrategiaPago recomendar(PlanPago avalancha, PlanPago bola) {
+    if (avalancha.alcanza != bola.alcanza) {
+      return avalancha.alcanza ? avalancha.estrategia : bola.estrategia;
+    }
+    if (!avalancha.alcanza) return EstrategiaPago.avalancha;
+    if (casiIgual(avalancha, bola)) return EstrategiaPago.bolaDeNieve;
+    return avalancha.interesesTotales <= bola.interesesTotales
+        ? EstrategiaPago.avalancha
+        : EstrategiaPago.bolaDeNieve;
+  }
+
+  /// Dos planes que terminan y cuyos intereses difieren en $1.000 o menos,
+  /// o en menos del 1 %.
+  static bool casiIgual(PlanPago a, PlanPago b) {
+    if (!a.alcanza || !b.alcanza) return false;
+    final diferencia = (a.interesesTotales - b.interesesTotales).abs();
+    final mayor = math.max(a.interesesTotales, b.interesesTotales);
+    return diferencia <= math.max(1000, mayor ~/ 100);
   }
 
   static DateTime? _fechaDe(DateTime hoy, int? meses) =>

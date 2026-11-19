@@ -335,4 +335,30 @@ void main() {
     expect(p.tasaInteres, 3);
     expect(p.tipoInteres, 'anual');
   });
+
+  testWidgets('calculadora de cuota del préstamo: con interés sobre lo '
+      'prestado cubre ese interés fijo', (tester) async {
+    await montar(tester, const Size(1366, 900), home: PrestamoForm(db: db));
+    await tester.enterText(find.byType(TextFormField).at(2), '1000000');
+    await tester.enterText(find.byType(TextFormField).at(3), '2');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Mensual'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mensual'));
+    await tester.pump();
+    final boton = find.text('Calcular la cuota para N meses');
+    await tester.ensureVisible(boton);
+    await tester.pumpAndSettle();
+    await tester.tap(boton);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '36');
+    await tester.tap(find.text('Calcular'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    // 20.000 de interés fijo al mes: 36·c ≥ 1.000.000 + 36·20.000.
+    expect(find.textContaining('48.000 al mes'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+  });
 }

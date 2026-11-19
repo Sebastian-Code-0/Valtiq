@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../db/database.dart';
 import '../../services/deudas_calculos.dart';
 import '../../services/interes_calculator.dart';
+import '../../services/plan_pago_preferencias.dart';
 import '../../theme/theme.dart';
 import '../../utils/date_format.dart';
 import '../../utils/fecha_civil.dart';
@@ -175,6 +176,9 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
         nombre: deuda.acreedorNombre,
         saldoPendiente: r.saldo,
         pagoMinimo: r.pagoMinimo,
+        // Lo que el Plan de pago dice pagarle este mes (mínimo + extra); el
+        // diálogo abre ya y el botón aparece cuando esté calculado.
+        pagoDelPlan: PreferenciasPlan.pagoDelPlan(widget.db, widget.deudaId),
       ),
     );
     if (guardado != true || !mounted) return;

@@ -558,12 +558,36 @@ Activar, Eliminar). "Vaciar inactivos" va en la fila de las pestañas, a la
 derecha (`BotonLimpiarHistorial(texto: …)`). La lógica (DAO, deduplicación
 al reactivar, prueba de notificación) no cambió.
 
-### Plan de pago: aviso de pago mínimo (2026-11-11)
+### Plan de pago: aviso de pago mínimo (2026-11-11, 2026-11-18)
 
 Si alguna deuda activa no tiene `cuotaMensual`, `PlanPagoTab` muestra un
-aviso (clave `plan-sin-minimo`) con un botón por deuda. El botón abre
-`DeudaForm(irAPagoMinimo: true)`, que baja hasta el campo, lo resalta
-1,6 s y le pone el cursor.
+aviso (clave `plan-sin-minimo`) con, por deuda, las dos cuotas sugeridas
+(`sugerirCuotas`), que se guardan con un toque vía `onPonerCuota`
+(`DeudasScreen._ponerCuota`), y "Otro monto", que abre
+`DeudaForm(irAPagoMinimo: true)`: baja hasta el campo, lo resalta 1,6 s y
+le pone el cursor.
+
+### Pago mínimo sugerido en el formulario de deuda (2026-11-18)
+
+Debajo de "Pago mínimo al mes", `DeudaForm._ayudaPagoMinimo` arma un
+`ResumenDeuda` con lo escrito en el formulario (y los pagos ya registrados,
+si se edita) y muestra:
+- Las dos cuotas de `ResumenDeuda.sugerirCuotas(hoy)`: **mínimo** a
+  `plazoMinimoSugerido` (36) meses o al mes de la fecha límite si llega
+  antes (`porLimite`); **más rápido** a `plazoRapidoSugerido` (12) meses o a
+  la mitad del plazo si este es de un año o menos. Una fecha límite vencida
+  no cuenta.
+- Qué pasa con lo escrito (`liquidacionCon`): "nunca se termina" si no
+  cubre el interés (`interesProximoMes`), aviso si termina después de la
+  fecha límite, o el mes en que termina. Es solo un aviso: no bloquea el
+  guardado.
+
+`cuotaParaTerminarEn(meses, hoy)` busca por mitades la cuota más baja
+(múltiplos de $1.000) con la que `liquidacionCon` llega a cero a más tardar
+en ese mes; así respeta `saldo_original`, `saldo_insoluto` y compuesto. La
+calculadora del campo (Deudas) y la de Préstamos (que arma una `Deuda` con
+los datos del préstamo) usan esa misma función con los meses que diga el
+usuario (`utils/dialogo_meses.dart`).
 
 ### Pantalla de Deudas (2026-11-11)
 
@@ -642,8 +666,17 @@ nunca muestran cifras distintas:
     Solo se calculan cuando hay algo que arreglar.
   - `saldoPorMes`: total adeudado hoy y al cerrar cada mes, para la
     gráfica.
-  La estrategia y el extra se guardan en `SharedPreferences`
-  (`valtiq_plan_estrategia`, `valtiq_plan_extra`).
+  - `PlanPago.elegir` simula las dos estrategias y usa la elegida o, si es
+    `null` ("Automática"), la de `recomendar`: la que termina, o la de
+    menos intereses; si `casiIgual` (diferencia ≤ $1.000 o < 1 %), bola de
+    nieve.
+  La estrategia y el extra viven en `services/plan_pago_preferencias.dart`
+  (`PreferenciasPlan`, `SharedPreferences` `valtiq_plan_estrategia` —
+  `'automatica'` o la clave de la estrategia; sin valor = automática — y
+  `valtiq_plan_extra`) y viajan en el respaldo. `PreferenciasPlan.pagoDelPlan`
+  da lo que el plan le paga a una deuda este mes: es el botón "Lo del plan"
+  de `RegistrarPagoDialog` (llega como `Future`, el diálogo abre sin
+  esperarlo y nunca falla).
 - `PlanPagoTab` (pantalla): en celular el orden es tarjeta "Libre de deudas
   en" (con la comparación contra `soloMinimos`) → avisos (sin mínimo, no
   baja, tarde, límite vencido; los de `paraTerminar`/`paraLimites` traen
@@ -652,7 +685,10 @@ nunca muestran cifras distintas:
   rápidos `extrasRapidos` que simulan antes de tocarlos, orden de pago) →
   gráfica (`_PintorSaldo`, `CustomPainter`, sin paquetes) → intereses. En
   PC (≥ 720 de ancho útil): controles y gráfica a la izquierda, lo demás a
-  la derecha.
+  la derecha. Píldoras Automática / Avalancha / Bola de nieve con la nota
+  de qué eligió Valtiq o cuánto ahorraría la recomendada; las explicaciones
+  van en "¿Cómo funciona?" (plegado). Con una sola deuda no se muestra la
+  estrategia ni la comparación de intereses.
 
 ### Widgets de Android y "Anotar gasto" (2026-11-12)
 
@@ -835,6 +871,10 @@ es la lógica de amortización de un crédito real, e implica que
 `resumenPrestamo`/`calcularDeudaTotal` necesitan la lista de abonos
 con fecha (`AbonoInteres`), no solo su suma.
 
+(Desde 2026-11-18 las calculadoras de los formularios ya no usan estas dos
+funciones sino `ResumenDeuda.cuotaParaTerminarEn`: la fórmula francesa
+supone interés sobre el saldo y con interés sobre lo prestado al inicio
+sugería una cuota que no alcanzaba.)
 `calcularCuotaFija`/`calcularCuotaFijaDesdeTasa` implementan el
 sistema de amortización francés (cuota fija e igual en todo el
 plazo): `Cuota = Capital × [i×(1+i)^n] / [(1+i)^n − 1]` — el mismo
@@ -927,7 +967,9 @@ con todas las tablas de contenido del usuario (deudas, pagosDeuda,
 prestamos, pagosRecibidos, ingresos, gastosFijos, gastosVariables,
 recordatorios, presupuestosCategorias) serializadas vía `toJson()`.
 `ConfigSmtps` se excluye a propósito — nunca debe salir del
-dispositivo. `importarDatos()` valida el formato mínimo, y dentro de
+dispositivo. Desde 2026-11-18 lleva además `planPago` (estrategia y extra
+del Plan de pago, `PreferenciasPlan.toJson`); al importar se restaura
+después de los datos y, si el respaldo no lo trae, no se toca. `importarDatos()` valida el formato mínimo, y dentro de
 una sola `transaction()` borra todo (hijas antes que padres, por FK) y
 reinserta en batch (padres antes que hijas), preservando los ids
 originales del archivo para que las referencias entre tablas sigan

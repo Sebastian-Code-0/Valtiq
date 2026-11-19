@@ -2,6 +2,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../utils/currency_input.dart';
 import '../db/database.dart';
+import 'plan_pago_preferencias.dart';
 
 class BackupService {
   BackupService(this.db);
@@ -52,6 +53,9 @@ class BackupService {
             .map((e) => e.toJson())
             .toList(),
       },
+      // Lo elegido en el Plan de pago (estrategia y extra al mes). Opcional:
+      // los respaldos anteriores no lo traen.
+      'planPago': (await PreferenciasPlan.leer()).toJson(),
       // ConfigSmtps se excluye a propósito — nunca debe salir en el backup.
     };
   }
@@ -213,5 +217,7 @@ class BackupService {
       // de fábrica que borró); uno viejo arranca con las de fábrica.
       await db.sembrarCategorias(deFabrica: categorias == null);
     });
+    // Después de los datos: si algo falla arriba, no se tocan.
+    await PreferenciasPlan.restaurar(json['planPago']);
   }
 }

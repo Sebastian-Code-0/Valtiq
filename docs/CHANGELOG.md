@@ -1,5 +1,38 @@
 # Changelog
 
+## Pago mínimo sugerido, estrategia automática y calculadora corregida (2026-11-18)
+
+- **Pago mínimo sugerido:** debajo de "Pago mínimo al mes" el formulario de
+  deuda sugiere dos cuotas que se tocan para usarlas: **Mínimo** (terminar
+  en 3 años, o antes de la fecha límite si llega primero) y **Más rápido**
+  (1 año, o la mitad del plazo si la fecha límite está a un año o menos).
+  Se calculan con lo que se debe hoy y el mismo motor de intereses
+  (`ResumenDeuda.sugerirCuotas`, `cuotaParaTerminarEn`).
+- **Aviso al escribir el pago mínimo** (no bloquea): si no alcanza ni para
+  el interés ("nunca se termina: solo el interés es de $X al mes"), si
+  termina después de la fecha límite, o, si está bien, en qué mes terminas.
+- **Calculadora del pago mínimo corregida** (Deudas y Préstamos): calcula
+  con lo que se debe hoy y no con lo prestado, respeta el interés sobre lo
+  prestado al inicio (la fórmula de cuota fija de los bancos daba una cuota
+  que no alcanzaba) y funciona también sin interés. Ahora dice en qué mes
+  terminas.
+- **Estrategia "Automática"** (por defecto): Valtiq usa la que menos
+  intereses cobra; si cuestan casi lo mismo (≤ $1.000 o < 1 %), bola de
+  nieve. Si el usuario elige otra se respeta, y se le dice cuánto ahorraría
+  con la recomendada ("Que elija Valtiq" vuelve a Automática).
+- **Avisos del plan con cuota sugerida:** a una deuda sin pago mínimo se le
+  pone el mínimo o el rápido con un toque; a una deuda que no baja, "Subir
+  el mínimo de X a $Y".
+- **"Lo del plan" al registrar un pago:** botón con lo que el plan dice
+  pagarle este mes (mínimo + extra).
+- **Menos texto en el plan:** las explicaciones pasaron a "¿Cómo funciona?".
+  Con una sola deuda no se muestra la estrategia (no cambia nada).
+- **Respaldo:** la estrategia y el extra del plan ahora viajan en el
+  respaldo (`planPago`, opcional; los respaldos viejos siguen sirviendo).
+- Arreglo: lo pagado este mes podía descontarse dos veces cuando el pago
+  del mes era mayor que lo que faltaba.
+- Tests: 470.
+
 ## Plan de pago: pantalla nueva (2026-11-17)
 
 - **Primero la respuesta:** en celular, "Libre de deudas en" va arriba,

@@ -1,8 +1,11 @@
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/services/backup_service.dart';
+import 'package:valtiq/services/deudas_calculos.dart';
+import 'package:valtiq/services/plan_pago_preferencias.dart';
 
 AppDatabase _createInMemoryDb() => AppDatabase(NativeDatabase.memory());
 
@@ -32,6 +35,7 @@ void main() {
   late BackupService service;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     db = _createInMemoryDb();
     service = BackupService(db);
   });
@@ -93,6 +97,29 @@ void main() {
           .toList();
       expect(nombres, contains('Perro'));
       expect(nombres, containsAll(['Alimentación', 'Ropa', 'Otros']));
+    });
+
+    test('el extra y la estrategia del Plan de pago viajan en el respaldo; '
+        'uno viejo sin ellos no cambia nada', () async {
+      await PreferenciasPlan.guardarEstrategia(EstrategiaPago.bolaDeNieve);
+      await PreferenciasPlan.guardarExtra(250000);
+      final backup = await service.exportarDatos();
+      expect(backup['planPago'], {
+        'estrategia': 'bola_de_nieve',
+        'extra': 250000,
+      });
+
+      SharedPreferences.setMockInitialValues({});
+      await service.importarDatos(backup);
+      var prefs = await PreferenciasPlan.leer();
+      expect(prefs.estrategia, EstrategiaPago.bolaDeNieve);
+      expect(prefs.extra, 250000);
+
+      backup.remove('planPago');
+      await PreferenciasPlan.guardarExtra(9000);
+      await service.importarDatos(backup);
+      prefs = await PreferenciasPlan.leer();
+      expect(prefs.extra, 9000);
     });
 
     test(
