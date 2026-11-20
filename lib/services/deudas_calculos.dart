@@ -188,10 +188,51 @@ class ResumenDeuda {
   double get costoMensualPct =>
       saldo <= 0 ? 0 : interesDelMes(1, saldo.toDouble()) / saldo * 100;
 
-  /// La deuda empezó en el mes de [hoy]: su primer pago es el mes que viene.
+  /// La deuda empezó en el mes de [hoy].
   bool empezoEsteMes(DateTime hoy) {
     final inicio = fechaCivilGuardada(deuda.fechaPrestamo);
     return inicio.year == hoy.year && inicio.month == hoy.month;
+  }
+
+  /// Día del mes en que cae el [Deuda.diaPago] en ese mes (el último día si
+  /// el mes es más corto). `null` si la deuda no tiene día de pago.
+  int? _diaDePagoEn(int anio, int mes) {
+    final dia = deuda.diaPago;
+    if (dia == null) return null;
+    return math.min(dia, DateTime(anio, mes + 1, 0).day);
+  }
+
+  /// El día de pago dentro del mes de [mes] (el último día si el mes es
+  /// más corto). `null` si la deuda no tiene día de pago.
+  DateTime? fechaDePagoEn(DateTime mes) {
+    final dia = _diaDePagoEn(mes.year, mes.month);
+    return dia == null ? null : DateTime(mes.year, mes.month, dia);
+  }
+
+  /// En el mes de [hoy] toca un pago. Siempre, salvo que la deuda haya
+  /// empezado este mes: entonces solo si su día de pago de este mes cae
+  /// después del día en que empezó (empezó el 12 y paga los 30 → sí; sin
+  /// día de pago, el primer pago es el mes que viene).
+  bool tienePagoEsteMes(DateTime hoy) {
+    if (!empezoEsteMes(hoy)) return true;
+    final dia = _diaDePagoEn(hoy.year, hoy.month);
+    if (dia == null) return false;
+    return dia > fechaCivilGuardada(deuda.fechaPrestamo).day;
+  }
+
+  /// El último mes (contando desde hoy, 0 = este mes) cuyo pago llega a
+  /// tiempo para la fecha límite. Si el día de pago cae después del día
+  /// límite en el mes del límite (límite el 15, paga los 30), ese mes ya
+  /// no alcanza y cuenta el anterior. Negativo = el límite ya pasó; `null`
+  /// si no hay fecha límite.
+  int? mesLimite(DateTime hoy) {
+    final limite = deuda.fechaLimite;
+    if (limite == null) return null;
+    final l = fechaCivilGuardada(limite);
+    var meses = (l.year - hoy.year) * 12 + l.month - hoy.month;
+    final dia = _diaDePagoEn(l.year, l.month);
+    if (meses > 0 && dia != null && dia > l.day) meses -= 1;
+    return meses;
   }
 
   /// Suma de los pagos registrados en el mes de [hoy].
@@ -205,10 +246,11 @@ class ResumenDeuda {
   }
 
   /// Lo que todavía falta pagar este mes para cumplir con [pagoDelMes]
-  /// (lo ya pagado este mes se descuenta). Cero si la deuda empezó este mes.
+  /// (lo ya pagado este mes se descuenta). Cero si este mes no toca pago
+  /// ([tienePagoEsteMes]).
   int pendienteEsteMes(DateTime hoy, int? pagoDelMes) {
     if (pagoDelMes == null || pagoDelMes <= 0 || saldo <= 0) return 0;
-    if (empezoEsteMes(hoy)) return 0;
+    if (!tienePagoEsteMes(hoy)) return 0;
     // Lo pagado este mes ya bajó el saldo: lo que falta es el resto del
     // pago del mes, sin pasarse de lo que se debe.
     return math.max(0, math.min(pagoDelMes - pagadoEsteMes(hoy), saldo));
@@ -217,7 +259,7 @@ class ResumenDeuda {
   /// Lo pagado este mes por encima de la cuota: ya cuenta como el extra
   /// del mes en el plan de pago.
   int pagadoDeMasEsteMes(DateTime hoy) {
-    final debido = empezoEsteMes(hoy) ? 0 : (deuda.cuotaMensual ?? 0);
+    final debido = tienePagoEsteMes(hoy) ? (deuda.cuotaMensual ?? 0) : 0;
     return math.max(0, pagadoEsteMes(hoy) - math.max(0, debido));
   }
 
@@ -280,9 +322,9 @@ class ResumenDeuda {
   /// `null` si ya no se debe nada.
   int? cuotaParaTerminarEn(int meses, DateTime hoy) {
     if (saldo <= 0) return null;
-    // Una deuda que empezó este mes no tiene pago este mes: lo antes que
-    // puede terminar es el mes que viene.
-    final objetivo = math.max(meses, empezoEsteMes(hoy) ? 1 : 0);
+    // Si este mes no toca pago, lo antes que puede terminar es el mes que
+    // viene.
+    final objetivo = math.max(meses, tienePagoEsteMes(hoy) ? 0 : 1);
     bool alcanza(int unidades) {
       final l = liquidacionCon(unidades * _pasoCuota, hoy);
       return l.meses != null && l.meses! <= objetivo;
@@ -310,22 +352,21 @@ class ResumenDeuda {
   static const _pasoCuota = 1000;
 
   /// Las dos cuotas que la app sugiere para esta deuda:
-  /// - **mínimo**: terminar en [plazoMinimoSugerido] meses, o antes de la
-  ///   fecha límite si esta llega primero;
-  /// - **más rápido**: terminar en [plazoRapidoSugerido] meses (o en la
-  ///   mitad del plazo, si la fecha límite está a un año o menos). `null`
-  ///   si saldría igual que el mínimo.
+  /// - **mínimo**: terminar en el plazo de [plazosSugeridos] según lo que
+  ///   se debe, o antes de la fecha límite si esta llega primero;
+  /// - **más rápido**: terminar en el plazo rápido (o en la mitad del plazo,
+  ///   si la fecha límite llega antes). `null` si saldría igual que el
+  ///   mínimo.
   ///
   /// Una fecha límite que ya pasó no cuenta (se usan los plazos normales).
   /// `null` si no se debe nada.
   SugerenciasCuota? sugerirCuotas(DateTime hoy) {
     if (saldo <= 0) return null;
-    var plazo = plazoMinimoSugerido;
+    final base = plazosSugeridos(saldo);
+    var plazo = base.minimo;
     var porLimite = false;
-    final limite = deuda.fechaLimite;
-    if (limite != null) {
-      final l = fechaCivilGuardada(limite);
-      final meses = (l.year - hoy.year) * 12 + l.month - hoy.month;
+    final meses = mesLimite(hoy);
+    if (meses != null) {
       if (meses >= 0 && meses <= plazo) {
         plazo = meses;
         porLimite = true;
@@ -342,9 +383,7 @@ class ResumenDeuda {
     }
 
     final minimo = sugerencia(plazo);
-    final plazoRapido = plazo > plazoRapidoSugerido
-        ? plazoRapidoSugerido
-        : (plazo / 2).floor();
+    final plazoRapido = plazo > base.rapido ? base.rapido : (plazo / 2).floor();
     final rapido = plazoRapido < plazo ? sugerencia(plazoRapido) : null;
     return SugerenciasCuota(
       minimo: minimo,
@@ -354,10 +393,22 @@ class ResumenDeuda {
   }
 }
 
-/// Plazos de las cuotas que sugiere la app (ver
-/// [ResumenDeuda.sugerirCuotas]).
-const plazoMinimoSugerido = 36;
-const plazoRapidoSugerido = 12;
+/// Plazos (en meses) de las cuotas que sugiere la app según lo que se debe
+/// hoy (ver [ResumenDeuda.sugerirCuotas]): una deuda pequeña no se estira
+/// años (100.000 en 3 años serían cuotas de $3.000, nada realista).
+///
+/// | Lo que se debe    | Mínimo | Más rápido |
+/// |-------------------|--------|------------|
+/// | hasta 500.000     | 6      | 3          |
+/// | hasta 2.000.000   | 12     | 6          |
+/// | hasta 10.000.000  | 24     | 12         |
+/// | más               | 36     | 12         |
+({int minimo, int rapido}) plazosSugeridos(int saldo) {
+  if (saldo <= 500000) return (minimo: 6, rapido: 3);
+  if (saldo <= 2000000) return (minimo: 12, rapido: 6);
+  if (saldo <= 10000000) return (minimo: 24, rapido: 12);
+  return (minimo: 36, rapido: 12);
+}
 
 class SugerenciaCuota {
   const SugerenciaCuota({
@@ -674,13 +725,7 @@ class PlanPago {
     final corrida = _correr(activas, extra, hoy);
     final minimos = _correr(activas, 0, hoy, cascada: false);
 
-    final limites = [
-      for (final r in activas)
-        if (r.deuda.fechaLimite case final l?)
-          _mesesHasta(hoy, fechaCivilGuardada(l))
-        else
-          null,
-    ];
+    final limites = [for (final r in activas) r.mesLimite(hoy)];
     final orden = [
       for (var i = 0; i < activas.length; i++)
         PasoPlan(
@@ -800,10 +845,6 @@ class PlanPago {
 
   static DateTime? _fechaDe(DateTime hoy, int? meses) =>
       meses == null ? null : DateTime(hoy.year, hoy.month + meses, 1);
-
-  /// Meses calendario de [hoy] a [fecha] (0 = mismo mes, negativo = antes).
-  static int _mesesHasta(DateTime hoy, DateTime fecha) =>
-      (fecha.year - hoy.year) * 12 + fecha.month - hoy.month;
 
   /// El extra más pequeño (en múltiplos de $1.000, mayor que [desde]) con
   /// el que [cumple] es cierto; `null` si ni con [tope] se cumple. Más extra

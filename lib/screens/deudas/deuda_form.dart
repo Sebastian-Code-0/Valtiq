@@ -95,7 +95,7 @@ class _DeudaFormState extends State<DeudaForm>
         ? null
         : fechaCivilGuardada(d!.fechaLimite!);
     // Las sugerencias y el aviso del pago mínimo se recalculan al escribir.
-    for (final ctrl in [_montoCtrl, _tasaCtrl, _cuotaCtrl]) {
+    for (final ctrl in [_montoCtrl, _tasaCtrl, _cuotaCtrl, _diaPagoCtrl]) {
       ctrl.addListener(_refrescar);
     }
     if (d != null) _cargarAbonos(d.id);
@@ -411,15 +411,16 @@ class _DeudaFormState extends State<DeudaForm>
       final limite = r.deuda.fechaLimite == null
           ? null
           : fechaCivilGuardada(r.deuda.fechaLimite!);
-      final mesLimite = limite == null
-          ? null
-          : (limite.year - hoy.year) * 12 + limite.month - hoy.month;
+      final mesLimite = r.mesLimite(hoy);
       final String texto;
       var alerta = false;
       if (l.noBaja) {
         alerta = true;
         final interes = r.interesProximoMes;
-        texto = cuota <= interes
+        texto = !r.tieneInteres
+            ? 'Con ${formatCOP(cuota)} al mes tardarías más de 50 años en '
+                  'terminar esta deuda. Prueba con una de las sugerencias.'
+            : cuota <= interes
             ? 'Con ${formatCOP(cuota)} al mes esta deuda nunca se termina: '
                   'solo el interés es de ${formatCOP(interes)} al mes, así '
                   'que lo que debes crece en vez de bajar.'
@@ -430,9 +431,13 @@ class _DeudaFormState extends State<DeudaForm>
           mesLimite >= 0 &&
           l.meses! > mesLimite) {
         alerta = true;
-        texto =
-            'Con este pago terminas en ${formatMesAnio(l.fecha!)}, después '
-            'de tu fecha límite (${formatMesAnio(limite!)}).';
+        final ultimoPago = r.fechaDePagoEn(l.fecha!);
+        texto = ultimoPago != null
+            ? 'Con este pago tu último pago sería el '
+                  '${formatFechaLegible(ultimoPago)}, después de tu fecha '
+                  'límite (${formatFechaLegible(limite!)}).'
+            : 'Con este pago terminas en ${formatMesAnio(l.fecha!)}, '
+                  'después de tu fecha límite (${formatMesAnio(limite!)}).';
       } else if (l.fecha != null) {
         texto = l.meses == 0
             ? 'Con este pago terminas este mes.'
@@ -729,8 +734,10 @@ class _DeudaFormState extends State<DeudaForm>
             CampoEtiquetado(
               etiqueta: 'Día de pago de cada mes (opcional)',
               ayuda:
-                  'Con esto Valtiq te muestra tu próximo pago. Si el mes no '
-                  'tiene ese día, cuenta el último.',
+                  'Valtiq lo usa para mostrarte tu próximo pago y para '
+                  'saber cuántos pagos te caben antes de tu fecha límite. '
+                  'Si el mes no tiene ese día (31 en febrero), cuenta el '
+                  'último.',
               child: TextFormField(
                 controller: _diaPagoCtrl,
                 decoration: const InputDecoration(hintText: 'Del 1 al 31'),

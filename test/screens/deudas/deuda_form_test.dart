@@ -161,6 +161,26 @@ void main() {
   String textoCuota(WidgetTester tester) =>
       tester.widget<TextFormField>(campoCuota()).controller!.text;
 
+  testWidgets('pago mínimo sin interés: un pago diminuto no habla de '
+      'interés', (tester) async {
+    await montar(tester, const Size(1366, 768));
+    await tester.enterText(find.byType(TextFormField).at(0), 'Amigo');
+    await tester.enterText(find.byType(TextFormField).at(2), '100000');
+    await tester.pump();
+    await irA(tester, campoCuota());
+    await tester.enterText(campoCuota(), '1');
+    await tester.pump();
+    final efecto = find.byKey(const ValueKey('cuota-efecto'));
+    expect(
+      find.descendant(of: efecto, matching: find.textContaining('50 años')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: efecto, matching: find.textContaining('interés')),
+      findsNothing,
+    );
+  });
+
   testWidgets('pago mínimo: sugiere dos cuotas, avisa si el pago no alcanza '
       'ni para el interés y al tocar una sugerencia la pone', (tester) async {
     await montar(tester, const Size(1366, 768));

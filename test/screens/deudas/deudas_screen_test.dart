@@ -591,8 +591,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(boton);
     await tester.pumpAndSettle();
-    // Sin interés, empieza hoy: 360.000 en 36 meses = 10.000 al mes.
-    expect((await db.deudasDao.getDeudaById(id))!.cuotaMensual, 10000);
+    // Sin interés, empieza hoy: 360.000 (tramo de 6 meses) = 60.000 al mes.
+    expect((await db.deudasDao.getDeudaById(id))!.cuotaMensual, 60000);
     expect(find.byKey(const ValueKey('plan-sin-minimo')), findsNothing);
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();

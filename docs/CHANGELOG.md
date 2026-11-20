@@ -1,5 +1,20 @@
 # Changelog
 
+## Pago mínimo sugerido: plazos realistas y día de pago (2026-11-19)
+
+- **Sugerencias según lo que debes:** el plazo ya no es siempre 3 años
+  (100.000 salía en cuotas de $3.000 hasta 2029). Hasta 500.000: 6 meses
+  (rápido 3); hasta 2 millones: 12 (6); hasta 10 millones: 24 (12); más:
+  36 (12).
+- **El día de pago cuenta:** una deuda que empezó este mes antes de su día
+  de pago ya tiene pago este mes, y si el día de pago cae después del día
+  de la fecha límite, ese último mes no cuenta (sugerencias, avisos del
+  formulario y del plan de pago).
+- **Aviso corregido sin interés:** un pago diminuto en una deuda sin interés
+  ya no dice que "el interés se come el pago"; dice que tardarías más de 50
+  años.
+- El texto de ayuda de "Día de pago" explica para qué sirve.
+
 ## Pago mínimo sugerido, estrategia automática y calculadora corregida (2026-11-18)
 
 - **Pago mínimo sugerido:** debajo de "Pago mínimo al mes" el formulario de

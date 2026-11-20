@@ -572,11 +572,14 @@ le pone el cursor.
 Debajo de "Pago mínimo al mes", `DeudaForm._ayudaPagoMinimo` arma un
 `ResumenDeuda` con lo escrito en el formulario (y los pagos ya registrados,
 si se edita) y muestra:
-- Las dos cuotas de `ResumenDeuda.sugerirCuotas(hoy)`: **mínimo** a
-  `plazoMinimoSugerido` (36) meses o al mes de la fecha límite si llega
-  antes (`porLimite`); **más rápido** a `plazoRapidoSugerido` (12) meses o a
-  la mitad del plazo si este es de un año o menos. Una fecha límite vencida
-  no cuenta.
+- Las dos cuotas de `ResumenDeuda.sugerirCuotas(hoy)`: **mínimo** y **más
+  rápido** según `plazosSugeridos(saldo)` (≤ 500.000: 6/3 meses; ≤ 2 M:
+  12/6; ≤ 10 M: 24/12; más: 36/12), o al último mes que llega a la fecha
+  límite (`mesLimite(hoy)`) si este es antes (`porLimite`), con el rápido a
+  la mitad de ese plazo. Una fecha límite vencida no cuenta.
+- `mesLimite(hoy)`: meses hasta la fecha límite; si hay día de pago y en el
+  mes del límite cae después del día límite, ese mes no cuenta (−1). El
+  plan de pago usa el mismo valor para sus avisos de límite.
 - Qué pasa con lo escrito (`liquidacionCon`): "nunca se termina" si no
   cubre el interés (`interesProximoMes`), aviso si termina después de la
   fecha límite, o el mes en que termina. Es solo un aviso: no bloquea el
@@ -639,8 +642,10 @@ nunca muestran cifras distintas:
     sigue sobre lo prestado aunque falte poco).
   - `pendienteEsteMes(hoy, pago)` / `pagadoDeMasEsteMes(hoy)`: lo que falta
     pagar este mes descontando los abonos del mes, y lo abonado por encima
-    de la cuota. Una deuda que empezó este mes (`empezoEsteMes`) no debe
-    nada este mes.
+    de la cuota. Si este mes no toca pago (`tienePagoEsteMes`) no se debe
+    nada este mes: pasa cuando la deuda empezó este mes, salvo que su día de
+    pago de este mes caiga después del día en que empezó (empezó el 12,
+    paga los 30 → sí toca).
   - `interesDelMes(k, saldo)`: respeta la configuración de la deuda
     (`saldo_insoluto`: sobre el saldo; `saldo_original` simple: sobre el
     monto original; `saldo_original` compuesto: sobre el original

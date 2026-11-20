@@ -753,31 +753,58 @@ void main() {
   });
 
   group('cuotas sugeridas', () {
+    // 36 millones: el tramo más alto de plazos (mínimo 36, rápido 12).
     ResumenDeuda sinInteres({DateTime? limite}) => ResumenDeuda.calcular(
-      _deuda(monto: 360000, inicio: DateTime.utc(2026, 11, 11), limite: limite),
+      _deuda(
+        monto: 36000000,
+        inicio: DateTime.utc(2026, 11, 11),
+        limite: limite,
+      ),
       const [],
       hoy: hoy,
     );
 
-    test('sin fecha límite: mínimo a 3 años y rápido a 1 año', () {
+    test('plazos según lo que se debe', () {
+      expect(plazosSugeridos(100000), (minimo: 6, rapido: 3));
+      expect(plazosSugeridos(500000), (minimo: 6, rapido: 3));
+      expect(plazosSugeridos(500001), (minimo: 12, rapido: 6));
+      expect(plazosSugeridos(2000000), (minimo: 12, rapido: 6));
+      expect(plazosSugeridos(10000000), (minimo: 24, rapido: 12));
+      expect(plazosSugeridos(10000001), (minimo: 36, rapido: 12));
+    });
+
+    test('una deuda pequeña no se estira años', () {
+      // 100.000: 6 meses (17.000) o 3 meses (34.000), no 3.000 en 3 años.
+      final s = ResumenDeuda.calcular(
+        _deuda(monto: 100000, inicio: DateTime.utc(2026, 11, 11)),
+        const [],
+        hoy: hoy,
+      ).sugerirCuotas(hoy)!;
+      expect(s.minimo.cuota, 17000);
+      expect(s.minimo.meses, 6);
+      expect(s.rapido!.cuota, 34000);
+      expect(s.rapido!.meses, 3);
+    });
+
+    test('sin fecha límite y deuda grande: mínimo a 3 años y rápido a 1', () {
       final s = sinInteres().sugerirCuotas(hoy)!;
       expect(s.porLimite, isFalse);
-      expect(s.minimo.cuota, 10000); // 360.000 / 36
+      expect(s.minimo.cuota, 1000000); // 36.000.000 / 36
       expect(s.minimo.meses, 36);
       expect(s.minimo.fecha, DateTime(2029, 11, 1));
-      expect(s.rapido!.cuota, 30000); // 360.000 / 12
+      expect(s.rapido!.cuota, 3000000); // 36.000.000 / 12
       expect(s.rapido!.meses, 12);
     });
 
-    test('con fecha límite antes de 3 años, el mínimo llega a tiempo', () {
+    test('con fecha límite antes del plazo, el mínimo llega a tiempo', () {
       // Límite en noviembre de 2028: 24 meses.
       final s = sinInteres(
         limite: DateTime.utc(2028, 11, 20),
       ).sugerirCuotas(hoy)!;
       expect(s.porLimite, isTrue);
-      expect(s.minimo.cuota, 15000); // 360.000 / 24
+      expect(s.minimo.cuota, 1500000); // 36.000.000 / 24
       expect(s.minimo.meses, lessThanOrEqualTo(24));
-      expect(s.rapido!.cuota, 30000);
+      expect(s.rapido!.cuota, 3000000);
     });
 
     test('con fecha límite cerca, el rápido es la mitad del plazo', () {
@@ -785,8 +812,8 @@ void main() {
       final s = sinInteres(
         limite: DateTime.utc(2027, 5, 30),
       ).sugerirCuotas(hoy)!;
-      expect(s.minimo.cuota, 60000);
-      expect(s.rapido!.cuota, 120000);
+      expect(s.minimo.cuota, 6000000);
+      expect(s.rapido!.cuota, 12000000);
     });
 
     test('una fecha límite que ya pasó no cuenta', () {
@@ -794,11 +821,67 @@ void main() {
         limite: DateTime.utc(2026, 9, 1),
       ).sugerirCuotas(hoy)!;
       expect(s.porLimite, isFalse);
-      expect(s.minimo.cuota, 10000);
+      expect(s.minimo.cuota, 1000000);
+    });
+
+    group('día de pago', () {
+      // Empezó el 12 de noviembre, límite 31 de enero, hoy 19 de noviembre.
+      final hoy19 = DateTime(2026, 11, 19);
+      ResumenDeuda cien({int? diaPago, DateTime? limite}) =>
+          ResumenDeuda.calcular(
+            _deuda(
+              monto: 100000,
+              inicio: DateTime.utc(2026, 11, 12),
+              limite: limite ?? DateTime.utc(2027, 1, 31),
+              diaPago: diaPago,
+            ),
+            const [],
+            hoy: hoy19,
+          );
+
+      test('paga los 30: el 30 de noviembre ya cuenta como pago', () {
+        final r = cien(diaPago: 30);
+        expect(r.tienePagoEsteMes(hoy19), isTrue);
+        expect(r.mesLimite(hoy19), 2);
+        final s = r.sugerirCuotas(hoy19)!;
+        // Tres pagos (30 nov, 30 dic, 30 ene).
+        expect(s.minimo.cuota, 34000);
+        expect(s.minimo.meses, 2);
+        // Más rápido: dos pagos, termina en diciembre.
+        expect(s.rapido!.cuota, 50000);
+        expect(s.rapido!.meses, 1);
+      });
+
+      test('sin día de pago, el primer pago es el mes que viene', () {
+        final r = cien();
+        expect(r.tienePagoEsteMes(hoy19), isFalse);
+        expect(r.sugerirCuotas(hoy19)!.minimo.cuota, 50000);
+      });
+
+      test('un día de pago anterior al inicio no cuenta este mes', () {
+        expect(cien(diaPago: 5).tienePagoEsteMes(hoy19), isFalse);
+        expect(cien(diaPago: 12).tienePagoEsteMes(hoy19), isFalse);
+      });
+
+      test('si paga después del día límite, ese mes ya no alcanza', () {
+        // Límite el 15 de enero, paga los 30: el 30 de enero llega tarde,
+        // así que quedan el 30 de noviembre y el 30 de diciembre.
+        final r = cien(diaPago: 30, limite: DateTime.utc(2027, 1, 15));
+        expect(r.mesLimite(hoy19), 1);
+        expect(r.sugerirCuotas(hoy19)!.minimo.cuota, 50000);
+        // Sin día de pago el mes del límite sí cuenta.
+        expect(cien(limite: DateTime.utc(2027, 1, 15)).mesLimite(hoy19), 2);
+      });
+
+      test('el 31 en un mes de 30 días cae en el último', () {
+        final r = cien(diaPago: 31);
+        expect(r.tienePagoEsteMes(hoy19), isTrue); // 30 de noviembre
+        expect(r.fechaDePagoEn(DateTime(2027, 2, 1)), DateTime(2027, 2, 28));
+      });
     });
 
     test('un pago menor que el interés nunca termina; el mínimo sugerido sí '
-        'y es el más bajo que llega a 3 años', () {
+        'y es el más bajo que llega a 2 años', () {
       final r = ResumenDeuda.calcular(
         _deuda(
           monto: 5000000,
@@ -815,9 +898,10 @@ void main() {
       expect(r.liquidacionCon(1000, hoy).noBaja, isTrue);
       final minimo = r.sugerirCuotas(hoy)!.minimo.cuota;
       expect(minimo, greaterThan(50000));
-      expect(r.liquidacionCon(minimo, hoy).meses!, lessThanOrEqualTo(36));
+      // 5.000.000: tramo de 24 meses.
+      expect(r.liquidacionCon(minimo, hoy).meses!, lessThanOrEqualTo(24));
       final menos = r.liquidacionCon(minimo - 1000, hoy).meses;
-      expect(menos == null || menos > 36, isTrue);
+      expect(menos == null || menos > 24, isTrue);
     });
 
     test('con interés sobre lo prestado la cuota cubre ese interés fijo', () {
