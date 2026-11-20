@@ -578,7 +578,8 @@ si se edita) y muestra:
   límite (`mesLimite(hoy)`) si este es antes (`porLimite`), con el rápido a
   la mitad de ese plazo. Una fecha límite vencida no cuenta.
 - `mesLimite(hoy)`: meses hasta la fecha límite; si hay día de pago y en el
-  mes del límite cae después del día límite, ese mes no cuenta (−1). El
+  mes del límite cae después del día límite, ese mes no cuenta (−1). Un
+  límite anterior a hoy da −1 aunque sea de este mismo mes (vencido). El
   plan de pago usa el mismo valor para sus avisos de límite.
 - Qué pasa con lo escrito (`liquidacionCon`): "nunca se termina" si no
   cubre el interés (`interesProximoMes`), aviso si termina después de la

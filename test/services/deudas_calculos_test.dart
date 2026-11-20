@@ -873,6 +873,35 @@ void main() {
         expect(cien(limite: DateTime.utc(2027, 1, 15)).mesLimite(hoy19), 2);
       });
 
+      test('un límite de este mes que ya pasó cuenta como vencido', () {
+        // Hoy 19 de noviembre, límite el 10: ya pasó aunque sea este mes.
+        final r = cien(diaPago: 30, limite: DateTime.utc(2026, 11, 10));
+        expect(r.mesLimite(hoy19), -1);
+        expect(r.sugerirCuotas(hoy19)!.porLimite, isFalse);
+        // Hoy mismo todavía no ha pasado.
+        expect(cien(limite: DateTime.utc(2026, 11, 19)).mesLimite(hoy19), 0);
+        final p = PlanPago.simular(
+          deudas: [
+            ResumenDeuda.calcular(
+              _deuda(
+                monto: 100000,
+                inicio: DateTime.utc(2026, 10, 1),
+                limite: DateTime.utc(2026, 11, 10),
+                cuota: 50000,
+              ),
+              const [],
+              hoy: hoy19,
+            ),
+          ],
+          estrategia: EstrategiaPago.avalancha,
+          extraMensual: 0,
+          hoy: hoy19,
+        );
+        expect(p.orden.single.limiteVencido, isTrue);
+        expect(p.orden.single.tarde, isFalse);
+        expect(p.paraLimites, isNull);
+      });
+
       test('el 31 en un mes de 30 días cae en el último', () {
         final r = cien(diaPago: 31);
         expect(r.tienePagoEsteMes(hoy19), isTrue); // 30 de noviembre

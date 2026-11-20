@@ -1,5 +1,11 @@
 # Changelog
 
+## Fecha límite vencida dentro del mismo mes (2026-11-19)
+
+- Una fecha límite que ya pasó pero es de este mismo mes (límite el 10, hoy
+  19) ahora sale como "ya pasó" en el plan de pago, en vez de "termina
+  después de su fecha límite" con un extra que no podía cumplirse.
+
 ## Pago mínimo sugerido: plazos realistas y día de pago (2026-11-19)
 
 - **Sugerencias según lo que debes:** el plazo ya no es siempre 3 años

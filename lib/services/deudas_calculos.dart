@@ -223,12 +223,22 @@ class ResumenDeuda {
   /// El último mes (contando desde hoy, 0 = este mes) cuyo pago llega a
   /// tiempo para la fecha límite. Si el día de pago cae después del día
   /// límite en el mes del límite (límite el 15, paga los 30), ese mes ya
-  /// no alcanza y cuenta el anterior. Negativo = el límite ya pasó; `null`
-  /// si no hay fecha límite.
+  /// no alcanza y cuenta el anterior. Negativo = el límite ya pasó (también
+  /// si fue antes de hoy dentro de este mismo mes); `null` si no hay fecha
+  /// límite.
   int? mesLimite(DateTime hoy) {
     final limite = deuda.fechaLimite;
     if (limite == null) return null;
     final l = fechaCivilGuardada(limite);
+    // Se compara solo el día civil (año, mes, día): `l` viene en UTC y
+    // `hoy` en hora local.
+    if (DateTime(
+      l.year,
+      l.month,
+      l.day,
+    ).isBefore(DateTime(hoy.year, hoy.month, hoy.day))) {
+      return -1;
+    }
     var meses = (l.year - hoy.year) * 12 + l.month - hoy.month;
     final dia = _diaDePagoEn(l.year, l.month);
     if (meses > 0 && dia != null && dia > l.day) meses -= 1;
