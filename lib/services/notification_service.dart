@@ -669,6 +669,18 @@ class NotificationService {
     await replanificar(db);
   }
 
+  /// Pone la hora del recordatorio diario que trae un respaldo, sin
+  /// encenderlo ni apagarlo en este dispositivo. Una hora inválida se
+  /// ignora.
+  static Future<void> restaurarHoraRecordatorioDiario(
+    AppDatabase db,
+    Object? minutos,
+  ) async {
+    if (minutos is! int || minutos < 0 || minutos >= 24 * 60) return;
+    final actual = await recordatorioDiario();
+    await setRecordatorioDiario(db, activo: actual.activo, minutos: minutos);
+  }
+
   /// Carga en lote las referencias (deuda/préstamo/gasto) de una lista de
   /// recordatorios, en vez de una consulta por recordatorio (evita N+1).
   static Future<

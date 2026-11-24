@@ -18,6 +18,7 @@ import 'package:valtiq/theme/theme.dart';
 import 'package:valtiq/utils/currency_input.dart';
 import 'package:valtiq/utils/fecha_civil.dart';
 import 'package:valtiq/utils/form_widgets.dart';
+import 'package:valtiq/utils/date_format.dart';
 import 'package:valtiq/utils/format.dart';
 
 // Los StreamBuilder de drift dejan un Timer de limpieza pendiente al
@@ -206,7 +207,7 @@ void main() {
       'Tasa',
       'Pago mínimo',
       'Próximo pago',
-      'Liquidación estimada',
+      'Fin a tu ritmo actual',
       'Pagos recientes',
       'Registrar pago',
     ]) {
@@ -333,9 +334,9 @@ void main() {
     expect(find.textContaining('No puedes pagar más'), findsOneWidget);
     expect(await db.pagosDeudaDao.getTotalAbonado(ids.juan), 100000);
 
-    // Solo números: letras y signos se descartan.
+    // Lo que no es un monto se rechaza: el campo queda como estaba.
     await tester.enterText(campo, '-5a0');
-    expect(monto(), '50');
+    expect(monto(), '300.002');
 
     await tester.tap(find.text('Liquidar ${formatCOP(300000)}'));
     await tester.pump();
@@ -411,7 +412,7 @@ void main() {
     // Avalancha: Nu (2 % mensual) va antes que Juan (0 %).
     await tester.tap(find.text('Avalancha'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('tasa más alta'), findsOneWidget);
+    expect(find.textContaining('menos intereses en total'), findsOneWidget);
     expect(arriba('Tarjeta Nu') < arriba('Juan'), isTrue);
 
     await tester.tap(find.text('Bola de nieve'));
@@ -453,6 +454,27 @@ void main() {
     expect(find.byKey(const ValueKey('plan-vs-minimos')), findsOneWidget);
     expect(find.byKey(const ValueKey('plan-este-mes')), findsOneWidget);
     expect(find.byKey(const ValueKey('plan-grafica')), findsOneWidget);
+    // La gráfica dice lo que se debe hoy y "$0" al final, y el orden aclara
+    // qué significa el número.
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('plan-grafica-fin')),
+        matching: find.text(formatCOP(0)),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('plan-grafica-hoy')),
+        matching: find.text('Hoy'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('plan-orden-ayuda')), findsOneWidget);
+    expect(
+      find.textContaining('además del pago mínimo de cada deuda'),
+      findsOneWidget,
+    );
     await captura(tester, 'plan-celular');
 
     // "+$100.000" suma al extra, se ve en el campo y se recuerda.
@@ -631,6 +653,69 @@ void main() {
     await tester.tap(find.text('Pagadas'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Todavía no has terminado'), findsOneWidget);
+    await _cerrar(tester);
+  });
+
+  testWidgets('Plan de pago: al terminar una deuda ofrece seguir pagando su '
+      'cuota, una sola vez y sin sumarla sola', (tester) async {
+    final hace3 = haceMeses(3);
+    final a = await db.deudasDao.insertDeuda(
+      DeudasCompanion.insert(
+        acreedorNombre: 'Deuda A',
+        montoOriginal: 100000,
+        fechaPrestamo: hace3,
+        cuotaMensual: const Value(100000),
+      ),
+    );
+    final b = await db.deudasDao.insertDeuda(
+      DeudasCompanion.insert(
+        acreedorNombre: 'Deuda B',
+        montoOriginal: 1000000,
+        fechaPrestamo: hace3,
+        cuotaMensual: const Value(100000),
+      ),
+    );
+    final fecha = normalizarFechaCivil(hoy);
+    for (final id in [a, b]) {
+      await db.pagosDeudaDao.insertPago(
+        PagosDeudaCompanion.insert(
+          deudaId: id,
+          montoAbonado: 100000,
+          fechaPago: fecha,
+        ),
+      );
+    }
+    await db.deudasDao.marcarComoPagada(a, fecha);
+
+    await montar(tester, const Size(1366, 768));
+    await tester.tap(find.text('Plan de pago'));
+    await tester.pumpAndSettle();
+
+    // No se sumó solo: la fecha es la de pagar solo los 100.000 de B.
+    var prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt(PlanPagoTab.claveExtra), isNull);
+    expect(find.text('Terminaste Deuda A'), findsOneWidget);
+    expect(find.textContaining(r'$100.000 libres al mes'), findsOneWidget);
+    final abril = formatMesAnio(DateTime(hoy.year, hoy.month + 5));
+    expect(find.text('Seguir pagándolos: terminas en $abril'), findsOneWidget);
+
+    final usar = find.byKey(const ValueKey('plan-liberada-usar'));
+    await tester.ensureVisible(usar);
+    await tester.pumpAndSettle();
+    await tester.tap(usar);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+    prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt(PlanPagoTab.claveExtra), 100000);
+    expect(find.byKey(const ValueKey('plan-liberada')), findsNothing);
+    final libre = find.byKey(const ValueKey('plan-libre'));
+    final grande = abril[0].toUpperCase() + abril.substring(1);
+    expect(
+      find.descendant(of: libre, matching: find.text(grande)),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(seconds: 10));
     await _cerrar(tester);
   });
 }

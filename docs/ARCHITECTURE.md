@@ -573,14 +573,28 @@ Debajo de "Pago mínimo al mes", `DeudaForm._ayudaPagoMinimo` arma un
 `ResumenDeuda` con lo escrito en el formulario (y los pagos ya registrados,
 si se edita) y muestra:
 - Las dos cuotas de `ResumenDeuda.sugerirCuotas(hoy)`: **mínimo** y **más
-  rápido** según `plazosSugeridos(saldo)` (≤ 500.000: 6/3 meses; ≤ 2 M:
-  12/6; ≤ 10 M: 24/12; más: 36/12), o al último mes que llega a la fecha
-  límite (`mesLimite(hoy)`) si este es antes (`porLimite`), con el rápido a
-  la mitad de ese plazo. Una fecha límite vencida no cuenta.
-- `mesLimite(hoy)`: meses hasta la fecha límite; si hay día de pago y en el
-  mes del límite cae después del día límite, ese mes no cuenta (−1). Un
-  límite anterior a hoy da −1 aunque sea de este mismo mes (vencido). El
-  plan de pago usa el mismo valor para sus avisos de límite.
+  rápido** según `plazosSugeridos(saldo)`, en cantidad de PAGOS (≤ 500.000:
+  6/3; ≤ 2 M: 12/6; ≤ 10 M: 24/12; más: 36/12), o al último mes que llega a
+  la fecha límite (`mesLimite(hoy)`) si este es antes (`porLimite`), con el
+  rápido a la mitad de esos pagos. Una fecha límite vencida no cuenta.
+- `primerMesDePago(hoy)`: 0 si la deuda ya empezó. Si empieza este mes o
+  después, paga en su mes de inicio solo si su día de pago cae después del
+  día de inicio o si su fecha límite cae en ese mismo mes; si no, desde el
+  siguiente. Antes de empezar no cobra cuota ni causa interés.
+- `mesLimite(hoy)`: último mes cuyo pago llega a tiempo; si el día de pago
+  cae después del día límite cuenta el mes anterior, salvo que no haya un
+  mes anterior con pago: entonces cuenta el del límite y `pagarAntesDe(hoy)`
+  da la fecha antes de la cual hay que pagar. Un límite anterior a hoy da
+  −1 aunque sea de este mismo mes (vencido).
+- `proximoPago` salta al mes siguiente si la cuota del mes ya está pagada;
+  `vencimiento` marca `vencida` si la fecha límite ya pasó, aun con día de
+  pago. `saldoAl(fecha)` usa `InteresCalculator.montoParaLiquidar`: el pago en
+  esa fecha que deja la deuda exactamente en $0 con todos sus pagos.
+- `PagosDeudaDao.eliminarPago` reabre una deuda liquidada que sin ese pago
+  vuelve a deber (no una que el usuario marcó pagada debiendo).
+- `cuotaParaPagos(n, hoy)` es la calculadora "N meses": N pagos, contando
+  el de este mes si aún no se ha hecho; si la fecha límite llega antes,
+  manda ella (`CuotaCalculada.porLimite`).
 - Qué pasa con lo escrito (`liquidacionCon`): "nunca se termina" si no
   cubre el interés (`interesProximoMes`), aviso si termina después de la
   fecha límite, o el mes en que termina. Es solo un aviso: no bloquea el
@@ -647,19 +661,63 @@ nunca muestran cifras distintas:
     nada este mes: pasa cuando la deuda empezó este mes, salvo que su día de
     pago de este mes caiga después del día en que empezó (empezó el 12,
     paga los 30 → sí toca).
-  - `interesDelMes(k, saldo)`: respeta la configuración de la deuda
-    (`saldo_insoluto`: sobre el saldo; `saldo_original` simple: sobre el
-    monto original; `saldo_original` compuesto: sobre el original
-    capitalizado). Aproximación: en `saldo_insoluto` todo el saldo se toma
-    como capital, así que con interés atrasado el estimado queda un poco por
-    encima del real, nunca por debajo.
-- `PlanPago.simular`: el mes 0 (el mes en curso) no suma interés (el
-  causado hasta hoy ya está en el saldo) y paga lo que falte de cada cuota
-  más lo que falte del extra (`extra − pagado de más este mes`). Desde el
-  mes 1, cada mes suma el interés de cada deuda, paga el mínimo de todas y
-  manda lo que sobra (el "extra al mes" más los mínimos de las deudas ya
-  terminadas) a la prioritaria. `EstrategiaPago.avalancha` ordena por
-  `costoMensualPct` más alto; `bolaDeNieve` por saldo más pequeño. Devuelve
+  - `interesDelMes(k, saldo, mora:, pagaEsteMes:)`: respeta la configuración
+    de la deuda (`saldo_insoluto` simple: sobre el capital, sin la `mora`;
+    `saldo_insoluto` compuesto: sobre todo lo que se debe; `saldo_original`
+    simple: sobre el monto original; `saldo_original` compuesto: sobre el
+    original capitalizado). La mora inicial es `interesPendiente`, y cada
+    pago la cubre primero, igual que el motor.
+  - `fraccionDelMes(k, pagaEsteMes:, pagadoHoy:)`: parte de un mes que
+    corre el interés antes del pago del mes k, con los días de pago reales.
+    Una deuda sin día de pago se proyecta con el día del mes en que empezó
+    (`_diaProyectado`), así la fecha no depende del día en que se abre la
+    app. En `saldo_insoluto`, el tramo que empieza hoy sin pagar nada hoy se
+    mide del último pago (o el inicio) al día de pago, menos lo ya contado
+    hasta hoy: el motor cuenta "meses completos + días/30" y esa cuenta no
+    se puede partir en pedazos. Si en el mes 0 se le paga algo hoy
+    (`pagadoHoy`), el mes 1 se mide desde hoy, como hace el motor.
+  - `faltaDelPagoEsteMes(hoy, pago)`: lo que falta del pago del mes sin
+    recortarlo al saldo de hoy (el último pago lleva el interés hasta el día
+    de pago). La simulación y `liquidacionCon` lo usan; la pantalla muestra
+    "mínimo" o "mínimo + extra" comparando con él.
+- `PlanPago.simular`: en el mes 0 (el mes en curso) el interés causado
+  hasta hoy ya está en el saldo; con día de pago futuro y un pago por hacer
+  suma el interés hasta ese día, también si con ese pago se termina (así
+  "Este mes paga" deja la deuda en cero pagándolo ese día; el pago con el
+  que se termina se redondea hacia arriba). Una deuda a la que le llega
+  extra este mes sin tocarle cuota se paga también en su día de pago, con
+  su interés (o hoy, si ese día ya pasó). Un saldo proyectado menor a
+  `_casiCero` ($1,50) se da por pagado: el saldo de hoy viene redondeado y
+  sin ese margen un peso cobraba un mes más de interés en `saldo_original`.
+  Paga lo que falte de cada cuota
+  más lo que falte del extra (`extra − extraDiferido − pagado de más este
+  mes`, contando también lo pagado de más a las `terminadas`). Desde el
+  mes 1, cada mes suma el interés de cada deuda, paga la cuota completa de
+  todas (`deuda.cuotaMensual`, no `pagoMinimo`, que viene recortado al
+  saldo) y reparte lo que sobra (el "extra al mes" más las cuotas de las
+  deudas ya terminadas) en un orden fijo de prioridad. Las fechas límite no
+  tienen un reparto especial: `_Simulacion.ordenesPara` da unos pocos órdenes
+  candidatos (el de la estrategia, fecha límite más próxima primero, y en
+  avalancha también por saldo, por interés y todos los órdenes hasta 4
+  deudas) y `mejor` usa el que termina, cumple más fechas y cobra menos.
+  Las urgentes (vencidas y fechas a ≤ 3 meses) desempatan antes que el
+  interés (`_esMejor`): primero que cada una se pase menos meses de su
+  fecha, luego, una por una en su orden, que termine antes o, si el interés
+  es casi igual (≤ $1.000 o < 1 %), que le quede menos al cerrar el mes de
+  su fecha (`_Corrida.faltaEnLimite`).
+  Con 5 o más deudas, `_ordenesBuscados` busca por mejora local (mover una
+  deuda de posición) con presupuesto fijo (`720 / n` simulaciones) y extras
+  de referencia que salen del saldo total, nunca del extra del usuario: los
+  candidatos no cambian al mover el extra. Solo quedan el orden base, el de
+  fechas límite, los ganadores y, si sin extra nada termina, el que termina
+  con menos extra (`_ordenParaTerminar`). Hay una sola búsqueda por cartera,
+  compartida por el plan, las vistas previas y los botones. Como con un orden fijo más plata nunca atrasa nada, más extra
+  no empeora el plan; la única excepción buscada es cumplir una fecha límite
+  más, que puede alargarlo. Bola de nieve usa su orden tal cual si no hay
+  riesgo de límite.
+  `EstrategiaPago.avalancha` parte de
+  `costoMensualPct` más alto (desempata por id, así no depende del orden de
+  la lista); `bolaDeNieve` por saldo más pequeño. Devuelve
   meses (0 = este mes), fecha libre de deudas, intereses totales y el orden;
   cada `PasoPlan` trae su fecha (aunque otra deuda no termine), lo que se
   le paga este mes y el siguiente (`proximosPagos`) y los meses hasta su
@@ -668,10 +726,19 @@ nunca muestran cifras distintas:
     otra deuda (`_correr(cascada: false)`), para comparar.
   - `paraTerminar` (si no alcanza) y `paraLimites` (si alguna queda
     `tarde`): el extra mínimo, de a $1.000, con el que se cumple, buscado
-    por mitades (con el orden fijo, más extra nunca atrasa ninguna deuda).
-    Solo se calculan cuando hay algo que arreglar.
+    por mitades sobre los mismos órdenes del plan, así que aplicar el extra
+    sugerido siempre cumple lo prometido. Solo se calculan cuando hay algo
+    que arreglar, la primera vez que su aviso los pide. `_extraMinimo` prueba
+    cada orden contra el mejor hasta ahora y solo busca por mitades si le
+    gana. `soloDesdeEsteMes` marca el
+    extra que deja de alcanzar si empieza el mes siguiente; el aviso lo dice.
   - `saldoPorMes`: total adeudado hoy y al cerrar cada mes, para la
     gráfica.
+  - En "Automática", `paraTerminar` y `paraLimites` se calculan con las dos
+    estrategias y se queda el menor extra que cumple ya en "Automática"
+    (que puede cambiar de estrategia con más extra), con la fecha que de
+    verdad sale. Los botones "+$X" de la pantalla usan `elegir` con la
+    misma elección y se guardan junto al plan (`_vistasPrevias`).
   - `PlanPago.elegir` simula las dos estrategias y usa la elegida o, si es
     `null` ("Automática"), la de `recomendar`: la que termina, o la de
     menos intereses; si `casiIgual` (diferencia ≤ $1.000 o < 1 %), bola de
@@ -679,7 +746,15 @@ nunca muestran cifras distintas:
   La estrategia y el extra viven en `services/plan_pago_preferencias.dart`
   (`PreferenciasPlan`, `SharedPreferences` `valtiq_plan_estrategia` —
   `'automatica'` o la clave de la estrategia; sin valor = automática — y
-  `valtiq_plan_extra`) y viajan en el respaldo. `PreferenciasPlan.pagoDelPlan`
+  `valtiq_plan_extra`) y viajan en el respaldo. `valtiq_plan_liberadas`
+  (JSON, sin migración) guarda los avisos "Terminaste X" ya atendidos, por
+  deuda: monto sumado al extra (0 = descartado), desde qué mes cuenta y si
+  el extra sigue siendo el que puso la app (`ajustable`). `usarLiberada` suma
+  la cuota y marca el aviso a la vez; `extraDiferido` evita contar este mes
+  una cuota que ya se pagó; `reconciliar` la quita del extra si la deuda se
+  reabre, salvo que el usuario haya escrito otro extra, y no hace nada
+  mientras se importa un respaldo (`restaurando`). Un respaldo con plan pero
+  sin esa lista la borra; uno sin plan no toca nada. `PreferenciasPlan.pagoDelPlan`
   da lo que el plan le paga a una deuda este mes: es el botón "Lo del plan"
   de `RegistrarPagoDialog` (llega como `Future`, el diálogo abre sin
   esperarlo y nunca falla).
@@ -689,7 +764,10 @@ nunca muestran cifras distintas:
   botón "Usar $X de extra") → "Este mes paga" (`proximosPagos`) →
   controles (estrategia con la nota de cuál ahorra, extra con botones
   rápidos `extrasRapidos` que simulan antes de tocarlos, orden de pago) →
-  gráfica (`_PintorSaldo`, `CustomPainter`, sin paquetes) → intereses. En
+  gráfica "Cuánto debes mes a mes" (`_PintorSaldo`, `CustomPainter`, sin
+  paquetes: un punto con el nombre de la deuda en su mes de fin, con los
+  nombres corridos arriba o abajo si chocan; debajo, lo de hoy y "$0" con
+  el mes final) → intereses. En
   PC (≥ 720 de ancho útil): controles y gráfica a la izquierda, lo demás a
   la derecha. Píldoras Automática / Avalancha / Bola de nieve con la nota
   de qué eligió Valtiq o cuánto ahorraría la recomendada; las explicaciones
@@ -975,7 +1053,13 @@ recordatorios, presupuestosCategorias) serializadas vía `toJson()`.
 `ConfigSmtps` se excluye a propósito — nunca debe salir del
 dispositivo. Desde 2026-11-18 lleva además `planPago` (estrategia y extra
 del Plan de pago, `PreferenciasPlan.toJson`); al importar se restaura
-después de los datos y, si el respaldo no lo trae, no se toca. `importarDatos()` valida el formato mínimo, y dentro de
+después de los datos y, si el respaldo no lo trae, no se toca. Desde
+2026-11-24 también `perfil` (nombre, apellido y la foto en base64 hasta
+5 MB, `PerfilService.paraRespaldo`/`restaurar`) y
+`recordatorioDiarioMinutos` (solo la hora: si está encendido lo decide cada
+dispositivo). Lo que un respaldo no trae no se toca, y si la foto o la hora
+fallan los datos igual quedan importados. No viajan el PIN, la biometría,
+el tema, el menú ni ocultar montos. `importarDatos()` valida el formato mínimo, y dentro de
 una sola `transaction()` borra todo (hijas antes que padres, por FK) y
 reinserta en batch (padres antes que hijas), preservando los ids
 originales del archivo para que las referencias entre tablas sigan
@@ -1078,6 +1162,12 @@ transaccional y respeta integridad referencial (FK enforcement).
   (`999999999999999.0`, con sufijo `+` cuando el clamp se activa) para
   que ni siquiera esas divisiones puedan caer en la notación exponencial
   de Dart (`"1e+21"`, umbral en magnitudes ≥ 1e21).
+- `parseCOP` es la única lectura de un monto (teclear, pegar y guardar).
+  Separadores repetidos son miles solo con agrupación válida; un último
+  separador que no la forma es decimal y se ignora sin redondear; lo ambiguo
+  da `null`. `CopInputFormatter` no guarda estado: la coma queda visible en
+  el texto y todo sale de ahí. Al borrar un dígito, los ceros que quedan
+  delante se muestran sin puntos (`050000`) para no perder el número.
 - `utils/currency_input.dart` — `formatCOPInput(num)`: formateador
   para el campo en edición (agrupa miles pero sin notación compacta,
   debe mostrar los dígitos exactos); tiene su propio clamp local

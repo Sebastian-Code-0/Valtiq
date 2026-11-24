@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
@@ -142,14 +141,12 @@ class _IngresoFormState extends State<IngresoForm>
                       prefixText: r'$ ',
                     ),
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      CopInputFormatter(),
-                    ],
+                    inputFormatters: [CopInputFormatter()],
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Requerido';
                       final n = parseCOP(v);
-                      if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                      if (n == null) return 'Monto inválido';
+                      if (n <= 0) return 'Debe ser mayor a 0';
                       return null;
                     },
                   ),

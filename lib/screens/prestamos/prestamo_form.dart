@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../services/deudas_calculos.dart';
@@ -87,18 +86,24 @@ class _PrestamoFormState extends State<PrestamoForm>
     final f = await showDatePicker(
       context: context,
       initialDate: _fechaPrestamo,
-      firstDate: DateTime(2000),
+      // Un respaldo puede traer fechas anteriores a 2000.
+      firstDate: _fechaPrestamo.year < 2000 ? _inicioDia : DateTime(2000),
       lastDate: DateTime(2100),
       locale: const Locale('es', 'CO'),
     );
     if (f != null) setState(() => _fechaPrestamo = f);
   }
 
+  DateTime get _inicioDia =>
+      DateTime(_fechaPrestamo.year, _fechaPrestamo.month, _fechaPrestamo.day);
+
   Future<void> _seleccionarFechaPactada() async {
     final f = await showDatePicker(
       context: context,
-      initialDate: _fechaPactada ?? _fechaPrestamo,
-      firstDate: DateTime(2000),
+      initialDate: _fechaPactada != null && !_fechaPactada!.isBefore(_inicioDia)
+          ? _fechaPactada!
+          : _inicioDia,
+      firstDate: _inicioDia,
       lastDate: DateTime(2100),
       locale: const Locale('es', 'CO'),
     );
@@ -145,6 +150,9 @@ class _PrestamoFormState extends State<PrestamoForm>
       modalidadCalculo: conInteres ? _modalidadCalculo : 'simple',
       tipoAmortizacion: conInteres ? _tipoAmortizacion : 'saldo_original',
       fechaPrestamo: normalizarFechaCivil(_fechaPrestamo),
+      fechaLimite: _fechaPactada == null
+          ? null
+          : normalizarFechaCivil(_fechaPactada!),
       notas: '',
       estado: 'activa',
       creadoEn: ahora,
@@ -154,17 +162,24 @@ class _PrestamoFormState extends State<PrestamoForm>
       for (final pago in pagos)
         AbonoInteres(fecha: pago.fechaPago, monto: pago.montoAbonado),
     ], hoy: ahora);
-    final cuota = r.cuotaParaTerminarEn(numeroCuotas, ahora);
-    if (cuota == null) {
+    final calculada = r.cuotaParaPagos(numeroCuotas, ahora);
+    if (calculada == null) {
       mostrarInfo(context, 'Este préstamo ya no tiene saldo por cobrar.');
       return;
     }
+    final cuota = calculada.cuota;
     final fin = r.liquidacionCon(cuota, ahora).fecha;
+    final cuando = fin == null
+        ? 'en $numeroCuotas meses'
+        : 'en ${formatMesAnio(fin)}';
     mostrarExito(
       context,
-      'Para que te terminen de pagar '
-      '${fin == null ? 'en $numeroCuotas meses' : 'en ${formatMesAnio(fin)}'}'
-      ', la cuota sería de ${formatCOP(cuota)} al mes.',
+      calculada.porLimite
+          ? 'La fecha pactada llega antes de $numeroCuotas meses: para que '
+                'te terminen de pagar $cuando, la cuota sería de '
+                '${formatCOP(cuota)} al mes.'
+          : 'Para que te terminen de pagar $cuando, la cuota sería de '
+                '${formatCOP(cuota)} al mes.',
     );
   }
 
@@ -176,6 +191,18 @@ class _PrestamoFormState extends State<PrestamoForm>
       return;
     }
     if (!camposOk) return;
+    if (_fechaPactada != null &&
+        DateTime(
+          _fechaPactada!.year,
+          _fechaPactada!.month,
+          _fechaPactada!.day,
+        ).isBefore(_inicioDia)) {
+      mostrarAlerta(
+        context,
+        'La fecha pactada no puede ser anterior a la fecha del préstamo.',
+      );
+      return;
+    }
     setState(() => guardando = true);
 
     final monto = parseCOP(_montoCtrl.text);
@@ -290,14 +317,12 @@ class _PrestamoFormState extends State<PrestamoForm>
                       prefixText: r'$ ',
                     ),
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      CopInputFormatter(),
-                    ],
+                    inputFormatters: [CopInputFormatter()],
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Requerido';
                       final n = parseCOP(v);
-                      if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                      if (n == null) return 'Monto inválido';
+                      if (n <= 0) return 'Debe ser mayor a 0';
                       return null;
                     },
                   ),
@@ -314,13 +339,9 @@ class _PrestamoFormState extends State<PrestamoForm>
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    onChanged: (_) => setState(() {
-                      if (!_tieneInteres) {
-                        _tipoInteres = 'ninguno';
-                        _modalidadCalculo = 'simple';
-                        _tipoAmortizacion = 'saldo_original';
-                      }
-                    }),
+                    // Sin resetear nada: borrar la tasa un momento no debe
+                    // perder lo elegido. Al guardar sin tasa queda sin interés.
+                    onChanged: (_) => setState(() {}),
                     validator: validarTasa,
                   ),
                 ),

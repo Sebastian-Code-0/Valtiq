@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../db/daos/categorias_dao.dart';
 import '../../db/database.dart';
@@ -445,10 +444,12 @@ class _EditorCategoriaDialogState extends State<_EditorCategoriaDialog> {
                 prefixText: r'$ ',
               ),
               keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                CopInputFormatter(),
-              ],
+              inputFormatters: [CopInputFormatter()],
+              // Vacío es "sin límite"; algo ilegible nunca debe borrarlo.
+              validator: (v) =>
+                  (v ?? '').trim().isNotEmpty && parseCOP(v!) == null
+                  ? 'Monto inválido'
+                  : null,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),

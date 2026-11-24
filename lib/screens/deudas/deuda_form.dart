@@ -1,5 +1,5 @@
-import 'dart:math' as math;
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
@@ -54,6 +54,9 @@ class _DeudaFormState extends State<DeudaForm>
   final _clavePagoMinimo = GlobalKey();
   final _focoPagoMinimo = FocusNode();
   bool _resaltarPagoMinimo = false;
+
+  /// El usuario ya eligió a mano sobre qué se calcula el interés.
+  late bool _amortizacionElegida;
   final List<Timer> _timers = [];
 
   late String _tipo;
@@ -88,6 +91,9 @@ class _DeudaFormState extends State<DeudaForm>
     _tipoInteres = d?.tipoInteres ?? 'ninguno';
     _modalidadCalculo = d?.modalidadCalculo ?? 'simple';
     _tipoAmortizacion = d?.tipoAmortizacion ?? 'saldo_original';
+    // Al editar se respeta lo guardado; al crear, el tipo propone el valor.
+    // Una deuda sin tasa nunca ha elegido esto de verdad.
+    _amortizacionElegida = d != null && d.tasaInteres > 0;
     _fechaPrestamo = d != null
         ? fechaCivilGuardada(d.fechaPrestamo)
         : DateTime.now();
@@ -103,6 +109,20 @@ class _DeudaFormState extends State<DeudaForm>
       // Espera a que termine la animación de entrada de la página.
       _timers.add(Timer(const Duration(milliseconds: 350), _irAPagoMinimo));
     }
+  }
+
+  /// Banco y tarjeta cobran sobre lo que falta por pagar. En una deuda
+  /// nueva se propone eso, salvo que el usuario ya haya elegido.
+  void _cambiarTipo(String tipo) {
+    setState(() {
+      _tipo = tipo;
+      if (!_amortizacionElegida) {
+        _tipoAmortizacion =
+            tipo == TipoDeuda.banco.clave || tipo == TipoDeuda.tarjeta.clave
+            ? 'saldo_insoluto'
+            : 'saldo_original';
+      }
+    });
   }
 
   void _refrescar() {
@@ -147,7 +167,8 @@ class _DeudaFormState extends State<DeudaForm>
           : normalizarFechaCivil(_fechaLimite!),
       cuotaMensual: parseCOP(_cuotaCtrl.text),
       notas: '',
-      estado: 'activa',
+      estado: d?.estado ?? 'activa',
+      fechaPagoReal: d?.fechaPagoReal,
       creadoEn: d?.creadoEn ?? ahora,
       actualizadoEn: ahora,
     );
@@ -210,18 +231,33 @@ class _DeudaFormState extends State<DeudaForm>
     final f = await showDatePicker(
       context: context,
       initialDate: _fechaPrestamo,
-      firstDate: DateTime(2000),
+      // Un respaldo puede traer fechas anteriores a 2000.
+      firstDate: _fechaPrestamo.year < 2000 ? _inicioDia : DateTime(2000),
       lastDate: DateTime(2100),
       locale: const Locale('es', 'CO'),
     );
     if (f != null) setState(() => _fechaPrestamo = f);
   }
 
+  DateTime get _inicioDia =>
+      DateTime(_fechaPrestamo.year, _fechaPrestamo.month, _fechaPrestamo.day);
+
+  /// La fecha límite no puede ser anterior a la fecha en que empezó.
+  bool get _limiteAntesDeInicio =>
+      _fechaLimite != null &&
+      DateTime(
+        _fechaLimite!.year,
+        _fechaLimite!.month,
+        _fechaLimite!.day,
+      ).isBefore(_inicioDia);
+
   Future<void> _seleccionarFechaLimite() async {
     final f = await showDatePicker(
       context: context,
-      initialDate: _fechaLimite ?? _fechaPrestamo,
-      firstDate: DateTime(2000),
+      initialDate: _fechaLimite != null && !_fechaLimite!.isBefore(_inicioDia)
+          ? _fechaLimite!
+          : _inicioDia,
+      firstDate: _inicioDia,
       lastDate: DateTime(2100),
       locale: const Locale('es', 'CO'),
     );
@@ -250,17 +286,73 @@ class _DeudaFormState extends State<DeudaForm>
     if (numeroCuotas == null || numeroCuotas <= 0 || !mounted) return;
     final r = _resumenFormulario();
     final hoy = DateTime.now();
-    final cuota = r?.cuotaParaTerminarEn(numeroCuotas, hoy);
-    if (r == null || cuota == null) {
+    if (widget.deuda != null && widget.deuda!.estado != 'activa') {
+      mostrarInfo(context, 'Esta deuda ya está pagada.');
+      return;
+    }
+    final calculada = r?.cuotaParaPagos(numeroCuotas, hoy);
+    if (r == null || calculada == null) {
       mostrarInfo(context, 'Esta deuda ya no tiene saldo por pagar.');
       return;
     }
+    final cuota = calculada.cuota;
     _ponerCuota(cuota);
     final fin = r.liquidacionCon(cuota, hoy).fecha;
-    mostrarExito(
-      context,
-      'Pagando ${formatCOP(cuota)} al mes terminas '
-      '${fin == null ? 'en $numeroCuotas meses' : 'en ${formatMesAnio(fin)}'}.',
+    final cuando = fin == null
+        ? 'en $numeroCuotas meses'
+        : 'en ${formatMesAnio(fin)}';
+    // Va debajo del campo y no en un aviso flotante: el aviso tapaba
+    // "Guardar deuda" y se perdía el toque.
+    setState(() {
+      _firmaCalculo = _firmaFormulario();
+      _textoCuotaCalculada = calculada.porLimite
+          ? 'Tu fecha límite llega antes de $numeroCuotas meses: pagando '
+                '${formatCOP(cuota)} al mes terminas $cuando.'
+          : 'Pagando ${formatCOP(cuota)} al mes terminas $cuando.';
+    });
+  }
+
+  String? _firmaCalculo;
+  String? _textoCuotaCalculada;
+
+  /// Todo lo que entra en el cálculo de la cuota, más la cuota misma.
+  String _firmaFormulario() => [
+    _montoCtrl.text,
+    _tasaCtrl.text,
+    _cuotaCtrl.text,
+    _diaPagoCtrl.text,
+    _tipo,
+    _tipoInteres,
+    _modalidadCalculo,
+    _tipoAmortizacion,
+    _fechaPrestamo,
+    _fechaLimite,
+  ].join('|');
+
+  /// El resultado de la calculadora, mientras siga siendo cierto.
+  Widget? _resultadoCalculadora(BuildContext context) {
+    final texto = _textoCuotaCalculada;
+    if (texto == null) return null;
+    // Cambió algo de lo que se usó para calcularla: ya no es cierto.
+    if (_firmaFormulario() != _firmaCalculo) {
+      _textoCuotaCalculada = null;
+      return null;
+    }
+    return Padding(
+      key: const ValueKey('cuota-calculada'),
+      padding: const EdgeInsets.only(top: AppSpacing.sm),
+      child: Semantics(
+        liveRegion: true,
+        child: Text(
+          texto,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontSize: 12.5,
+            height: 1.4,
+            fontWeight: FontWeight.w600,
+            color: context.colores.positivo,
+          ),
+        ),
+      ),
     );
   }
 
@@ -272,6 +364,13 @@ class _DeudaFormState extends State<DeudaForm>
       return;
     }
     if (!camposOk) return;
+    if (_limiteAntesDeInicio) {
+      mostrarAlerta(
+        context,
+        'La fecha límite no puede ser anterior a la fecha en que empezó.',
+      );
+      return;
+    }
     setState(() => guardando = true);
 
     final monto = parseCOP(_montoCtrl.text);
@@ -336,6 +435,66 @@ class _DeudaFormState extends State<DeudaForm>
             actualizadoEn: DateTime.now(),
           ),
         );
+        // Si con el monto nuevo ya no debe nada, pasa a pagadas: una deuda
+        // activa en $0 no tendría nada que hacer en el plan.
+        final guardada = await dao.getDeudaById(widget.deuda!.id);
+        final pagos = await widget.db.pagosDeudaDao.getPagosDeDeuda(
+          widget.deuda!.id,
+        );
+        final abonos = [
+          for (final p in pagos)
+            AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
+        ];
+        if (guardada != null && guardada.estado == 'pagada') {
+          // Estaba liquidada y con el monto nuevo vuelve a deber: se reabre.
+          final antes = ResumenDeuda.calcular(
+            widget.deuda!,
+            abonos,
+            hoy: DateTime.now(),
+          );
+          final ahora = ResumenDeuda.calcular(
+            guardada,
+            abonos,
+            hoy: DateTime.now(),
+          );
+          if (antes.saldo <= 1 && ahora.saldo > 1) {
+            await dao.marcarComoActiva(guardada.id);
+            final activa = ResumenDeuda.calcular(
+              guardada.copyWith(
+                estado: 'activa',
+                fechaPagoReal: const Value(null),
+              ),
+              abonos,
+              hoy: DateTime.now(),
+            );
+            if (mounted) {
+              mostrarInfo(
+                context,
+                'Con ese monto todavía debes ${formatCOP(activa.saldo)}: la '
+                'deuda volvió a activas.',
+              );
+            }
+          }
+        }
+        if (guardada != null && guardada.estado == 'activa') {
+          final r = ResumenDeuda.calcular(
+            guardada,
+            abonos,
+            hoy: DateTime.now(),
+          );
+          if (r.saldo <= 0) {
+            await dao.marcarComoPagada(
+              guardada.id,
+              normalizarFechaCivil(DateTime.now()),
+            );
+            if (mounted) {
+              mostrarInfo(
+                context,
+                'Con ese monto ya no debes nada: la deuda pasó a pagadas.',
+              );
+            }
+          }
+        }
       }
     });
   }
@@ -346,7 +505,7 @@ class _DeudaFormState extends State<DeudaForm>
   /// después de la fecha límite. Nunca bloquea el guardado.
   Widget? _ayudaPagoMinimo(BuildContext context) {
     final r = _resumenFormulario();
-    if (r == null || r.saldo <= 0) return null;
+    if (r == null || r.saldo <= 0 || r.deuda.estado != 'activa') return null;
     final hoy = DateTime.now();
     final sugerencias = r.sugerirCuotas(hoy);
     if (sugerencias == null) return null;
@@ -439,10 +598,16 @@ class _DeudaFormState extends State<DeudaForm>
             : 'Con este pago terminas en ${formatMesAnio(l.fecha!)}, '
                   'después de tu fecha límite (${formatMesAnio(limite!)}).';
       } else if (l.fecha != null) {
-        texto = l.meses == 0
+        final antesDe = l.meses == mesLimite ? r.pagarAntesDe(hoy) : null;
+        final base = l.meses == 0
             ? 'Con este pago terminas este mes.'
             : 'Con este pago terminas en ${formatMesAnio(l.fecha!)} '
                   '(${l.meses} ${l.meses == 1 ? 'mes' : 'meses'}).';
+        texto = antesDe == null
+            ? base
+            : '$base Haz ese pago antes del '
+                  '${formatFechaLegible(antesDe)}: tu día de pago cae después '
+                  'de tu fecha límite.';
       } else {
         texto = '';
       }
@@ -537,8 +702,7 @@ class _DeudaFormState extends State<DeudaForm>
                     ),
                     validator: (v) =>
                         (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-                    alElegir: (s) =>
-                        setState(() => _tipo = s.grupo.tipoDeuda.clave),
+                    alElegir: (s) => _cambiarTipo(s.grupo.tipoDeuda.clave),
                   ),
                 ),
                 CampoEtiquetado(
@@ -567,14 +731,12 @@ class _DeudaFormState extends State<DeudaForm>
                       prefixText: r'$ ',
                     ),
                     keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      CopInputFormatter(),
-                    ],
+                    inputFormatters: [CopInputFormatter()],
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Requerido';
                       final n = parseCOP(v);
-                      if (n == null || n <= 0) return 'Debe ser mayor a 0';
+                      if (n == null) return 'Monto inválido';
+                      if (n <= 0) return 'Debe ser mayor a 0';
                       return null;
                     },
                   ),
@@ -595,10 +757,16 @@ class _DeudaFormState extends State<DeudaForm>
                     ),
                     items: [
                       for (final t in TipoDeuda.values)
-                        DropdownMenuItem(value: t.clave, child: Text(t.nombre)),
+                        DropdownMenuItem(
+                          value: t.clave,
+                          child: Text(
+                            t.nombre,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                     ],
-                    onChanged: (v) =>
-                        setState(() => _tipo = v ?? TipoDeuda.otro.clave),
+                    onChanged: (v) => _cambiarTipo(v ?? TipoDeuda.otro.clave),
                   ),
                 ),
               ],
@@ -624,13 +792,9 @@ class _DeudaFormState extends State<DeudaForm>
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    onChanged: (_) => setState(() {
-                      if (!_tieneInteres) {
-                        _tipoInteres = 'ninguno';
-                        _modalidadCalculo = 'simple';
-                        _tipoAmortizacion = 'saldo_original';
-                      }
-                    }),
+                    // Sin resetear nada: borrar la tasa un momento no debe
+                    // perder lo elegido. Al guardar sin tasa queda sin interés.
+                    onChanged: (_) => setState(() {}),
                     validator: validarTasa,
                   ),
                 ),
@@ -668,6 +832,11 @@ class _DeudaFormState extends State<DeudaForm>
               ayuda: !tieneInteres
                   ? 'Escribe una tasa mayor a 0 para elegir cómo se calcula '
                         'el interés.'
+                  : !_amortizacionElegida &&
+                        _tipoAmortizacion == 'saldo_original'
+                  ? 'Revisa esto: ahora el interés se calcula sobre el monto '
+                        'original completo, aunque hagas abonos. Si baja con '
+                        'cada pago, elige "Lo que falta por pagar".'
                   : _tipoAmortizacion == 'saldo_insoluto'
                   ? 'El interés de cada mes se calcula sobre lo que '
                         'aún debes, no sobre el monto original — así '
@@ -687,13 +856,18 @@ class _DeudaFormState extends State<DeudaForm>
                   ),
                   DropdownMenuItem(
                     value: 'saldo_insoluto',
-                    child: Text('Lo que falta por pagar (baja con cada abono)'),
+                    child: Text(
+                      'Lo que falta por pagar (baja con cada abono)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
                 onChanged: tieneInteres
-                    ? (v) => setState(
-                        () => _tipoAmortizacion = v ?? 'saldo_original',
-                      )
+                    ? (v) => setState(() {
+                        _amortizacionElegida = true;
+                        _tipoAmortizacion = v ?? 'saldo_original';
+                      })
                     : null,
               ),
             ),
@@ -802,28 +976,35 @@ class _DeudaFormState extends State<DeudaForm>
                     ),
                   ),
                   keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CopInputFormatter(),
-                  ],
+                  inputFormatters: [CopInputFormatter()],
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return null;
                     final cuota = parseCOP(v);
                     if (cuota == null) return 'Monto inválido';
-                    // Tope: lo prestado o lo que se debe hoy (con intereses
-                    // puede ser más), para atajar un cero de más.
-                    final monto = math.max(
-                      parseCOP(_montoCtrl.text) ?? 0,
-                      _resumenFormulario()?.saldo ?? 0,
-                    );
-                    if (monto > 0 && cuota > monto) {
-                      return 'La cuota no puede superar lo que debes';
+                    // Una cuota ya guardada puede quedar mayor que el saldo
+                    // en el último pago: no se le exige cambiarla.
+                    if (cuota == widget.deuda?.cuotaMensual) return null;
+                    // Tope: lo que se debe hoy (o lo escrito, si aún no hay
+                    // cómo calcularlo), para atajar un cero de más.
+                    final r = _resumenFormulario();
+                    // Incluye el interés hasta el primer pago: la cuota que
+                    // propone la calculadora siempre se puede guardar.
+                    final tope = r != null && r.deuda.estado == 'activa'
+                        ? math.max(
+                            r.saldo,
+                            r.cuotaParaTerminarEn(0, DateTime.now()) ?? 0,
+                          )
+                        : parseCOP(_montoCtrl.text) ?? 0;
+                    if (tope > 0 && cuota > tope) {
+                      return 'La cuota no puede superar lo que debes '
+                          '(${formatCOP(tope)})';
                     }
                     return null;
                   },
                 ),
               ),
             ),
+            ?_resultadoCalculadora(context),
             ?_ayudaPagoMinimo(context),
             espacio,
             CampoEtiquetado(

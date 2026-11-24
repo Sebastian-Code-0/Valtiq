@@ -179,6 +179,24 @@ class _DeudasScreenState extends State<DeudasScreen> {
     }
   }
 
+  /// Una deuda activa que ya no debe nada pasa a "Pagadas".
+  Future<void> _marcarPagada(Deuda deuda) async {
+    try {
+      // Se terminó con su último pago, no hoy.
+      final pagos = await widget.db.pagosDeudaDao.getPagosDeDeuda(deuda.id);
+      final fecha = pagos.isEmpty
+          ? normalizarFechaCivil(DateTime.now())
+          : pagos
+                .map((p) => fechaCivilGuardada(p.fechaPago))
+                .reduce((a, b) => a.isAfter(b) ? a : b);
+      await widget.db.deudasDao.marcarComoPagada(deuda.id, fecha);
+      if (!mounted) return;
+      mostrarExito(context, '${deuda.acreedorNombre} pasó a pagadas.');
+    } catch (_) {
+      if (mounted) mostrarAlerta(context, 'No se pudo actualizar la deuda.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -256,6 +274,8 @@ class _DeudasScreenState extends State<DeudasScreen> {
                         ),
                         1 => PlanPagoTab(
                           activas: activas,
+                          terminadas: pagadas,
+                          onMarcarPagada: _marcarPagada,
                           margen: margen,
                           onEditar: (deuda) => Navigator.push(
                             context,
@@ -268,6 +288,18 @@ class _DeudasScreenState extends State<DeudasScreen> {
                             ),
                           ),
                           onPonerCuota: _ponerCuota,
+                          // En PC va a Activas con su panel abierto, igual
+                          // que al tocar la tarjeta; en celular, a su página.
+                          onAbrirDeuda: (id) {
+                            if (conPanel) {
+                              setState(() {
+                                _pestana = 0;
+                                _seleccionada = id;
+                              });
+                            } else {
+                              _abrir(id, enPanel: false);
+                            }
+                          },
                         ),
                         _ => _Pagadas(
                           pagadas: pagadas,
@@ -457,7 +489,7 @@ class _Totales extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final porcentaje = (totales.fraccionPagada * 100).round();
+    final porcentaje = totales.porcentajePagado;
     return Wrap(
       spacing: 40,
       runSpacing: AppSpacing.md,
@@ -534,7 +566,7 @@ class _TarjetaDeuda extends StatelessWidget {
     final c = context.colores;
     final deuda = resumen.deuda;
     final vence = resumen.vencimiento(hoy);
-    final porcentaje = (resumen.fraccionPagada * 100).round();
+    final porcentaje = resumen.porcentajePagado;
     final pequeno = theme.textTheme.bodySmall?.copyWith(
       color: c.textoSecundario,
     );
@@ -587,7 +619,12 @@ class _TarjetaDeuda extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  AppChip(label: etiquetaTasa(deuda), neutra: true),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: AppChip(label: etiquetaTasa(deuda), neutra: true),
+                    ),
+                  ),
                 ],
               ),
               const Spacer(),

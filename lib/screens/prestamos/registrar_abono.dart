@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../services/interes_calculator.dart';
@@ -58,6 +57,7 @@ Future<bool> registrarAbonoPrestamo(
       prestamoId: prestamo.id,
       nombre: prestamo.deudorNombre,
       saldoPendiente: saldoPendiente,
+      fechaInicio: prestamo.fechaPrestamo,
     ),
   );
   if (guardado != true || !context.mounted) return false;
@@ -67,6 +67,11 @@ Future<bool> registrarAbonoPrestamo(
     0,
     (sum, p) => sum + p.montoAbonado,
   );
+  // Se mira en la fecha del último abono: si se saldó con una fecha pasada,
+  // ahí se congela el interés.
+  final ultimoAbono = pagosActuales
+      .map((p) => fechaCivilGuardada(p.fechaPago))
+      .reduce((a, b) => a.isAfter(b) ? a : b);
   final resumenActual = InteresCalculator.resumenPrestamo(
     montoPrestado: prestamo.montoPrestado,
     tasaInteres: prestamo.tasaInteres,
@@ -78,15 +83,13 @@ Future<bool> registrarAbonoPrestamo(
     abonos: pagosActuales
         .map((p) => AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado))
         .toList(),
+    fechaFin: ultimoAbono,
   );
   final saldoPendienteActual =
       resumenActual['totalConInteres']! - resumenActual['totalAbonado']!;
   if (saldoPendienteActual > 0) return false;
 
-  await db.prestamosDao.marcarComoPagado(
-    prestamo.id,
-    normalizarFechaCivil(DateTime.now()),
-  );
+  await db.prestamosDao.marcarComoPagado(prestamo.id, ultimoAbono);
   if (context.mounted) {
     mostrarExito(
       context,
@@ -107,6 +110,7 @@ class RegistrarAbonoDialog extends StatefulWidget {
     required this.prestamoId,
     required this.nombre,
     required this.saldoPendiente,
+    this.fechaInicio,
   });
 
   final AppDatabase db;
@@ -118,6 +122,9 @@ class RegistrarAbonoDialog extends StatefulWidget {
   /// Lo que falta por cobrar hoy: el tope de lo que se puede abonar.
   final int saldoPendiente;
 
+  /// Cuándo empezó el préstamo: no se puede registrar un abono anterior.
+  final DateTime? fechaInicio;
+
   @override
   State<RegistrarAbonoDialog> createState() => _RegistrarAbonoDialogState();
 }
@@ -128,6 +135,50 @@ class _RegistrarAbonoDialogState extends State<RegistrarAbonoDialog>
   final _notasCtrl = TextEditingController();
   DateTime _fecha = DateTime.now();
 
+  /// El préstamo y sus abonos, para saber el saldo a una fecha pasada.
+  Prestamo? _prestamo;
+  List<AbonoInteres> _abonos = const [];
+
+  /// El monto salió de "Todo": sigue al saldo de la fecha.
+  bool _esTodo = false;
+
+  /// Lo que deja el préstamo en cero con un abono en la fecha elegida.
+  int get _saldo {
+    final p = _prestamo;
+    if (p == null) return widget.saldoPendiente;
+    return InteresCalculator.montoParaLiquidar(
+      montoPrestado: p.montoPrestado,
+      tasaInteres: p.tasaInteres,
+      tipoInteres: p.tipoInteres,
+      modalidadCalculo: p.modalidadCalculo,
+      fechaPrestamo: p.fechaPrestamo,
+      tipoAmortizacion: p.tipoAmortizacion,
+      abonos: _abonos,
+      fecha: normalizarFechaCivil(_fecha),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarPrestamo();
+  }
+
+  Future<void> _cargarPrestamo() async {
+    final p = await widget.db.prestamosDao.getPrestamoById(widget.prestamoId);
+    final pagos = await widget.db.prestamosDao.getPagosDelPrestamo(
+      widget.prestamoId,
+    );
+    if (!mounted || p == null) return;
+    setState(() {
+      _prestamo = p;
+      _abonos = [
+        for (final a in pagos)
+          AbonoInteres(fecha: a.fechaPago, monto: a.montoAbonado),
+      ];
+    });
+  }
+
   @override
   void dispose() {
     _montoCtrl.dispose();
@@ -135,7 +186,8 @@ class _RegistrarAbonoDialogState extends State<RegistrarAbonoDialog>
     super.dispose();
   }
 
-  void _ponerMonto(int monto) {
+  void _ponerMonto(int monto, {bool todo = false}) {
+    _esTodo = todo;
     final texto = formatCOPInput(monto);
     _montoCtrl.value = TextEditingValue(
       text: texto,
@@ -145,24 +197,42 @@ class _RegistrarAbonoDialogState extends State<RegistrarAbonoDialog>
   }
 
   Future<void> _elegirFecha() async {
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final inicio = widget.fechaInicio == null
+        ? null
+        : fechaCivilGuardada(widget.fechaInicio!);
+    var primera = inicio == null
+        ? DateTime(2000)
+        : DateTime(inicio.year, inicio.month, inicio.day);
+    // Un préstamo con fecha futura solo deja elegir hoy.
+    if (primera.isAfter(hoy)) primera = hoy;
     final f = await showDatePicker(
       context: context,
-      initialDate: _fecha,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
+      initialDate: _fecha.isBefore(primera) ? primera : _fecha,
+      firstDate: primera,
+      lastDate: ahora,
       locale: const Locale('es', 'CO'),
     );
-    if (f != null) setState(() => _fecha = f);
+    if (f == null || !mounted) return;
+    setState(() => _fecha = f);
+    if (_esTodo) {
+      _ponerMonto(_saldo, todo: true);
+    } else if (_montoCtrl.text.isNotEmpty) {
+      formKey.currentState?.validate();
+    }
   }
 
   String? _validar(String? v) {
     if (v == null || v.trim().isEmpty) return 'Requerido';
     final n = parseCOP(v);
-    if (n == null || n <= 0) return 'Escribe un monto mayor a 0';
+    if (n == null) return 'Monto inválido';
+    if (n <= 0) return 'Escribe un monto mayor a 0';
     // Margen de $1 por redondeo del interés.
-    if (n - widget.saldoPendiente > 1) {
-      return 'No puede superar el saldo pendiente '
-          '(${formatCOP(widget.saldoPendiente)})';
+    final saldo = _saldo;
+    if (n - saldo > 1) {
+      return 'No puede superar lo que debían en esa fecha '
+          '(${formatCOP(saldo)})';
     }
     return null;
   }
@@ -195,7 +265,7 @@ class _RegistrarAbonoDialogState extends State<RegistrarAbonoDialog>
         _fecha.year == hoy.year &&
         _fecha.month == hoy.month &&
         _fecha.day == hoy.day;
-    final saldo = widget.saldoPendiente;
+    final saldo = _saldo;
     final rotulo = theme.textTheme.bodySmall?.copyWith(
       fontSize: 12.5,
       fontWeight: FontWeight.w600,
@@ -251,11 +321,9 @@ class _RegistrarAbonoDialogState extends State<RegistrarAbonoDialog>
                     errorMaxLines: 2,
                   ),
                   keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CopInputFormatter(),
-                  ],
+                  inputFormatters: [CopInputFormatter()],
                   validator: _validar,
+                  onChanged: (_) => _esTodo = false,
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (saldo > 1)
@@ -269,7 +337,7 @@ class _RegistrarAbonoDialogState extends State<RegistrarAbonoDialog>
                       ),
                       ActionChip(
                         label: Text('Todo ${formatCOP(saldo)}'),
-                        onPressed: () => _ponerMonto(saldo),
+                        onPressed: () => _ponerMonto(saldo, todo: true),
                       ),
                     ],
                   ),

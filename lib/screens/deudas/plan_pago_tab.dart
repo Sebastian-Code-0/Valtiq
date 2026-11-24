@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../services/deudas_calculos.dart';
@@ -12,6 +11,7 @@ import '../../utils/date_format.dart';
 import '../../utils/encabezado_pantalla.dart';
 import '../../utils/fecha_civil.dart';
 import '../../utils/format.dart';
+import '../../utils/notificaciones.dart';
 import '../../utils/selector_pildoras.dart';
 import 'deuda_widgets.dart';
 
@@ -25,12 +25,22 @@ class PlanPagoTab extends StatefulWidget {
     super.key,
     required this.activas,
     required this.margen,
+    this.terminadas = const [],
+    this.onMarcarPagada,
     this.onEditar,
     this.onPonerCuota,
+    this.onAbrirDeuda,
   });
 
   final List<ResumenDeuda> activas;
   final double margen;
+
+  /// Deudas ya pagadas: de aquí sale el aviso "Terminaste X: te quedan
+  /// $Y libres al mes".
+  final List<ResumenDeuda> terminadas;
+
+  /// Pasa a "Pagadas" una deuda activa que ya no debe nada.
+  final ValueChanged<Deuda>? onMarcarPagada;
 
   /// Abre el formulario de una deuda (para ponerle el pago mínimo que le
   /// falta). Sin esto, el aviso se muestra con los botones apagados.
@@ -39,6 +49,9 @@ class PlanPagoTab extends StatefulWidget {
   /// Guarda [cuota] como pago mínimo de la deuda (botones de cuota
   /// sugerida de los avisos). Sin esto, esos botones no se muestran.
   final Future<void> Function(Deuda deuda, int cuota)? onPonerCuota;
+
+  /// Abre el detalle de una deuda al tocarla en el orden de pago.
+  final ValueChanged<int>? onAbrirDeuda;
 
   /// Preferencias donde se recuerda lo elegido (solo en este dispositivo).
   static const claveEstrategia = PreferenciasPlan.claveEstrategia;
@@ -58,28 +71,67 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
   /// recomendada).
   EstrategiaPago? _elegida;
   int _extra = 0;
+  PreferenciasPlan _prefs = const PreferenciasPlan(estrategia: null, extra: 0);
   bool _verComoFunciona = false;
 
   @override
   void initState() {
     super.initState();
+    PreferenciasPlan.restauraciones.addListener(_recargar);
     _cargar();
   }
 
   @override
+  void didUpdateWidget(PlanPagoTab old) {
+    super.didUpdateWidget(old);
+    // Una deuda que se reabre vuelve a cobrar su cuota.
+    final antes = {for (final r in old.activas) r.deuda.id};
+    if (widget.activas.any((r) => !antes.contains(r.deuda.id))) _cargar();
+  }
+
+  @override
   void dispose() {
+    PreferenciasPlan.restauraciones.removeListener(_recargar);
     _extraCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _cargar() async {
+    final prefs = await PreferenciasPlan.reconciliar({
+      for (final r in widget.activas) r.deuda.id,
+    });
+    if (!mounted) return;
+    setState(() => _aplicar(prefs));
+  }
+
+  /// Tras restaurar un respaldo: solo lee. Las deudas de este widget todavía
+  /// pueden ser las de antes, así que aquí no se ajusta nada.
+  Future<void> _recargar() async {
     final prefs = await PreferenciasPlan.leer();
     if (!mounted) return;
-    setState(() {
-      _elegida = prefs.estrategia;
+    setState(() => _aplicar(prefs));
+  }
+
+  void _aplicar(PreferenciasPlan prefs) {
+    _prefs = prefs;
+    _elegida = prefs.estrategia;
+    if (prefs.extra != _extra || _extraCtrl.text.isEmpty) {
       _extra = prefs.extra;
       _extraCtrl.text = prefs.extra > 0 ? formatCOPInput(prefs.extra) : '';
-    });
+    }
+  }
+
+  Future<void> _usarLiberada(CuotaLiberada c) async {
+    final prefs = await PreferenciasPlan.usarLiberada(c);
+    if (!mounted) return;
+    setState(() => _aplicar(prefs));
+    mostrarExito(context, 'Sumamos ${formatCOP(c.monto)} a tu extra al mes.');
+  }
+
+  Future<void> _descartarLiberada(CuotaLiberada c) async {
+    final prefs = await PreferenciasPlan.descartarLiberada(c);
+    if (!mounted) return;
+    setState(() => _aplicar(prefs));
   }
 
   Future<void> _elegirEstrategia(EstrategiaPago? e) async {
@@ -88,7 +140,9 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
   }
 
   Future<void> _cambiarExtra(String texto) async {
-    final extra = parseCOP(texto) ?? 0;
+    // A medio escribir (`1,500,0`) no se lee aún: se deja el extra anterior.
+    final extra = texto.trim().isEmpty ? 0 : parseCOP(texto);
+    if (extra == null) return;
     setState(() => _extra = extra < 0 ? 0 : extra);
     await PreferenciasPlan.guardarExtra(_extra);
   }
@@ -102,12 +156,45 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     await PreferenciasPlan.guardarExtra(_extra);
   }
 
-  PlanElegido _elegir(DateTime hoy, {int? extra}) => PlanPago.elegir(
-    deudas: widget.activas,
-    elegida: _elegida,
-    extraMensual: extra ?? _extra,
-    hoy: hoy,
-  );
+  /// Último plan calculado: buscar el extra para las fechas límite puede
+  /// tardar, y la pantalla se redibuja sin que cambie nada de esto.
+  PlanElegido? _planGuardado;
+  List<Object?> _llavePlan = const [];
+
+  /// Lo que daría cada botón de extra rápido con el plan guardado.
+  final _vistasPrevias = <int, PlanPago>{};
+
+  PlanElegido _elegir(DateTime hoy) {
+    final llave = <Object?>[
+      widget.activas,
+      widget.terminadas,
+      _elegida,
+      _extra,
+      _prefs.extraDiferido(hoy),
+      hoy.year,
+      hoy.month,
+      hoy.day,
+    ];
+    final guardado = _planGuardado;
+    if (guardado != null &&
+        llave.length == _llavePlan.length &&
+        Iterable<int>.generate(llave.length).every(
+          (i) =>
+              identical(llave[i], _llavePlan[i]) || llave[i] == _llavePlan[i],
+        )) {
+      return guardado;
+    }
+    _llavePlan = llave;
+    _vistasPrevias.clear();
+    return _planGuardado = PlanPago.elegir(
+      deudas: widget.activas,
+      elegida: _elegida,
+      extraMensual: _extra,
+      extraDiferido: _prefs.extraDiferido(hoy),
+      terminadas: widget.terminadas,
+      hoy: hoy,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +212,15 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
             ),
           ),
         ),
+      );
+    }
+
+    // Activas pero ya sin nada que pagar (se reabrió una pagada, o se bajó
+    // el monto a lo ya pagado): no hay plan posible, hay que cerrarlas.
+    if (widget.activas.every((r) => r.saldo <= 0)) {
+      return SingleChildScrollView(
+        padding: EdgeInsets.all(widget.margen),
+        child: _avisoEnCero(context, widget.activas),
       );
     }
 
@@ -154,7 +250,7 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
       builder: (context, constraints) {
         final ancho = constraints.maxWidth - 2 * widget.margen;
         final controles = _tarjetaControles(context, elegido, hoy);
-        final libre = _tarjetaLibre(context, plan);
+        final libre = _tarjetaLibre(context, plan, hoy);
         final intereses = _tarjetaIntereses(
           context,
           plan,
@@ -218,11 +314,24 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
 
   // ───────────────────────── Avisos ─────────────────────────
 
+  /// Este extra solo alcanza si se empieza a pagar este mes.
+  String _avisoDesdeEsteMes(SugerenciaExtra s) => s.soloDesdeEsteMes
+      ? ' Cuenta con que abones ese extra desde este mes: si empiezas el '
+            'mes que viene, ya no alcanza.'
+      : '';
+
   /// Avisos discretos (se ven como una tarjeta más, solo el ícono lleva el
   /// color de marca): deudas sin pago mínimo, deudas que no bajan, deudas
   /// que terminarían después de su fecha límite.
   List<Widget> _avisos(BuildContext context, PlanPago plan, DateTime hoy) {
     final avisos = <Widget>[];
+    final enCero = [
+      for (final r in widget.activas)
+        if (r.saldo <= 0) r,
+    ];
+    if (enCero.isNotEmpty) avisos.add(_avisoEnCero(context, enCero));
+    final liberada = _avisoLiberada(context, plan, hoy);
+    if (liberada != null) avisos.add(liberada);
     final sinMinimo = [
       for (final p in plan.orden)
         if (p.resumen.pagoMinimo == null) p.resumen,
@@ -240,17 +349,20 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
         noBajan.map((p) => p.resumen.deuda.acreedorNombre),
       );
       final una = noBajan.length == 1;
+      final conInteres = noBajan.any((p) => p.resumen.tieneInteres);
       final s = plan.paraTerminar;
       avisos.add(
         _aviso(
           context,
           llave: 'plan-no-baja',
           icono: Icons.trending_up,
-          titulo: una ? '$nombres no baja' : '$nombres no bajan',
+          titulo: conInteres
+              ? (una ? '$nombres no baja' : '$nombres no bajan')
+              : (una ? '$nombres no termina' : '$nombres no terminan'),
           texto:
-              'Con lo que se paga al mes, el interés crece más rápido que '
-              'los pagos. Puedes subir su pago mínimo'
-              '${s == null ? '.' : ' o poner ${formatCOP(s.extra)} de extra al mes (terminas todo en ${formatMesAnio(s.fechaLibre)}).'}',
+              '${conInteres ? 'Con lo que se paga al mes, el interés crece más rápido que los pagos.' : 'Con lo que se paga al mes tardaría más de 50 años.'} '
+              'Puedes subir su pago mínimo'
+              '${s == null ? '.' : ' o poner ${formatCOP(s.extra)} de extra al mes (terminas todo en ${formatMesAnio(s.fechaLibre)}).${_avisoDesdeEsteMes(s)}'}',
           extra: s?.extra,
           cuotas: [
             for (final p in noBajan)
@@ -281,8 +393,28 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
               : '${tarde.length} deudas terminan después de su fecha límite',
           texto:
               '$detalle\n'
-              '${s == null ? 'Ni con mucho extra se alcanza: habla con quien te prestó para mover la fecha.' : 'Con ${formatCOP(s.extra)} de extra al mes llegas a tiempo.'}',
+              '${s == null ? 'Ni con mucho extra se alcanza: habla con quien te prestó para mover la fecha.' : 'Con ${formatCOP(s.extra)} de extra al mes llegas a tiempo.${_avisoDesdeEsteMes(s)}'}',
           extra: s?.extra,
+        ),
+      );
+    }
+
+    // Terminan justo en el mes del límite, pero su día de pago cae después.
+    for (final p in plan.orden) {
+      if (p.tarde || p.meses == null || p.meses != p.mesLimite) continue;
+      final antesDe = p.resumen.pagarAntesDe(hoy);
+      if (antesDe == null) continue;
+      avisos.add(
+        _aviso(
+          context,
+          llave: 'plan-pagar-antes-${p.resumen.deuda.id}',
+          icono: Icons.event_outlined,
+          titulo:
+              'Paga ${p.resumen.deuda.acreedorNombre} antes del '
+              '${formatFechaLegible(antesDe)}',
+          texto:
+              'Tu día de pago (${p.resumen.deuda.diaPago}) cae después de tu '
+              'fecha límite: ese pago tiene que salir antes.',
         ),
       );
     }
@@ -302,14 +434,126 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
           icono: Icons.history_toggle_off,
           titulo: vencidas.length == 1
               ? 'La fecha límite de $nombres ya pasó'
-              : 'La fecha límite de $nombres ya pasó',
-          texto:
-              'El plan la sigue pagando como las demás. Si acordaste una '
-              'fecha nueva, edita la deuda para cambiarla.',
+              : 'Las fechas límite de $nombres ya pasaron',
+          texto: vencidas.length == 1
+              ? 'El plan la sigue pagando como las demás. Si acordaste una '
+                    'fecha nueva, edita la deuda para cambiarla.'
+              : 'El plan las sigue pagando como las demás. Si acordaste '
+                    'fechas nuevas, edita cada deuda para cambiarlas.',
         ),
       );
     }
     return avisos;
+  }
+
+  /// Deudas activas que ya no deben nada: se ofrece pasarlas a "Pagadas".
+  Widget _avisoEnCero(BuildContext context, List<ResumenDeuda> deudas) {
+    final nombres = _lista(deudas.map((r) => r.deuda.acreedorNombre));
+    final marcar = widget.onMarcarPagada;
+    return _cajaAviso(
+      context,
+      key: const ValueKey('plan-en-cero'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _tituloAviso(
+            context,
+            Icons.check_circle_outline,
+            deudas.length == 1
+                ? '$nombres ya no debe nada'
+                : '$nombres ya no deben nada',
+          ),
+          const SizedBox(height: 6),
+          Text(
+            deudas.length == 1
+                ? 'Sigue en activas, pero su saldo es \$0.'
+                : 'Siguen en activas, pero su saldo es \$0.',
+            style: _gris(context),
+          ),
+          if (marcar != null) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final r in deudas)
+                  OutlinedButton(
+                    key: ValueKey('plan-en-cero-${r.deuda.id}'),
+                    onPressed: () => marcar(r.deuda),
+                    style: _estiloBoton,
+                    child: Text(
+                      'Pasar ${r.deuda.acreedorNombre} a pagadas',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Una deuda se acaba de terminar y su cuota quedó libre: ofrece seguir
+  /// pagándola a las demás (nunca se suma sola). No sale si no adelanta
+  /// nada.
+  Widget? _avisoLiberada(BuildContext context, PlanPago plan, DateTime hoy) {
+    for (final c in _prefs.cuotasLiberadas(widget.terminadas, hoy)) {
+      // Solo con la estrategia en uso: es una vista previa.
+      final con = PlanPago.simular(
+        deudas: widget.activas,
+        estrategia: plan.estrategia,
+        extraMensual: _extra + c.monto,
+        extraDiferido: _prefs.extraDiferido(hoy) + c.diferidoEn(hoy),
+        terminadas: widget.terminadas,
+        hoy: hoy,
+        conSugerencias: false,
+      );
+      if (!con.alcanza) continue;
+      if (plan.alcanza && con.meses! >= plan.meses!) continue;
+      return _cajaAviso(
+        context,
+        key: const ValueKey('plan-liberada'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _tituloAviso(
+              context,
+              Icons.celebration_outlined,
+              'Terminaste ${c.deuda.acreedorNombre}',
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Te quedan ${formatCOP(c.monto)} libres al mes. '
+              '${plan.alcanza ? 'Si no los sigues pagando, terminas en ${formatMesAnio(plan.fechaLibre!)}.' : 'Sin ellos el plan no alcanza a terminar.'}',
+              style: _gris(context),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                OutlinedButton(
+                  key: const ValueKey('plan-liberada-usar'),
+                  onPressed: () => _usarLiberada(c),
+                  style: _estiloBoton,
+                  child: Text(
+                    'Seguir pagándolos: terminas en '
+                    '${formatMesAnio(con.fechaLibre!)}',
+                  ),
+                ),
+                TextButton(
+                  key: const ValueKey('plan-liberada-no'),
+                  onPressed: () => _descartarLiberada(c),
+                  child: const Text('Ahora no'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+    return null;
   }
 
   /// "Banco", "Banco y Nu", "Banco, Nu y Juan".
@@ -507,16 +751,27 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
 
   /// Tarjeta destacada: cuándo se queda libre de deudas y cuánto se gana
   /// frente a pagar solo los mínimos.
-  Widget _tarjetaLibre(BuildContext context, PlanPago plan) {
+  Widget _tarjetaLibre(BuildContext context, PlanPago plan, DateTime hoy) {
     final c = context.colores;
     final String grande;
     final String detalle;
     if (plan.alcanza) {
       final meses = plan.meses!;
       grande = formatMesAnio(plan.fechaLibre!);
+      // El total de un mes cualquiera puede no ser el de este mes (parte ya
+      // pagada, una cuota que aún no empieza): se dicen los dos para que no
+      // parezca que el plan pide más de lo que toca hoy.
+      final proximos = plan.proximosPagos;
+      final totalProximo = proximos.pagos.fold<int>(0, (s, p) => s + p.$2);
+      final cuando = proximos.esteMes
+          ? 'Este mes'
+          : 'En ${formatMesAnio(DateTime(hoy.year, hoy.month + 1)).split(' de ').first}';
+      final distinto =
+          proximos.pagos.isNotEmpty && totalProximo != plan.presupuestoMensual;
       detalle =
           '${meses == 0 ? 'Este mismo mes' : 'En $meses ${meses == 1 ? 'mes' : 'meses'}'}, '
-          'pagando ${formatCOP(plan.presupuestoMensual)} al mes entre todas.';
+          'pagando ${formatCOP(plan.presupuestoMensual)} al mes entre todas.'
+          '${distinto ? ' $cuando te tocan ${formatCOP(totalProximo)}: abajo ves a cuál.' : ''}';
     } else if (plan.presupuestoMensual == 0) {
       grande = 'Sin fecha';
       detalle =
@@ -667,9 +922,11 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     final total = proximos.pagos.fold<int>(0, (s, p) => s + p.$2);
 
     String etiqueta(ResumenDeuda r, int pago) {
+      // Sin recortar al saldo de hoy: el último pago lleva el interés hasta
+      // el día de pago y sigue siendo "mínimo", no extra.
       final minimo = proximos.esteMes
-          ? r.pendienteEsteMes(hoy, r.pagoMinimo)
-          : (r.pagoMinimo ?? 0);
+          ? r.faltaDelPagoEsteMes(hoy, r.deuda.cuotaMensual)
+          : (r.deuda.cuotaMensual ?? 0);
       if (minimo <= 0) return 'extra';
       return pago > minimo ? 'mínimo + extra' : 'mínimo';
     }
@@ -685,7 +942,13 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
             TextoKicker('$mes paga', color: c.acento),
             if (!proximos.esteMes) ...[
               const SizedBox(height: 6),
-              Text('Lo de este mes ya está pago.', style: _gris(context)),
+              Text(
+                plan.orden.any((p) => p.resumen.pagadoEsteMes(hoy) > 0)
+                    ? 'Lo de este mes ya está pago.'
+                    : 'Este mes todavía no toca pagar: tu primer pago es el '
+                          'mes que viene.',
+                style: _gris(context),
+              ),
             ],
             const SizedBox(height: AppSpacing.xs),
             for (final (r, pago) in proximos.pagos)
@@ -803,6 +1066,12 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
               const SizedBox(height: 26),
             ],
             _rotulo(context, 'Extra al mes'),
+            const SizedBox(height: 6),
+            Text(
+              'Lo que puedes pagar cada mes además del pago mínimo de cada '
+              'deuda. Si no te sobra nada, déjalo en 0.',
+              style: _gris(context),
+            ),
             const SizedBox(height: 10),
             Align(
               alignment: Alignment.centerLeft,
@@ -822,10 +1091,7 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
                     ),
                   ),
                   keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CopInputFormatter(),
-                  ],
+                  inputFormatters: [CopInputFormatter()],
                   onChanged: _cambiarExtra,
                 ),
               ),
@@ -841,6 +1107,16 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
             ),
             const SizedBox(height: 26),
             _rotulo(context, 'Orden de pago'),
+            const SizedBox(height: 6),
+            Text(
+              variasDeudas
+                  ? 'El número dice a cuál va primero tu extra, no cuál '
+                        'terminas antes: el mes en que terminas cada una '
+                        'está a la derecha.'
+                  : 'A la derecha, el mes en que la terminas.',
+              key: const ValueKey('plan-orden-ayuda'),
+              style: _gris(context),
+            ),
             const SizedBox(height: AppSpacing.xs),
             Column(
               key: const ValueKey('plan-orden'),
@@ -869,12 +1145,17 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
                 'Cada mes pagas el mínimo de todas las deudas y lo que sobra '
                 '(el extra) va completo a la primera de la lista. Cuando '
                 'terminas una, lo que le pagabas pasa a la siguiente, así que '
-                'lo que pagas al mes no baja pero cada vez rinde más.\n\n'
-                'Avalancha ataca primero la deuda que más te cuesta: pagas '
-                'menos intereses. Bola de nieve, la más pequeña: terminas '
-                'deudas antes y eso anima. En "Automática" Valtiq elige la '
-                'que menos intereses te cobra; si las dos cuestan casi lo '
-                'mismo, elige bola de nieve.\n\n'
+                'lo que pagas al mes no baja pero cada vez rinde más. Lo que '
+                'sobra va primero a las deudas vencidas y a las que tienen su '
+                'fecha límite a 3 meses o menos. La cuota de cada deuda no '
+                'cambia.'
+                '\n\n'
+                'Avalancha busca el orden con el que pagas menos intereses. '
+                'Bola de nieve, la más pequeña: terminas '
+                'deudas antes y eso anima. En "Automática" Valtiq elige primero '
+                'la que cumple más fechas límite y después la que menos '
+                'intereses te cobra; si cuestan casi lo mismo, elige bola de '
+                'nieve.\n\n'
                 'Las fechas son un estimado con las tasas de hoy y cuentan el '
                 'pago de este mes si todavía no lo has hecho.',
                 style: _gris(context),
@@ -906,6 +1187,8 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
         texto = plan.alcanza
             ? 'Valtiq eligió $nombre: con ella sí terminas de pagar.'
             : 'Valtiq usa $nombre mientras el plan no alcance para terminar.';
+      } else if (e.difierenEnFechas) {
+        texto = 'Valtiq eligió $nombre: es la que cumple más fechas límite.';
       } else if (e.casiIgual) {
         texto =
             'Valtiq eligió $nombre: las dos te cobran casi lo mismo y así '
@@ -915,6 +1198,9 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
             'Valtiq eligió $nombre: te cobra ${formatCOP(ahorro)} menos en '
             'intereses que $nombreOtra.';
       }
+    } else if (!plan.alcanza && !otra.alcanza) {
+      bien = true;
+      texto = 'Con ninguna de las dos terminas todavía: mira el aviso.';
     } else if (plan.estrategia == reco) {
       bien = true;
       texto = 'Es la que Valtiq recomienda para tus deudas.';
@@ -922,6 +1208,8 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
       bien = false;
       texto = !comparables
           ? 'Con ${reco.nombre.toLowerCase()} sí terminas de pagar.'
+          : e.difierenEnFechas
+          ? '${reco.nombre} cumple más fechas límite.'
           : e.casiIgual
           ? '${reco.nombre} cuesta casi lo mismo y terminas deudas más '
                 'pronto: es la que Valtiq recomienda.'
@@ -977,7 +1265,18 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     int monto,
   ) {
     final c = context.colores;
-    final con = _elegir(hoy, extra: _extra + monto).plan;
+    // Lo mismo que pasa al tocarlo: en "Automática" Valtiq puede cambiar de
+    // estrategia con más extra. Se guarda junto al plan, porque la pantalla
+    // se redibuja sin que cambie nada de esto.
+    final con = _vistasPrevias[monto] ??= PlanPago.elegir(
+      deudas: widget.activas,
+      elegida: _elegida,
+      extraMensual: _extra + monto,
+      extraDiferido: _prefs.extraDiferido(hoy),
+      terminadas: widget.terminadas,
+      hoy: hoy,
+      conSugerencias: false,
+    ).plan;
     final String efecto;
     if (!con.alcanza) {
       efecto = 'aún sin fecha';
@@ -1053,12 +1352,14 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
       fecha = formatMesAnioCorto(paso.fecha!);
       nota = paso.tarde
           ? 'después del límite'
+          : paso.priorizadaPorLimite
+          ? 'primero por su límite'
           : paso.meses == 0
           ? 'este mes'
           : 'liquidada';
     }
     final alerta = !paso.termina || paso.tarde;
-    return Container(
+    final fila = Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: c.divisor, width: 0.5)),
@@ -1139,6 +1440,16 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
         ],
       ),
     );
+    final abrir = widget.onAbrirDeuda;
+    if (abrir == null) return fila;
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        key: ValueKey('plan-orden-${r.deuda.id}'),
+        onTap: () => abrir(r.deuda.id),
+        child: fila,
+      ),
+    );
   }
 
   /// "4,5 %", "25 %".
@@ -1152,21 +1463,24 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
 
   // ───────────────────────── Gráfica ─────────────────────────
 
-  /// Cómo baja lo que se debe mes a mes, con un punto numerado donde se
-  /// termina cada deuda. `null` si no hay curva que mostrar (el plan no
-  /// alcanza o se termina todo en uno o dos meses).
+  /// Cuánto se debe mes a mes, con un punto y el nombre de la deuda en el
+  /// mes en que se termina cada una. `null` si no hay curva que mostrar (el
+  /// plan no alcanza o se termina todo en uno o dos meses).
   Widget? _tarjetaGrafica(BuildContext context, PlanPago plan) {
     if (!plan.alcanza || plan.saldoPorMes.length < 4) return null;
     final c = context.colores;
     final theme = Theme.of(context);
     final marcas = [
-      for (final (i, p) in plan.orden.indexed)
-        if (p.meses != null) (mes: p.meses!, numero: i + 1),
+      for (final p in plan.orden)
+        if (p.meses != null)
+          (mes: p.meses!, nombre: p.resumen.deuda.acreedorNombre),
     ];
     final pequeno = theme.textTheme.bodySmall?.copyWith(
       fontSize: 11.5,
       color: c.textoSecundario,
     );
+    final fuerte = monoStyle(fontSize: 12.5, fontWeight: FontWeight.w600);
+    final fin = formatMesAnioCorto(plan.fechaLibre!);
     return Card(
       key: const ValueKey('plan-grafica'),
       margin: EdgeInsets.zero,
@@ -1175,40 +1489,61 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextoKicker('Cómo baja tu deuda', color: c.acento),
+            TextoKicker('Cuánto debes mes a mes', color: c.acento),
             const SizedBox(height: 6),
             Text(
-              'Cada número es el mes en que terminas esa deuda.',
+              'Cada punto es el mes en que terminas esa deuda.',
               style: _gris(context),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(formatCOP(plan.saldoPorMes.reduce(math.max)), style: pequeno),
-            const SizedBox(height: 4),
             Semantics(
               label:
                   'Gráfica: lo que debes baja de '
                   '${formatCOP(plan.saldoPorMes.first)} hoy a cero en '
-                  '${formatMesAnio(plan.fechaLibre!)}.',
+                  '${formatMesAnio(plan.fechaLibre!)}. '
+                  '${[for (final p in plan.orden)
+                    if (p.fecha != null) '${p.resumen.deuda.acreedorNombre} termina en ${formatMesAnio(p.fecha!)}'].join('; ')}.',
               child: SizedBox(
-                height: 150,
+                height: 170,
                 child: CustomPaint(
                   painter: _PintorSaldo(
                     saldos: plan.saldoPorMes,
                     marcas: marcas,
                     linea: c.acento,
                     guia: c.divisor,
-                    textoMarca: c.fondo,
+                    texto: c.texto,
+                    fondo: c.superficie,
                   ),
                   size: Size.infinite,
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Hoy', style: pequeno),
-                const Spacer(),
-                Text(formatMesAnioCorto(plan.fechaLibre!), style: pequeno),
+                Expanded(
+                  child: Column(
+                    key: const ValueKey('plan-grafica-hoy'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Hoy', style: pequeno),
+                      Text(formatCOP(plan.saldoPorMes.first), style: fuerte),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Column(
+                  key: const ValueKey('plan-grafica-fin'),
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(fin, style: pequeno),
+                    Text(
+                      formatCOP(0),
+                      style: fuerte.copyWith(color: c.positivo),
+                    ),
+                  ],
+                ),
               ],
             ),
           ],
@@ -1314,33 +1649,36 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
   }
 }
 
-/// Curva de lo que se debe (área suave debajo) con un círculo numerado en
-/// el mes en que se termina cada deuda. `saldos[0]` es hoy y `saldos[k+1]`
-/// el cierre del mes k (el mes 0 es el actual).
+/// Curva de lo que se debe (área suave debajo) con un punto y el nombre de
+/// la deuda en el mes en que se termina cada una. `saldos[0]` es hoy y
+/// `saldos[k+1]` el cierre del mes k (el mes 0 es el actual).
 class _PintorSaldo extends CustomPainter {
   _PintorSaldo({
     required this.saldos,
     required this.marcas,
     required this.linea,
     required this.guia,
-    required this.textoMarca,
+    required this.texto,
+    required this.fondo,
   });
 
   final List<int> saldos;
-  final List<({int mes, int numero})> marcas;
+  final List<({int mes, String nombre})> marcas;
   final Color linea;
   final Color guia;
-  final Color textoMarca;
+  final Color texto;
+  final Color fondo;
 
-  static const _radio = 10.0;
+  static const _radio = 4.5;
+  static const _anchoEtiqueta = 170.0;
 
   @override
   void paint(Canvas canvas, Size size) {
     final maximo = saldos.reduce(math.max).toDouble();
     if (maximo <= 0 || saldos.length < 2) return;
-    // Aire arriba para los círculos y a los lados para que no se corten.
-    const arriba = _radio * 2 + 4;
-    const lado = _radio + 1;
+    // Aire arriba y a los lados para que puntos y nombres no se corten.
+    const arriba = 22.0;
+    const lado = _radio + 2;
     final ancho = size.width - 2 * lado;
     final alto = size.height - arriba;
     final ultimo = saldos.length - 1;
@@ -1385,42 +1723,82 @@ class _PintorSaldo extends CustomPainter {
         ..strokeCap = StrokeCap.round,
     );
 
-    // Varias deudas pueden terminar el mismo mes: sus círculos se apilan.
-    final apilados = <int, int>{};
-    for (final m in marcas) {
-      final i = (m.mes + 1).clamp(0, ultimo);
-      final base = punto(i);
-      final nivel = apilados.update(i, (n) => n + 1, ifAbsent: () => 0);
-      final centro = Offset(
-        base.dx,
-        math.max(_radio, base.dy - _radio - 4 - nivel * (_radio * 2 + 2)),
-      );
-      // Guía punteada del círculo a la base.
-      final pincel = Paint()
-        ..color = guia
-        ..strokeWidth = 1;
-      for (var y = centro.dy + _radio; y < size.height; y += 6) {
-        canvas.drawLine(
-          Offset(centro.dx, y),
-          Offset(centro.dx, math.min(y + 3, size.height)),
-          pincel,
-        );
-      }
-      canvas.drawCircle(centro, _radio, Paint()..color = linea);
-      final texto = TextPainter(
+    // Primero todos los puntos, luego los nombres encima de la curva.
+    final ordenadas = [...marcas]..sort((a, b) => a.mes.compareTo(b.mes));
+    final puntos = [
+      for (final m in ordenadas) punto((m.mes + 1).clamp(0, ultimo)),
+    ];
+    for (final p in puntos) {
+      canvas.drawCircle(p, _radio + 1.5, Paint()..color = fondo);
+      canvas.drawCircle(p, _radio, Paint()..color = linea);
+    }
+
+    // Cada nombre va arriba a la derecha de su punto (a la izquierda si no
+    // cabe). Si choca con otro ya puesto, se corre hacia arriba o hacia
+    // abajo hasta encontrar un hueco; si no hay, se pone donde iba.
+    final puestos = <Rect>[];
+    for (final (k, m) in ordenadas.indexed) {
+      final p = puntos[k];
+      final pintor = TextPainter(
         text: TextSpan(
-          text: '${m.numero}',
+          text: m.nombre,
           style: TextStyle(
             fontFamily: fuenteTexto,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: textoMarca,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            color: texto,
           ),
         ),
         textDirection: TextDirection.ltr,
-      )..layout();
-      texto.paint(canvas, centro - Offset(texto.width / 2, texto.height / 2));
-      texto.dispose();
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: math.min(_anchoEtiqueta, size.width * 0.45));
+      final w = pintor.width + 8;
+      final h = pintor.height + 3;
+      final aLaDerecha = p.dx + 6 + w <= size.width;
+      final x = aLaDerecha ? p.dx + 6 : math.max(0.0, p.dx - 6 - w);
+      final yBase = p.dy - 4 - h;
+      Rect enY(double y) => Rect.fromLTWH(x, y, w, h);
+      bool libre(Rect r) =>
+          r.top >= 0 &&
+          r.bottom <= size.height &&
+          !puestos.any((o) => o.inflate(1).overlaps(r));
+      var rect = enY(yBase.clamp(0, size.height - h));
+      if (!libre(rect)) {
+        for (var paso = 1; paso <= 8; paso++) {
+          final arribaR = enY(yBase - paso * (h + 2));
+          if (libre(arribaR)) {
+            rect = arribaR;
+            break;
+          }
+          final abajoR = enY(yBase + paso * (h + 2));
+          if (libre(abajoR)) {
+            rect = abajoR;
+            break;
+          }
+        }
+      }
+      puestos.add(rect);
+      // Guía del punto al nombre cuando quedó lejos.
+      final borde = Offset(
+        aLaDerecha ? rect.left : rect.right,
+        rect.center.dy.clamp(rect.top, rect.bottom),
+      );
+      if ((borde - p).distance > 14) {
+        canvas.drawLine(
+          p,
+          borde,
+          Paint()
+            ..color = guia
+            ..strokeWidth = 1,
+        );
+      }
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+        Paint()..color = fondo.withValues(alpha: 0.92),
+      );
+      pintor.paint(canvas, rect.topLeft + const Offset(4, 1.5));
+      pintor.dispose();
     }
   }
 
@@ -1430,5 +1808,6 @@ class _PintorSaldo extends CustomPainter {
       old.marcas != marcas ||
       old.linea != linea ||
       old.guia != guia ||
-      old.textoMarca != textoMarca;
+      old.texto != texto ||
+      old.fondo != fondo;
 }

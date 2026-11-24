@@ -109,6 +109,6 @@ void main() {
     expect(validarTasa('abc'), isNotNull);
     expect(tasaParaCampo(0), '');
     expect(tasaParaCampo(2), '2');
-    expect(tasaParaCampo(2.5), '2.50');
+    expect(tasaParaCampo(2.5), '2,5');
   });
 }

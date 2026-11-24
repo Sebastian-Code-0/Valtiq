@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 
 import '../../db/database.dart';
@@ -144,6 +145,23 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
       accion: 'Confirmar',
     );
     if (!ok) return;
+    final pagos = await widget.db.pagosDeudaDao.getPagosDeDeuda(widget.deudaId);
+    final reabierta = ResumenDeuda.calcular(
+      deuda.copyWith(estado: 'activa', fechaPagoReal: const Value(null)),
+      [
+        for (final p in pagos)
+          AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
+      ],
+      hoy: DateTime.now(),
+    );
+    if (!mounted) return;
+    if (reabierta.saldo <= 0) {
+      mostrarInfo(
+        context,
+        'Esta deuda no debe nada. Para reabrirla, primero elimina un pago.',
+      );
+      return;
+    }
     await widget.db.deudasDao.marcarComoActiva(widget.deudaId);
     if (mounted) widget.onSalir();
   }
@@ -168,6 +186,8 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
 
   Future<void> _registrarPago(ResumenDeuda r) async {
     final deuda = r.deuda;
+    final hoyPago = DateTime.now();
+    final faltaDelMes = r.pendienteCuotaEsteMes(hoyPago);
     final guardado = await showDialog<bool>(
       context: context,
       builder: (_) => RegistrarPagoDialog(
@@ -175,7 +195,10 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
         deudaId: widget.deudaId,
         nombre: deuda.acreedorNombre,
         saldoPendiente: r.saldo,
-        pagoMinimo: r.pagoMinimo,
+        // Si ya abonó parte de la cuota de este mes, lo que falta de ella.
+        pagoMinimo: faltaDelMes > 0 ? faltaDelMes : r.pagoMinimo,
+        fechaInicio: deuda.fechaPrestamo,
+        saldoEnFecha: r.saldoAl,
         // Lo que el Plan de pago dice pagarle este mes (mínimo + extra); el
         // diálogo abre ya y el botón aparece cuando esté calculado.
         pagoDelPlan: PreferenciasPlan.pagoDelPlan(widget.db, widget.deudaId),
@@ -185,18 +208,20 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
 
     // ¿Con este pago quedó en cero? Entonces pasa sola a "Pagadas".
     final pagos = await widget.db.pagosDeudaDao.getPagosDeDeuda(widget.deudaId);
+    // Se mira en la fecha del último pago: si se liquidó con una fecha
+    // pasada, ahí se congela el interés.
+    final ultimo = pagos
+        .map((p) => fechaCivilGuardada(p.fechaPago))
+        .reduce((a, b) => a.isAfter(b) ? a : b);
     final actual = ResumenDeuda.calcular(deuda, [
       for (final p in pagos)
         AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
-    ], hoy: DateTime.now());
+    ], hoy: DateTime(ultimo.year, ultimo.month, ultimo.day));
     if (actual.saldo > 0) return;
-    await widget.db.deudasDao.marcarComoPagada(
-      widget.deudaId,
-      // Fecha civil (medianoche UTC), igual que el botón manual: con el
-      // instante crudo, un pago hecho de noche (UTC-5) se leía como el día
-      // siguiente y la deuda pagada mostraba un día de interés de más.
-      normalizarFechaCivil(DateTime.now()),
-    );
+    // Fecha civil (medianoche UTC), igual que el botón manual: con el
+    // instante crudo, un pago hecho de noche (UTC-5) se leía como el día
+    // siguiente y la deuda pagada mostraba un día de interés de más.
+    await widget.db.deudasDao.marcarComoPagada(widget.deudaId, ultimo);
     if (!mounted) return;
     mostrarExito(
       context,
@@ -213,7 +238,15 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
       accion: 'Eliminar',
       peligro: true,
     );
-    if (ok) await widget.db.pagosDeudaDao.deletePago(pago.id);
+    if (!ok) return;
+    final debe = await widget.db.pagosDeudaDao.eliminarPago(pago.id);
+    if (debe == null || !mounted) return;
+    mostrarInfo(
+      context,
+      'Sin ese pago todavía debes ${formatCOP(debe)}: la deuda volvió a '
+      'Activas.',
+    );
+    widget.onSalir();
   }
 
   @override
@@ -262,7 +295,7 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
     final deuda = r.deuda;
     final activa = deuda.estado == 'activa';
     final vence = activa ? r.vencimiento(hoy) : null;
-    final porcentaje = (r.fraccionPagada * 100).round();
+    final porcentaje = r.porcentajePagado;
 
     final enPanel = widget.onCerrar != null;
     return ListView(
@@ -483,7 +516,7 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
 
     final String textoEstimada;
     if (estimada.noBaja) {
-      textoEstimada = 'No baja';
+      textoEstimada = r.tieneInteres ? 'No baja' : 'Más de 50 años';
     } else if (estimada.fecha == null) {
       textoEstimada = 'Sin estimar';
     } else {
@@ -505,7 +538,7 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
           valor: proximo == null ? 'Sin fecha' : fechaCorta(proximo, hoy),
         ),
         _Dato(
-          titulo: 'Liquidación estimada',
+          titulo: 'Fin a tu ritmo actual',
           valor: textoEstimada,
           colorValor: estimada.noBaja ? c.alerta : null,
         ),
@@ -513,12 +546,15 @@ class _DeudaDetalleContenidoState extends State<DeudaDetalleContenido> {
       const SizedBox(height: AppSpacing.sm),
       Text(
         estimada.noBaja
-            ? 'Pagando ${formatCOP(estimada.ritmo!)} al mes la deuda no baja: '
-                  'el interés de cada mes es mayor que el pago.'
+            ? (r.tieneInteres
+                  ? 'Pagando ${formatCOP(estimada.ritmo!)} al mes la deuda no '
+                        'baja: el interés de cada mes es mayor que el pago.'
+                  : 'Pagando ${formatCOP(estimada.ritmo!)} al mes tardarías '
+                        'más de 50 años en terminar.')
             : estimada.fecha != null
-            ? 'Estimada con ${formatCOP(estimada.ritmo!)} al mes, que es lo '
-                  'que vienes pagando. Si pagas más, se adelanta; si pagas '
-                  'menos o te saltas un mes, se atrasa.'
+            ? '${estimada.ritmo != deuda.cuotaMensual ? 'A tu ritmo actual: ${formatCOP(estimada.ritmo!)} al mes, lo que vienes pagando.' : 'A tu ritmo actual: tu cuota de ${formatCOP(estimada.ritmo!)} al mes.'} '
+                  'El Plan de pago puede dar otra fecha: suma tu extra y lo '
+                  'que liberan otras deudas.'
             : 'Para estimar cuándo terminas, edita la deuda y ponle un pago '
                   'mínimo al mes.',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(

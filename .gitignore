@@ -57,3 +57,6 @@ valtiq_key.bin
 
 # Notas locales de trabajo (no se suben a GitHub)
 /NOTAS_CAMBIOS.md
+
+# Configuración local de Claude Code (no se sube)
+/.claude/

@@ -30,11 +30,12 @@ Future<void> setMontosOcultos(bool ocultos) async {
 String formatMonto(num monto) =>
     montosOcultosNotifier.value ? montoOculto : formatCOP(monto);
 
-
 String formatCOP(num monto) {
-  final esNegativo = monto < 0;
-  final signo = esNegativo ? '-\$' : '\$';
+  if (monto.isNaN) return r'$0';
   final abs = monto.abs();
+  // Un valor que redondea a cero no lleva signo ("-$0").
+  final esNegativo = monto < 0 && abs >= 0.5;
+  final signo = esNegativo ? '-\$' : '\$';
 
   // Magnitudes extremas se muestran en escala larga (es_CO) para que un
   // solo monto nunca produzca una cadena de 15+ dígitos que rompa layouts.
@@ -44,8 +45,9 @@ String formatCOP(num monto) {
   if (abs >= 1e18) {
     return '$signo${_formatEscala(abs / 1e18, singular: 'trillón', plural: 'trillones')}';
   }
-  if (abs >= 1e12) {
-    return '$signo${_formatEscala(abs / 1e12, singular: 'billón', plural: 'billones')}';
+  // 999.999.999.999,6 redondea a un billón: no debe salir con 13 dígitos.
+  if (abs >= 1e12 - 0.5) {
+    return '$signo${_formatEscala((abs < 1e12 ? 1e12 : abs) / 1e12, singular: 'billón', plural: 'billones')}';
   }
 
   final digitos = abs.toStringAsFixed(0);
@@ -63,7 +65,12 @@ String _formatEscala(
   required String plural,
 }) {
   final excedido = coeficiente > maxCoeficiente;
-  final valor = (excedido ? maxCoeficiente : coeficiente).toStringAsFixed(2);
+  // Se trunca a dos decimales: redondear haría que 999,999… billones se
+  // leyera como "1000 billones", más de lo que es.
+  final truncado = excedido
+      ? maxCoeficiente
+      : ((coeficiente * 100 + 1e-11).floorToDouble() / 100);
+  final valor = truncado.toStringAsFixed(2);
   var texto = valor.replaceAll('.', ',');
   if (texto.endsWith(',00')) {
     texto = texto.substring(0, texto.length - 3);

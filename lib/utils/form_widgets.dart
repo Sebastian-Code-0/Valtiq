@@ -338,7 +338,13 @@ class FormSaveButton extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.sm),
           ],
-          Text(loading ? 'Guardando...' : label),
+          Flexible(
+            child: Text(
+              loading ? 'Guardando...' : label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/services/backup_service.dart';
 import 'package:valtiq/services/deudas_calculos.dart';
+import 'package:valtiq/services/notification_service.dart';
+import 'package:valtiq/services/perfil_service.dart';
 import 'package:valtiq/services/plan_pago_preferencias.dart';
 
 AppDatabase _createInMemoryDb() => AppDatabase(NativeDatabase.memory());
@@ -121,6 +125,53 @@ void main() {
       prefs = await PreferenciasPlan.leer();
       expect(prefs.extra, 9000);
     });
+
+    test(
+      'nombre, apellido, foto y hora del recordatorio diario viajan; '
+      'el encendido del recordatorio no, y uno viejo no cambia nada',
+      () async {
+        final dir = Directory.systemTemp.createTempSync('valtiq_perfil_');
+        addTearDown(() => dir.deleteSync(recursive: true));
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('plugins.flutter.io/path_provider'),
+              (call) async => dir.path,
+            );
+        final foto = File('${dir.path}/origen.png')
+          ..writeAsBytesSync([1, 2, 3, 4, 5]);
+        SharedPreferences.setMockInitialValues({
+          'valtiq_perfil_nombre': 'Ana',
+          'valtiq_perfil_apellido': 'Pérez Gómez',
+          'valtiq_perfil_foto': foto.path,
+          'valtiq_recordatorio_diario': true,
+          'valtiq_recordatorio_diario_minutos': 7 * 60 + 30,
+        });
+        final backup = await service.exportarDatos();
+        expect(backup['perfil']['nombre'], 'Ana');
+        expect(backup['perfil']['fotoExtension'], 'png');
+        expect(backup['recordatorioDiarioMinutos'], 7 * 60 + 30);
+
+        // Otro dispositivo, sin perfil y con el recordatorio apagado.
+        SharedPreferences.setMockInitialValues({});
+        await PerfilService.cargar();
+        await service.importarDatos(backup);
+        final perfil = PerfilService.perfil.value;
+        expect(perfil.nombre, 'Ana');
+        expect(perfil.apellido, 'Pérez Gómez');
+        expect(File(perfil.rutaFoto!).readAsBytesSync(), [1, 2, 3, 4, 5]);
+        final diario = await NotificationService.recordatorioDiario();
+        expect(diario.minutos, 7 * 60 + 30);
+        expect(diario.activo, isFalse);
+
+        // Un respaldo viejo (sin perfil ni hora) no borra lo que hay.
+        backup
+          ..remove('perfil')
+          ..remove('recordatorioDiarioMinutos');
+        await service.importarDatos(backup);
+        expect(PerfilService.perfil.value.nombre, 'Ana');
+        expect((await NotificationService.recordatorioDiario()).minutos, 450);
+      },
+    );
 
     test(
       'exportarDatos → importarDatos: round-trip preserva los montos',

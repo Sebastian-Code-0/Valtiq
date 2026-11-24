@@ -210,9 +210,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 FormSaveButton(onPressed: _guardar, loading: _guardando),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  'Tu nombre y tu foto se guardan solo en este '
-                  'dispositivo y no se incluyen en la copia de '
-                  'seguridad.',
+                  'Tu nombre y tu foto se guardan en este dispositivo y '
+                  'van incluidos en la copia de seguridad.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: c.textoSecundario,

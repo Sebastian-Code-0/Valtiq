@@ -1,5 +1,120 @@
 # Changelog
 
+## Plan de pago exacto y respaldo con perfil (2026-11-24)
+
+- **Último pago:** "Este mes paga" y "Lo del plan" incluyen el interés hasta
+  el día de pago; antes el último pago quedaba corto y la deuda no se
+  cerraba.
+- **Fechas límite:** lo que sobra va de verdad primero a la vencida y a las
+  fechas cercanas cuando el interés queda casi igual; una urgente que igual
+  llega tarde no encarece mucho el plan.
+- **Sin día de pago:** se proyecta con el día en que empezó la deuda; la
+  fecha ya no cambia según el día en que abres la app.
+- **Cálculo fino:** el plan mide el interés como el calculador de la app (un
+  saldo de $1 ya no suma un mes de interés).
+- **Automática:** los botones "+$X" y el extra sugerido prevén el cambio de
+  estrategia.
+- **Respaldo:** lleva nombre, apellido, foto y la hora del recordatorio
+  diario.
+
+## Campo de monto nuevo y plan más rápido (2026-11-22)
+
+- **Campos de monto:** se reescribieron. Una sola regla lee el valor al pegar
+  y guardar. Los centavos se ignoran sin redondear y lo que no se pueda leer
+  con certeza se rechaza. Borrar un dígito ya no daña el resto del número.
+- **Plan de pago:** recalcula mucho más rápido, también con avisos de cuota
+  liberada. Ya no dice "no terminas" en casos donde otro orden sí termina.
+- **Calculadora de cuota:** su resultado desaparece si cambias un dato.
+- **Extra sugerido:** el aviso dice cuándo solo alcanza si empiezas este mes.
+- **Presupuestos:** un monto ilegible ya no borra el presupuesto.
+- **Orden de pago:** tocar una deuda abre su detalle.
+- **Montos:** se escriben solo con números; coma y punto no hacen nada.
+- **Prioridad:** lo que sobra va primero a deudas vencidas y a fechas límite
+  a 3 meses o menos, sin cambiar cuotas. Automática prefiere cumplir fechas.
+- **Aviso "Terminaste":** sale una sola vez por deuda.
+- **Textos del Plan:** si este mes pagas distinto del total mensual, la
+  tarjeta "Libre de deudas en" lo dice. "Extra al mes" explica qué es el
+  extra, y "Orden de pago" aclara que el número dice a cuál va primero el
+  extra, no cuál terminas antes.
+- **Gráfica "Cuánto debes mes a mes":** lo que debes hoy al inicio, "$0" y el
+  mes al final, y el nombre de cada deuda en el punto donde la terminas (antes,
+  un número).
+- **Fechas límite:** con 5 o más deudas, Avalancha vuelve a comparar todos los
+  órdenes que protegen esas fechas.
+
+## Plan con muchas deudas y campos de monto (2026-11-22)
+
+- **Plan con 5 o más deudas:** Avalancha busca mejores órdenes con un límite
+  fijo de cálculos. Ya no dice "no terminas" cuando otro orden sí termina, y
+  paga menos intereses.
+- **Cuota sugerida:** si ya abonaste este mes, llega a tiempo a la fecha
+  límite.
+- **Campos de monto:** `1,500,000` ahora es 1.500.000 (antes guardaba $1).
+  Más de 12 dígitos o un pegado ambiguo se rechazan sin cambiar el valor.
+  Supr junto a un punto, reemplazar una selección y los ceros a la izquierda
+  funcionan bien.
+- **Calculadora de cuota:** el resultado sale debajo del campo y ya no tapa
+  "Guardar deuda".
+- **Extra sugerido:** si solo alcanza empezando este mes, el aviso lo dice.
+
+## Plan de pago más simple y rápido; datos y formularios (2026-11-21)
+
+- **Plan:** se simplificó el reparto. Compara unos pocos órdenes de pago y
+  usa el que termina, cumple más fechas límite y cobra menos. El extra
+  sugerido siempre cumple al aplicarlo, más extra nunca empeora el plan y el
+  cálculo con 12 deudas pasó de segundos a milisegundos.
+- **Liquidar con fecha pasada** deja la deuda exactamente en $0 aunque haya
+  pagos posteriores, también en Préstamos.
+- **"N meses"** son exactamente N pagos aunque ya hayas abonado este mes.
+- **Cuota liberada:** no se cuenta dos veces y nunca pisa el extra que
+  escribiste. Restaurar un respaldo con el Plan abierto conserva lo elegido.
+- **Campos de monto:** la coma ya no multiplica; lo que no es un monto se
+  rechaza y el cursor se queda donde estaba.
+- **Formularios:** la cuota que propone la app siempre se puede guardar;
+  subir el monto de una deuda pagada la reabre; banco y tarjeta avisan cómo
+  se calcula el interés; fechas anteriores a 2000 ya no rompen el selector.
+
+## Motor de intereses y pantallas de deudas: segunda tanda (2026-11-21)
+
+- **Intereses:** un pago con fecha anterior al inicio ya no suma interés de
+  más. En compuesto sobre lo que falta, el interés que un abono no cubre
+  sigue capitalizando (**cambia el saldo de las deudas compuesto + "lo que
+  falta" con abonos parciales**). Los días ya no dependen del cambio de
+  hora. Un pago con fecha futura no cuenta en ningún modo hasta su fecha.
+- **Proyecciones:** el interés atrasado ya no se trata como capital, y se
+  cuenta el interés hasta tu día de pago real.
+- **Avalancha** busca el orden que menos intereses cobra, también con
+  interés sobre lo prestado.
+- **Tasas** con todos sus decimales; no se aceptan formatos como `1e2`.
+  **Montos pegados** con centavos ya no se multiplican.
+- **Deudas:** una activa en $0 ya no rompe el plan; quitar un pago reabre la
+  deuda; liquidar con fecha pasada usa el saldo de ese día; el próximo pago
+  avanza tras pagar el mes; "Venció" cuando el límite pasó; textos más
+  claros y sin desbordes en pantallas pequeñas.
+- **Formularios:** borrar la tasa no pierde lo elegido, banco y tarjeta
+  proponen "lo que falta por pagar", y la fecha límite no puede ser anterior
+  al inicio.
+
+## Plan de pago: fechas, límites y cuotas corregidos (2026-11-21)
+
+- **Al terminar una deuda** el plan ya no promete una fecha que no vas a
+  cumplir ni sube tu extra solo. Te avisa "Terminaste A: te quedan $X libres
+  al mes" y con un toque sigues pagándolos a las demás. El aviso sale una
+  vez, no cuenta dos veces la plata de este mes y, si reabres la deuda, su
+  cuota sale del extra.
+- **Fechas límite:** lo justo para cumplirlas va primero y el resto sigue
+  avalancha o bola de nieve; el extra sugerido es el mínimo real (en el caso
+  de prueba bajó de $1.558.000 a $126.000).
+- **"N meses" son N pagos** en la calculadora de Deudas y Préstamos y en las
+  cuotas sugeridas. Con fecha límite (o fecha pactada) manda esa fecha.
+- **Último pago:** si abonaste parte de la última cuota, el plan dice lo que
+  falta; con una cuota mayor que el saldo, plan y tarjeta dan la misma fecha.
+- **Límite antes del día de pago:** sigue a tiempo, pero la app avisa que
+  hay que pagar antes de esa fecha y la tarjeta muestra el límite.
+- **Límite este mes en una deuda nueva:** ya se puede pagar este mes.
+- **Deudas que empiezan en el futuro** no cobran cuota ni interés antes de
+  empezar.
+
 ## Fecha límite vencida dentro del mismo mes (2026-11-19)
 
 - Una fecha límite que ya pasó pero es de este mismo mes (límite el 10, hoy

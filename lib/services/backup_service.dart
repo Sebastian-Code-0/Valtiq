@@ -2,6 +2,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../utils/currency_input.dart';
 import '../db/database.dart';
+import 'notification_service.dart';
+import 'perfil_service.dart';
 import 'plan_pago_preferencias.dart';
 
 class BackupService {
@@ -56,7 +58,16 @@ class BackupService {
       // Lo elegido en el Plan de pago (estrategia y extra al mes). Opcional:
       // los respaldos anteriores no lo traen.
       'planPago': (await PreferenciasPlan.leer()).toJson(),
+      // Nombre, apellido y foto. Opcional: los respaldos anteriores no lo
+      // traen.
+      'perfil': await PerfilService.paraRespaldo(),
+      // Solo la hora del recordatorio diario: si está encendido o no lo
+      // decide cada dispositivo.
+      'recordatorioDiarioMinutos':
+          (await NotificationService.recordatorioDiario()).minutos,
       // ConfigSmtps se excluye a propósito — nunca debe salir en el backup.
+      // Tampoco el PIN ni la biometría (viven fuera de la base de datos), ni
+      // el tema, el menú u ocultar montos (son de cada dispositivo).
     };
   }
 
@@ -107,6 +118,17 @@ class BackupService {
   }
 
   Future<void> importarDatos(Map<String, dynamic> json) async {
+    // Mientras se cambian datos y preferencias, el Plan de pago no ajusta
+    // nada con una mezcla de lo viejo y lo nuevo.
+    PreferenciasPlan.restaurando++;
+    try {
+      await _importarDatos(json);
+    } finally {
+      PreferenciasPlan.restaurando--;
+    }
+  }
+
+  Future<void> _importarDatos(Map<String, dynamic> json) async {
     // Validación mínima antes de tocar nada:
     if (json['datos'] is! Map) {
       throw const FormatException(
@@ -219,5 +241,16 @@ class BackupService {
     });
     // Después de los datos: si algo falla arriba, no se tocan.
     await PreferenciasPlan.restaurar(json['planPago']);
+    // El perfil y la hora del recordatorio son un extra: si fallan, los
+    // datos ya quedaron importados.
+    try {
+      await PerfilService.restaurar(json['perfil']);
+    } catch (_) {}
+    try {
+      await NotificationService.restaurarHoraRecordatorioDiario(
+        db,
+        json['recordatorioDiarioMinutos'],
+      );
+    } catch (_) {}
   }
 }

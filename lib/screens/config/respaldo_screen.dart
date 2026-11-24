@@ -184,10 +184,11 @@ class _RespaldoScreenState extends State<RespaldoScreen> {
         const SizedBox(height: AppSpacing.md),
         const AvisoDiscreto(
           texto:
-              'Por seguridad, la configuración de recordatorios por '
-              'correo no se incluye en este respaldo. Si restauras '
-              'estos datos en otro dispositivo, deberás configurarla '
-              'de nuevo en Ajustes → Correo.',
+              'Por seguridad, ni el PIN ni la configuración de '
+              'recordatorios por correo se incluyen en este respaldo. Si '
+              'restauras estos datos en otro dispositivo, deberás '
+              'configurarlos de nuevo. El tema y la apariencia también '
+              'son de cada dispositivo.',
         ),
         const SizedBox(height: AppSpacing.xl),
         // Separado del resto: es lo único de esta pantalla que destruye.

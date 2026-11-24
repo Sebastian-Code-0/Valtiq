@@ -1,6 +1,6 @@
 # Política de Privacidad de Valtiq
 
-Última actualización: 9 de noviembre de 2026
+Última actualización: 24 de noviembre de 2026
 
 ## Resumen
 
@@ -76,7 +76,8 @@ tu propia cuenta de Gmail o cualquier proveedor de correo).
 
 Si escribes tu nombre o eliges una foto de perfil, se guardan únicamente en
 tu dispositivo, dentro de la carpeta privada de Valtiq. No se envían a ningún
-lado ni se incluyen en la copia de seguridad.
+lado. Sí se incluyen en el archivo de copia de seguridad que tú exportas, para
+que lleguen al importarlo en otro dispositivo.
 
 ## Permisos que solicita la app (Android)
 
@@ -141,6 +142,8 @@ dispositivos sigue activa, así que además se declaran reglas explícitas en
 
 El único respaldo soportado es el manual, desde Ajustes → Copia de
 seguridad: tú decides dónde se guarda el archivo y quién tiene acceso a él.
+El archivo no está cifrado: lleva tus datos, tu nombre, tu foto y la hora del
+recordatorio diario, pero nunca el PIN, el bloqueo ni el correo configurado.
 Al cambiar de celular debes exportar tus datos en el anterior e importarlos
 en el nuevo.
 

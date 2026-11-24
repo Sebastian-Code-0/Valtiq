@@ -1,5 +1,6 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../db/database.dart';
 import '../../theme/theme.dart';
@@ -22,6 +23,8 @@ class RegistrarPagoDialog extends StatefulWidget {
     required this.saldoPendiente,
     this.pagoMinimo,
     this.pagoDelPlan,
+    this.fechaInicio,
+    this.saldoEnFecha,
   });
 
   final AppDatabase db;
@@ -40,6 +43,13 @@ class RegistrarPagoDialog extends StatefulWidget {
   /// ya pagado este mes); resuelve a `null` si este mes no le toca nada.
   final Future<int?>? pagoDelPlan;
 
+  /// Cuándo empezó la deuda: no se puede registrar un pago anterior.
+  final DateTime? fechaInicio;
+
+  /// Lo que se debía en una fecha. Con una fecha pasada el tope y "Liquidar"
+  /// son los de ese día (todavía no se había causado el interés de después).
+  final int Function(DateTime fecha)? saldoEnFecha;
+
   @override
   State<RegistrarPagoDialog> createState() => _RegistrarPagoDialogState();
 }
@@ -49,6 +59,11 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
   final _montoCtrl = TextEditingController();
   DateTime _fecha = DateTime.now();
   int? _delPlan;
+
+  /// El monto escrito salió del botón "Liquidar": sigue al saldo de la fecha.
+  bool _esLiquidar = false;
+
+  int get _saldo => widget.saldoEnFecha?.call(_fecha) ?? widget.saldoPendiente;
 
   @override
   void initState() {
@@ -64,7 +79,8 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
     super.dispose();
   }
 
-  void _ponerMonto(int monto) {
+  void _ponerMonto(int monto, {bool liquidar = false}) {
+    _esLiquidar = liquidar;
     final texto = formatCOPInput(monto);
     _montoCtrl.value = TextEditingValue(
       text: texto,
@@ -74,23 +90,41 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
   }
 
   Future<void> _elegirFecha() async {
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final inicio = widget.fechaInicio == null
+        ? null
+        : fechaCivilGuardada(widget.fechaInicio!);
+    var primera = inicio == null
+        ? DateTime(2000)
+        : DateTime(inicio.year, inicio.month, inicio.day);
+    // Una deuda que empieza en el futuro solo deja elegir hoy.
+    if (primera.isAfter(hoy)) primera = hoy;
     final f = await showDatePicker(
       context: context,
-      initialDate: _fecha,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
+      initialDate: _fecha.isBefore(primera) ? primera : _fecha,
+      firstDate: primera,
+      lastDate: ahora,
       locale: const Locale('es', 'CO'),
     );
-    if (f != null) setState(() => _fecha = f);
+    if (f == null || !mounted) return;
+    setState(() => _fecha = f);
+    if (_esLiquidar) {
+      _ponerMonto(_saldo, liquidar: true);
+    } else if (_montoCtrl.text.isNotEmpty) {
+      formKey.currentState?.validate();
+    }
   }
 
   String? _validar(String? v) {
     final n = parseCOP(v ?? '');
-    if (n == null || n <= 0) return 'Escribe un monto mayor a 0';
+    if (n == null) return 'Monto inválido';
+    if (n <= 0) return 'Escribe un monto mayor a 0';
     // Margen de $1 por redondeo del interés, igual que antes.
-    if (n - widget.saldoPendiente > 1) {
-      return 'No puedes pagar más de lo que debes '
-          '(${formatCOP(widget.saldoPendiente)})';
+    final saldo = _saldo;
+    if (n - saldo > 1) {
+      return 'No puedes pagar más de lo que debías en esa fecha '
+          '(${formatCOP(saldo)})';
     }
     return null;
   }
@@ -122,14 +156,14 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
         _fecha.year == hoy.year &&
         _fecha.month == hoy.month &&
         _fecha.day == hoy.day;
-    final minimo = widget.pagoMinimo;
+    final saldo = _saldo;
+    final minimo = widget.pagoMinimo == null
+        ? null
+        : math.min(widget.pagoMinimo!, saldo);
     // Solo si dice algo distinto de "Mínimo" y "Liquidar".
     final delPlan = _delPlan;
     final mostrarPlan =
-        delPlan != null &&
-        delPlan > 0 &&
-        delPlan != minimo &&
-        delPlan < widget.saldoPendiente;
+        delPlan != null && delPlan > 0 && delPlan != minimo && delPlan < saldo;
 
     return Dialog(
       child: ConstrainedBox(
@@ -152,8 +186,7 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  '${widget.nombre} · Saldo '
-                  '${formatCOP(widget.saldoPendiente)}',
+                  '${widget.nombre} · Saldo ${formatCOP(saldo)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontSize: 13,
                     color: c.textoSecundario,
@@ -188,12 +221,9 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
                     errorMaxLines: 2,
                   ),
                   keyboardType: TextInputType.number,
-                  // Solo dígitos: ni signos, ni letras, ni negativos.
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    CopInputFormatter(),
-                  ],
+                  inputFormatters: [CopInputFormatter()],
                   validator: _validar,
+                  onChanged: (_) => _esLiquidar = false,
                   onFieldSubmitted: (_) => _guardar(),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -213,10 +243,8 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
                         onPressed: () => _ponerMonto(delPlan),
                       ),
                     ActionChip(
-                      label: Text(
-                        'Liquidar ${formatCOP(widget.saldoPendiente)}',
-                      ),
-                      onPressed: () => _ponerMonto(widget.saldoPendiente),
+                      label: Text('Liquidar ${formatCOP(saldo)}'),
+                      onPressed: () => _ponerMonto(saldo, liquidar: true),
                     ),
                   ],
                 ),

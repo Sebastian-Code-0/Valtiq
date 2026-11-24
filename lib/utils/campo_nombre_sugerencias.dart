@@ -102,10 +102,14 @@ class _CampoNombreConSugerenciasState extends State<CampoNombreConSugerencias> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              s.grupo.tipo,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: c.textoSecundario),
+                            Flexible(
+                              child: Text(
+                                s.grupo.tipo,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: c.textoSecundario),
+                              ),
                             ),
                           ],
                         ),

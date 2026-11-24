@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/services/deudas_calculos.dart';
@@ -40,6 +42,68 @@ Deuda _deuda({
 
 AbonoInteres _abono(int anio, int mes, int dia, int monto) =>
     AbonoInteres(fecha: DateTime.utc(anio, mes, dia), monto: monto);
+
+/// Fuerza bruta: ¿existe ALGÚN reparto (de a $1.000) de lo que sobra cada mes
+/// con el que todas las deudas lleguen a su fecha límite pagando [extra]?
+bool _algunRepartoCumple(List<ResumenDeuda> rs, int extra, DateTime hoy) {
+  final n = rs.length;
+  final limites = [for (final r in rs) r.mesLimite(hoy)];
+  final ultimo = limites
+      .whereType<int>()
+      .where((l) => l >= 0)
+      .fold<int>(0, math.max);
+  final primeros = [for (final r in rs) r.primerMesDePago(hoy)];
+  final memo = <String, bool>{};
+
+  bool mes(int k, List<double> saldos) {
+    for (var i = 0; i < n; i++) {
+      final l = limites[i];
+      if (l != null && l >= 0 && l < k && saldos[i] >= 0.5) return false;
+    }
+    if (k > ultimo) return true;
+    final clave = '$k:${saldos.map((v) => v.round()).join(',')}';
+    final visto = memo[clave];
+    if (visto != null) return visto;
+    final t = List.of(saldos);
+    if (k > 0) {
+      for (var i = 0; i < n; i++) {
+        if (t[i] >= 0.5) t[i] += rs[i].interesDelMes(k, t[i]);
+      }
+    }
+    var disponible = extra.toDouble();
+    for (var i = 0; i < n; i++) {
+      if (k < primeros[i]) continue;
+      final cuota = (rs[i].deuda.cuotaMensual ?? 0).toDouble();
+      disponible += cuota;
+      final pago = math.min(cuota, t[i]);
+      t[i] -= pago;
+      disponible -= pago;
+    }
+
+    bool repartir(int i, double queda, List<double> u) {
+      if (i == n - 1) {
+        final v = List.of(u);
+        v[i] = math.max(0, v[i] - queda);
+        for (var j = 0; j < n; j++) {
+          if (v[j] < 0.5) v[j] = 0;
+        }
+        return mes(k + 1, v);
+      }
+      for (var a = 0.0; ; a += 1000) {
+        final real = math.min(a, queda);
+        final v = List.of(u);
+        v[i] = math.max(0, v[i] - real);
+        if (repartir(i + 1, queda - real, v)) return true;
+        if (a >= queda || a >= u[i]) break;
+      }
+      return false;
+    }
+
+    return memo[clave] = repartir(0, math.max(0, disponible), t);
+  }
+
+  return mes(0, [for (final r in rs) r.saldo.toDouble()]);
+}
 
 void main() {
   final hoy = DateTime(2026, 11, 11);
@@ -973,6 +1037,463 @@ void main() {
       );
       expect(r.pendienteEsteMes(hoy, 100000), 50000);
       expect(r.liquidacionCon(100000, hoy).meses, 0);
+    });
+  });
+
+  group('correcciones del plan de pago (2026-11-21)', () {
+    final hoy21 = DateTime(2026, 11, 21);
+
+    ResumenDeuda res(Deuda d, [List<AbonoInteres> a = const []]) =>
+        ResumenDeuda.calcular(d, a, hoy: hoy21);
+
+    PlanPago plan(
+      List<ResumenDeuda> rs, {
+      EstrategiaPago e = EstrategiaPago.avalancha,
+      int extra = 0,
+      int diferido = 0,
+      List<ResumenDeuda> terminadas = const [],
+    }) => PlanPago.simular(
+      deudas: rs,
+      estrategia: e,
+      extraMensual: extra,
+      extraDiferido: diferido,
+      terminadas: terminadas,
+      hoy: hoy21,
+    );
+
+    group('1. cuota de una deuda terminada', () {
+      final a = _deuda(
+        id: 1,
+        nombre: 'A',
+        monto: 100000,
+        inicio: DateTime.utc(2026, 9, 1),
+        cuota: 100000,
+      );
+      final b = _deuda(
+        id: 2,
+        nombre: 'B',
+        monto: 1000000,
+        inicio: DateTime.utc(2026, 9, 1),
+        cuota: 100000,
+      );
+
+      test('sin sumarla, la fecha es honesta; sumándola vuelve a abril sin '
+          'contar dos veces la plata de este mes', () {
+        expect(plan([res(a), res(b)]).fechaLibre, DateTime(2027, 4, 1));
+        // A quedó pagada y B ya recibió su cuota de noviembre.
+        final soloB = res(b, [_abono(2026, 11, 21, 100000)]);
+        expect(plan([soloB]).fechaLibre, DateTime(2027, 8, 1));
+        final seguir = plan([soloB], extra: 100000, diferido: 100000);
+        expect(seguir.fechaLibre, DateTime(2027, 4, 1));
+        expect(seguir.orden.single.pagoEsteMes, 0);
+        expect(seguir.orden.single.pagoMesSiguiente, 200000);
+      });
+    });
+
+    group('2. fechas límite', () {
+      List<ResumenDeuda> cuatro() => [
+        res(
+          _deuda(
+            id: 1,
+            nombre: 'Amigo',
+            monto: 100000,
+            inicio: DateTime.utc(2026, 11, 12),
+            limite: DateTime.utc(2027, 1, 31),
+            diaPago: 30,
+            cuota: 34000,
+          ),
+        ),
+        res(
+          _deuda(
+            id: 2,
+            nombre: 'Banco',
+            monto: 5000000,
+            tasa: 1,
+            tipoInteres: 'mensual',
+            amortizacion: 'saldo_insoluto',
+            inicio: DateTime.utc(2026, 10, 21),
+            diaPago: 15,
+            cuota: 250000,
+          ),
+        ),
+        res(
+          _deuda(
+            id: 3,
+            nombre: 'Tarjeta',
+            monto: 2000000,
+            tasa: 2.5,
+            tipoInteres: 'mensual',
+            amortizacion: 'saldo_insoluto',
+            inicio: DateTime.utc(2026, 10, 21),
+            diaPago: 25,
+            cuota: 120000,
+          ),
+        ),
+        res(
+          _deuda(
+            id: 4,
+            nombre: 'Límite',
+            monto: 600000,
+            inicio: DateTime.utc(2026, 11, 21),
+            limite: DateTime.utc(2027, 2, 28),
+            cuota: 20000,
+          ),
+        ),
+      ];
+
+      for (final e in EstrategiaPago.values) {
+        test('${e.nombre}: el extra sugerido es el mínimo real', () {
+          final rs = cuatro();
+          final p = plan(rs, e: e);
+          final x = p.paraLimites!.extra;
+          // 4x + cuotas de Límite (60.000) + lo que libera Amigo (36.000)
+          // = 600.000 → x = 126.000.
+          expect(x, 126000);
+          expect(plan(rs, e: e, extra: x).tarde, isEmpty);
+          expect(plan(rs, e: e, extra: x - 1000).tarde, isNotEmpty);
+        });
+      }
+
+      test('una fecha límite muy cerca va primero aunque no haya riesgo', () {
+        final rs = cuatro();
+        final holgado = plan(rs, extra: 1600000);
+        expect(holgado.tarde, isEmpty);
+        expect(holgado.orden.first.resumen.deuda.acreedorNombre, 'Amigo');
+        expect(holgado.orden.first.priorizadaPorLimite, isTrue);
+        // Lo que sobra después de esa fecha sigue yendo a la Tarjeta.
+        final tarjeta = holgado.orden.firstWhere(
+          (p) => p.resumen.deuda.acreedorNombre == 'Tarjeta',
+        );
+        expect(tarjeta.pagoEsteMes, greaterThan(120000));
+      });
+
+      test('fuerza bruta: ningún reparto logra las fechas con menos extra', () {
+        final rnd = math.Random(11);
+        var revisados = 0;
+        for (var c = 0; c < 120; c++) {
+          final n = 2 + rnd.nextInt(2);
+          final rs = [
+            for (var i = 0; i < n; i++)
+              res(
+                _deuda(
+                  id: i + 1,
+                  monto: (4 + rnd.nextInt(16)) * 1000,
+                  tasa: c.isOdd ? [0.0, 2.0, 5.0, 10.0][rnd.nextInt(4)] : 0,
+                  tipoInteres: c.isOdd ? 'mensual' : 'ninguno',
+                  amortizacion: 'saldo_insoluto',
+                  inicio: rnd.nextBool()
+                      ? DateTime.utc(2026, 11, 21)
+                      : DateTime.utc(2026, 9, 1),
+                  limite: rnd.nextDouble() < .7
+                      ? DateTime.utc(2026, 12 + rnd.nextInt(3), 28)
+                      : null,
+                  cuota: (2 + rnd.nextInt(3)) * 1000,
+                ),
+              ),
+          ];
+          for (final e in EstrategiaPago.values) {
+            final p = plan(rs, e: e);
+            final s = p.paraLimites;
+            if (p.tarde.isEmpty || s == null) continue;
+            revisados++;
+            expect(plan(rs, e: e, extra: s.extra).tarde, isEmpty);
+            if (s.extra >= 1000) {
+              expect(
+                _algunRepartoCumple(rs, s.extra - 1000, hoy21),
+                isFalse,
+                reason: 'caso $c (${e.name}): extra ${s.extra}',
+              );
+            }
+          }
+        }
+        expect(revisados, greaterThan(50));
+      });
+    });
+
+    group('3. "N meses" son N pagos', () {
+      test('deuda de meses anteriores: 12 meses = 12 pagos', () {
+        final r = res(_deuda(monto: 1200000, inicio: DateTime.utc(2026, 8, 1)));
+        final c = r.cuotaParaPagos(12, hoy21)!;
+        expect(c.cuota, 100000);
+        expect(c.porLimite, isFalse);
+        expect(r.liquidacionCon(c.cuota, hoy21).meses, 11);
+      });
+
+      test('deuda nueva: el primer pago es el mes que viene', () {
+        final r = res(
+          _deuda(monto: 1200000, inicio: DateTime.utc(2026, 11, 21)),
+        );
+        expect(r.cuotaParaPagos(12, hoy21)!.cuota, 100000);
+      });
+
+      test('si este mes ya pagó, cuenta desde el siguiente', () {
+        final r = res(
+          _deuda(monto: 1300000, inicio: DateTime.utc(2026, 8, 1)),
+          [_abono(2026, 11, 5, 100000)],
+        );
+        expect(r.cuotaParaPagos(12, hoy21)!.cuota, 100000);
+      });
+
+      test('con fecha límite más cercana manda la fecha límite', () {
+        final r = res(
+          _deuda(
+            monto: 1200000,
+            inicio: DateTime.utc(2026, 8, 1),
+            limite: DateTime.utc(2027, 2, 28),
+          ),
+        );
+        final c = r.cuotaParaPagos(12, hoy21)!;
+        expect(c.porLimite, isTrue);
+        expect(c.cuota, 300000); // nov, dic, ene, feb
+      });
+
+      test('las sugerencias también son esa cantidad de pagos', () {
+        final s = res(
+          _deuda(monto: 1200000, inicio: DateTime.utc(2026, 8, 1)),
+        ).sugerirCuotas(hoy21)!;
+        expect(s.minimo.cuota, 100000); // 12 pagos
+        expect(s.minimo.meses, 11);
+        expect(s.rapido!.cuota, 200000); // 6 pagos
+        expect(s.rapido!.meses, 5);
+      });
+    });
+
+    group('4. último pago', () {
+      test('abonó parte de la última cuota: el plan dice lo que falta', () {
+        final r = res(
+          _deuda(
+            monto: 100000,
+            inicio: DateTime.utc(2026, 8, 1),
+            cuota: 100000,
+          ),
+          [_abono(2026, 11, 5, 50000)],
+        );
+        expect(r.saldo, 50000);
+        expect(r.pendienteCuotaEsteMes(hoy21), 50000);
+        final p = plan([r]);
+        expect(p.orden.single.pagoEsteMes, 50000);
+        expect(p.proximosPagos.esteMes, isTrue);
+        expect(p.meses, 0);
+        expect(r.liquidacionCon(100000, hoy21).meses, p.meses);
+      });
+
+      test('cuota mayor que el saldo con interés: plan y tarjeta iguales', () {
+        final r = res(
+          _deuda(
+            monto: 100000,
+            tasa: 5,
+            tipoInteres: 'mensual',
+            amortizacion: 'saldo_insoluto',
+            inicio: DateTime.utc(2026, 11, 21),
+            cuota: 200000,
+          ),
+        );
+        expect(r.liquidacionCon(200000, hoy21).meses, 1);
+        final p = plan([r]);
+        expect(p.meses, 1);
+        expect(p.presupuestoMensual, 105000);
+      });
+    });
+
+    group('5. límite este mes antes del día de pago', () {
+      final r = res(
+        _deuda(
+          monto: 300000,
+          inicio: DateTime.utc(2026, 8, 1),
+          limite: DateTime.utc(2026, 11, 25),
+          diaPago: 30,
+          cuota: 300000,
+        ),
+      );
+
+      test('sigue a tiempo, pero avisa que hay que pagar antes', () {
+        expect(r.mesLimite(hoy21), 0);
+        expect(r.pagarAntesDe(hoy21), DateTime(2026, 11, 25));
+        expect(r.vencimiento(hoy21)!.fecha, DateTime(2026, 11, 25));
+        final p = plan([r]);
+        expect(p.orden.single.limiteVencido, isFalse);
+        expect(p.orden.single.tarde, isFalse);
+      });
+
+      test('si el día de pago llega a tiempo no hay aviso', () {
+        final bien = res(
+          _deuda(
+            monto: 300000,
+            inicio: DateTime.utc(2026, 8, 1),
+            limite: DateTime.utc(2026, 11, 28),
+            diaPago: 25,
+          ),
+        );
+        expect(bien.pagarAntesDe(hoy21), isNull);
+      });
+
+      test('empezó este mes y el día de pago del mes siguiente cae después '
+          'del límite: no cuenta un mes sin pago', () {
+        final x = res(
+          _deuda(
+            monto: 100000,
+            inicio: DateTime.utc(2026, 11, 15),
+            limite: DateTime.utc(2026, 12, 5),
+            diaPago: 10,
+          ),
+        );
+        expect(x.primerMesDePago(hoy21), 1);
+        expect(x.mesLimite(hoy21), 1);
+        expect(x.pagarAntesDe(hoy21), DateTime(2026, 12, 5));
+      });
+    });
+
+    test('6. creada hoy con límite este mes y sin día de pago: se puede '
+        'pagar este mes', () {
+      final r = res(
+        _deuda(
+          monto: 100000,
+          inicio: DateTime.utc(2026, 11, 21),
+          limite: DateTime.utc(2026, 11, 28),
+        ),
+      );
+      expect(r.tienePagoEsteMes(hoy21), isTrue);
+      final s = r.sugerirCuotas(hoy21)!;
+      expect(s.porLimite, isTrue);
+      expect(s.minimo.cuota, 100000);
+      expect(s.minimo.meses, 0);
+      expect(s.minimo.fecha, DateTime(2026, 11, 1));
+    });
+
+    group('7. deuda que empieza en el futuro', () {
+      final r = res(
+        _deuda(
+          monto: 300000,
+          tasa: 2,
+          tipoInteres: 'mensual',
+          amortizacion: 'saldo_insoluto',
+          inicio: DateTime.utc(2027, 1, 15),
+          cuota: 100000,
+          diaPago: 20,
+        ),
+      );
+
+      test('no cobra cuota ni interés antes de empezar', () {
+        expect(r.primerMesDePago(hoy21), 2);
+        expect(r.tienePagoEsteMes(hoy21), isFalse);
+        expect(r.pendienteCuotaEsteMes(hoy21), 0);
+        expect(r.interesDelMes(1, 300000), 0);
+        // Enero: corre del 15 (inicio) al 20 (día de pago).
+        expect(r.interesDelMes(2, 300000), closeTo(1000, 1e-6));
+        expect(r.interesDelMes(3, 200000), closeTo(4000, 1e-6));
+        expect(r.proximoPago(hoy21), DateTime(2027, 1, 20));
+        final p = plan([r], extra: 50000);
+        expect(p.orden.single.pagoEsteMes, 0);
+        expect(p.orden.single.pagoMesSiguiente, 0);
+      });
+
+      test('plan y tarjeta coinciden', () {
+        final tarjeta = r.liquidacionCon(100000, hoy21);
+        final p = plan([r]);
+        expect(p.meses, tarjeta.meses);
+        expect(p.fechaLibre, tarjeta.fecha);
+      });
+
+      test('el extra no se le adelanta a otra deuda antes de tiempo ni se '
+          'pierde', () {
+        final vieja = res(
+          _deuda(
+            id: 9,
+            monto: 1000000,
+            inicio: DateTime.utc(2026, 8, 1),
+            cuota: 100000,
+          ),
+        );
+        final p = plan([r, vieja], extra: 50000);
+        final pasoFutura = p.orden.firstWhere((x) => x.resumen.deuda.id == 1);
+        final pasoVieja = p.orden.firstWhere((x) => x.resumen.deuda.id == 9);
+        expect(pasoFutura.pagoEsteMes, 0);
+        expect(pasoVieja.pagoEsteMes, 150000);
+      });
+    });
+
+    test('invariante: pagar lo del plan este mes no mueve la fecha de fin', () {
+      final rnd = math.Random(23);
+      var revisados = 0;
+      for (var c = 0; c < 300; c++) {
+        final n = 1 + rnd.nextInt(4);
+        final deudas = [
+          for (var i = 0; i < n; i++)
+            _deuda(
+              id: i + 1,
+              monto: (1 + rnd.nextInt(40)) * 50000,
+              tasa: [0.0, 1.0, 2.5, 5.0][rnd.nextInt(4)],
+              tipoInteres: 'mensual',
+              amortizacion: rnd.nextBool()
+                  ? 'saldo_insoluto'
+                  : 'saldo_original',
+              inicio: [
+                DateTime.utc(2026, 8, 3),
+                DateTime.utc(2026, 11, 12),
+                DateTime.utc(2026, 11, 21),
+                DateTime.utc(2027, 1, 15),
+              ][rnd.nextInt(4)],
+              limite: rnd.nextBool()
+                  ? DateTime.utc(2026, 12 + rnd.nextInt(8), 20)
+                  : null,
+              diaPago: rnd.nextBool() ? 1 + rnd.nextInt(28) : null,
+              cuota: (1 + rnd.nextInt(8)) * 50000,
+            ),
+        ];
+        final extra = rnd.nextInt(5) * 50000;
+        for (final e in EstrategiaPago.values) {
+          final antes = plan(
+            [for (final d in deudas) res(d)],
+            e: e,
+            extra: extra,
+          );
+          if (!antes.alcanza) continue;
+          var extraDespues = extra;
+          var diferido = 0;
+          final despues = <ResumenDeuda>[];
+          final terminadas = <ResumenDeuda>[];
+          for (final p in antes.orden) {
+            final d = p.resumen.deuda;
+            final abonos = [
+              if (p.pagoEsteMes > 0) _abono(2026, 11, 21, p.pagoEsteMes),
+            ];
+            final r = res(d, abonos);
+            if (r.saldo <= 1) {
+              // Caso 1: al terminarla, su cuota se suma con el aviso.
+              extraDespues += d.cuotaMensual!;
+              diferido += d.cuotaMensual!;
+              terminadas.add(r);
+            } else {
+              despues.add(r);
+            }
+          }
+          if (despues.isEmpty) continue;
+          revisados++;
+          final ahora = plan(
+            despues,
+            e: e,
+            extra: extraDespues,
+            diferido: diferido,
+            terminadas: terminadas,
+          );
+          // Sin día de pago, exacta. Con día de pago el plan supone que se
+          // paga ese día: pagar antes ahorra interés y solo puede adelantar.
+          if (deudas.every((d) => d.diaPago == null)) {
+            expect(
+              ahora.fechaLibre,
+              antes.fechaLibre,
+              reason: 'caso $c (${e.name})',
+            );
+          } else {
+            expect(
+              ahora.fechaLibre!.isAfter(antes.fechaLibre!),
+              isFalse,
+              reason: 'caso $c (${e.name})',
+            );
+          }
+        }
+      }
+      expect(revisados, greaterThan(100));
     });
   });
 
