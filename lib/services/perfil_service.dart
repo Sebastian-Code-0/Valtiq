@@ -65,6 +65,26 @@ abstract class PerfilService {
     );
   }
 
+  static const _extensionesFoto = {
+    'jpg',
+    'jpeg',
+    'png',
+    'webp',
+    'heic',
+    'heif',
+    'gif',
+    'bmp',
+  };
+
+  /// La extensión con la que se guarda la foto. Solo se aceptan las de
+  /// imagen conocidas: un respaldo manipulado podría traer `..` o barras y
+  /// escribir fuera de la carpeta de la app. Cualquier otra cosa es 'jpg'.
+  @visibleForTesting
+  static String extensionSegura(String extension) {
+    final ext = extension.trim().toLowerCase();
+    return _extensionesFoto.contains(ext) ? ext : 'jpg';
+  }
+
   /// Copia la imagen elegida a la carpeta privada de la app y la deja como
   /// foto de perfil. Se copia (no se guarda la ruta original) porque el
   /// archivo de la galería puede moverse o borrarse, y en Android la ruta
@@ -73,7 +93,7 @@ abstract class PerfilService {
     final dir = await getApplicationSupportDirectory();
     // Nombre nuevo cada vez: Flutter guarda las imágenes en caché por ruta,
     // y con el mismo nombre seguiría mostrando la foto anterior.
-    final ext = extension.isEmpty ? 'jpg' : extension.toLowerCase();
+    final ext = extensionSegura(extension);
     final destino = File(
       p.join(dir.path, 'perfil_${DateTime.now().millisecondsSinceEpoch}.$ext'),
     );
@@ -141,7 +161,11 @@ abstract class PerfilService {
       );
     }
     final foto = json['foto'];
-    if (foto is String && foto.isNotEmpty) {
+    // Base64 ocupa 4 caracteres por cada 3 bytes: una foto más grande que el
+    // tope no se restaura (un respaldo legítimo nunca la trae).
+    if (foto is String &&
+        foto.isNotEmpty &&
+        foto.length <= (maxBytesFotoRespaldo + 2) ~/ 3 * 4) {
       try {
         final ext = json['fotoExtension'];
         await guardarFoto(base64Decode(foto), ext is String ? ext : 'jpg');

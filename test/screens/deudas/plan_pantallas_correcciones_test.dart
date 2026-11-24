@@ -149,7 +149,10 @@ void main() {
     await escribir(t, 'Monto original', '300000');
     await escribir(t, 'Pago mínimo al mes (opcional)', '');
     await guardar(t, 'Guardar cambios');
-    expect((await db.deudasDao.getDeudaById(id))!.estado, 'pagada');
+    final pagada = (await db.deudasDao.getDeudaById(id))!;
+    expect(pagada.estado, 'pagada');
+    // Se terminó con su último pago, no hoy.
+    expect(fechaCivilGuardada(pagada.fechaPagoReal!), _atras(1));
     await t.pump(const Duration(seconds: 6));
     await fin(t);
   });

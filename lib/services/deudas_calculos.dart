@@ -1219,7 +1219,15 @@ class PlanPago {
     // Las búsquedas de extra solo se hacen cuando hay algo que arreglar y
     // usan los mismos órdenes que el plan: el extra que se sugiere cumple
     // al aplicarlo.
-    final tope = 2 * activas.fold<int>(0, (s, r) => s + r.saldo) + 1000;
+    // El tope cuenta lo que el mes 0 descuenta del extra (lo ya usado este
+    // mes): sin eso, con un extra ya gastado el tope no alcanzaba a pagar
+    // la deuda con límite este mes y decía "ningún extra alcanza".
+    final tope =
+        extra +
+        extraYaUsado +
+        sim.pagadoDeMas +
+        2 * activas.fold<int>(0, (s, r) => s + r.saldo) +
+        1000;
     SugerenciaExtra? sugerir(
       bool Function(_Corrida? c) sirve, {
       bool limites = false,
@@ -1677,7 +1685,7 @@ class _Simulacion {
       candidatos,
       termina,
       desde: 0,
-      tope: 2 * total + 1000,
+      tope: pagadoDeMas + 2 * total + 1000,
     );
     if (umbral == null) return const [];
     return [candidatos.firstWhere((o) => termina(umbral, o))];

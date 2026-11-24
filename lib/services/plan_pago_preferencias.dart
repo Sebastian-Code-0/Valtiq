@@ -264,11 +264,18 @@ class PreferenciasPlan {
     await prefs.setString(claveEstrategia, e?.clave ?? automatica);
   }
 
-  static Future<void> guardarExtra(int extra) async {
+  /// Guarda el extra al mes. Lo que escribe el usuario manda: reabrir una
+  /// deuda ya no se lo baja. Los botones de la app ("+$X", "Usar este
+  /// extra") pasan [escritoPorUsuario] en `false`: solo suman sobre el extra
+  /// que ya incluye las cuotas liberadas, así que esas cuotas siguen
+  /// saliendo del extra si su deuda se reabre.
+  static Future<void> guardarExtra(
+    int extra, {
+    bool escritoPorUsuario = true,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final valor = extra < 0 ? 0 : extra;
-    // Lo que escribe el usuario manda: reabrir una deuda ya no se lo baja.
-    if (prefs.getInt(claveExtra) != valor) {
+    if (escritoPorUsuario && prefs.getInt(claveExtra) != valor) {
       final atendidas = _leerLiberadas(prefs.getString(claveLiberadas));
       if (atendidas.any((l) => l.ajustable)) {
         await _guardarLiberadas(prefs, [
@@ -288,15 +295,24 @@ class PreferenciasPlan {
   };
 
   /// Restaura lo que traiga un respaldo; lo que falte o no sea válido se
-  /// deja como está. Un respaldo sin plan de pago no toca nada (tampoco los
-  /// avisos atendidos: el extra sigue incluyendo esas cuotas). Uno con plan
-  /// pero sin avisos, sí los limpia: su extra no las incluye.
+  /// deja como está. Un respaldo sin plan de pago conserva la estrategia y
+  /// el extra de este dispositivo, pero sus avisos atendidos ya no se
+  /// ajustan: apuntan a deudas por su id, y el respaldo trae sus propias
+  /// deudas con ids que pueden ser de otras. Reabrir una de ellas no le
+  /// quita nada al extra. Uno con plan pero sin avisos, sí los limpia: su
+  /// extra no las incluye.
   static Future<void> restaurar(Object? json) async {
+    final prefs = await SharedPreferences.getInstance();
     if (json is! Map) {
+      final atendidas = _leerLiberadas(prefs.getString(claveLiberadas));
+      if (atendidas.any((l) => l.monto > 0)) {
+        await _guardarLiberadas(prefs, [
+          for (final l in atendidas) l.sinMonto(),
+        ]);
+      }
       restauraciones.value++;
       return;
     }
-    final prefs = await SharedPreferences.getInstance();
     final liberadas = json['liberadas'];
     if (liberadas is List) {
       await _guardarLiberadas(

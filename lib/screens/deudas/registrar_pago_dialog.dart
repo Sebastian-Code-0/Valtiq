@@ -63,7 +63,20 @@ class _RegistrarPagoDialogState extends State<RegistrarPagoDialog>
   /// El monto escrito salió del botón "Liquidar": sigue al saldo de la fecha.
   bool _esLiquidar = false;
 
-  int get _saldo => widget.saldoEnFecha?.call(_fecha) ?? widget.saldoPendiente;
+  /// [_saldo] ya calculado y para qué fecha: calcularlo son unas 30
+  /// simulaciones, y se lee en cada tecla (validación y build).
+  ({DateTime fecha, int saldo})? _saldoGuardado;
+
+  int get _saldo {
+    final enFecha = widget.saldoEnFecha;
+    if (enFecha == null) return widget.saldoPendiente;
+    final fecha = DateTime(_fecha.year, _fecha.month, _fecha.day);
+    final g = _saldoGuardado;
+    if (g != null && g.fecha == fecha) return g.saldo;
+    final saldo = enFecha(fecha);
+    _saldoGuardado = (fecha: fecha, saldo: saldo);
+    return saldo;
+  }
 
   @override
   void initState() {

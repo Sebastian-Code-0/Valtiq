@@ -753,8 +753,11 @@ nunca muestran cifras distintas:
   la cuota y marca el aviso a la vez; `extraDiferido` evita contar este mes
   una cuota que ya se pagó; `reconciliar` la quita del extra si la deuda se
   reabre, salvo que el usuario haya escrito otro extra, y no hace nada
-  mientras se importa un respaldo (`restaurando`). Un respaldo con plan pero
-  sin esa lista la borra; uno sin plan no toca nada. `PreferenciasPlan.pagoDelPlan`
+  mientras se importa un respaldo (`restaurando`). Solo lo tecleado quita
+  lo `ajustable`: los botones "+$X" y "Usar este extra" llaman
+  `guardarExtra(..., escritoPorUsuario: false)`. Un respaldo con plan pero
+  sin esa lista la borra; uno sin plan conserva estrategia y extra, pero
+  deja los avisos en monto 0 (sus ids pueden ser de otras deudas). `PreferenciasPlan.pagoDelPlan`
   da lo que el plan le paga a una deuda este mes: es el botón "Lo del plan"
   de `RegistrarPagoDialog` (llega como `Future`, el diálogo abre sin
   esperarlo y nunca falla).
@@ -1056,9 +1059,12 @@ del Plan de pago, `PreferenciasPlan.toJson`); al importar se restaura
 después de los datos y, si el respaldo no lo trae, no se toca. Desde
 2026-11-24 también `perfil` (nombre, apellido y la foto en base64 hasta
 5 MB, `PerfilService.paraRespaldo`/`restaurar`) y
-`recordatorioDiarioMinutos` (solo la hora: si está encendido lo decide cada
-dispositivo). Lo que un respaldo no trae no se toca, y si la foto o la hora
-fallan los datos igual quedan importados. No viajan el PIN, la biometría,
+`recordatorioDiarioMinutos` (solo la hora, y solo si el usuario la eligió:
+la de fábrica no pisa la del otro dispositivo; si está encendido lo decide
+cada dispositivo). Lo que un respaldo no trae no se toca, y si el plan, la
+foto o la hora fallan los datos igual quedan importados. La extensión de la
+foto pasa por una lista blanca (`PerfilService.extensionSegura`): un
+respaldo manipulado no puede escribir fuera de la carpeta de la app. No viajan el PIN, la biometría,
 el tema, el menú ni ocultar montos. `importarDatos()` valida el formato mínimo, y dentro de
 una sola `transaction()` borra todo (hijas antes que padres, por FK) y
 reinserta en batch (padres antes que hijas), preservando los ids
@@ -1077,7 +1083,9 @@ dinero como `double` (ej. `500000.0`); `jsonDecode` lo decodifica como
 acepta ese tipo. `importarDatos()` pasa cada fila por
 `_enteroEnClaves()`, que redondea (`.round()`) las claves monetarias
 conocidas de cada tabla antes de deserializar, así un backup viejo se
-sigue pudiendo restaurar sin fallar.
+sigue pudiendo restaurar sin fallar. Uno de antes de schemaVersion 11 trae
+las fechas de negocio con hora: `_fechasCiviles()` hace lo mismo que la
+migración `from < 11` (día en el huso del dispositivo, a medianoche UTC).
 
 ## Dashboard: DashboardService y widgets propios (2026-09-04)
 

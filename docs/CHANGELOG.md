@@ -1,5 +1,25 @@
 # Changelog
 
+## Revisión del Plan de pago (2026-11-24)
+
+- **Respaldo más seguro:** la foto de un respaldo solo se guarda con una
+  extensión de imagen conocida y con tamaño máximo; un archivo manipulado
+  ya no puede escribir fuera de la carpeta de Valtiq.
+- **Respaldos viejos:** los de antes de septiembre de 2026 pasan sus fechas a
+  día civil al importarlos; un pago hecho el día en que se marcó pagada
+  vuelve a contar.
+- **Extra sugerido:** ya no dice que ningún extra alcanza tras "Seguir
+  pagándolos" con una fecha límite este mes.
+- **Cuotas liberadas:** los botones "+$X" y "Usar este extra" no impiden
+  sacar la cuota del extra si la deuda se reabre. Un respaldo sin plan ya no
+  resta cuotas de otras deudas.
+- **Pasar a pagadas al editar:** usa la fecha del último pago, no hoy.
+- **Hora del recordatorio:** solo viaja si la elegiste.
+- **Importar:** si fallan las preferencias del plan, la importación no se ve
+  como fallida.
+- **Velocidad:** "Liquidar" y el aviso de cuota liberada no se recalculan en
+  cada tecla o redibujo.
+
 ## Plan de pago exacto y respaldo con perfil (2026-11-24)
 
 - **Último pago:** "Este mes paga" y "Lo del plan" incluyen el interés hasta

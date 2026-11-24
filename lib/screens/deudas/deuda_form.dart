@@ -483,10 +483,21 @@ class _DeudaFormState extends State<DeudaForm>
             hoy: DateTime.now(),
           );
           if (r.saldo <= 0) {
-            await dao.marcarComoPagada(
-              guardada.id,
-              normalizarFechaCivil(DateTime.now()),
-            );
+            // Igual que al registrar un pago: si ya quedaba en cero con el
+            // último pago, se terminó ese día, no hoy.
+            var fin = normalizarFechaCivil(DateTime.now());
+            if (pagos.isNotEmpty) {
+              final ultimo = pagos
+                  .map((p) => fechaCivilGuardada(p.fechaPago))
+                  .reduce((a, b) => a.isAfter(b) ? a : b);
+              final alUltimo = ResumenDeuda.calcular(
+                guardada,
+                abonos,
+                hoy: DateTime(ultimo.year, ultimo.month, ultimo.day),
+              );
+              if (alUltimo.saldo <= 0) fin = ultimo;
+            }
+            await dao.marcarComoPagada(guardada.id, fin);
             if (mounted) {
               mostrarInfo(
                 context,

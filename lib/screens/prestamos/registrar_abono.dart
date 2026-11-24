@@ -142,11 +142,24 @@ class _RegistrarAbonoDialogState extends State<RegistrarAbonoDialog>
   /// El monto salió de "Todo": sigue al saldo de la fecha.
   bool _esTodo = false;
 
+  /// [_saldo] ya calculado y con qué préstamo, abonos y fecha: calcularlo
+  /// son unas 30 simulaciones, y se lee en cada tecla (validación y build).
+  ({Prestamo p, List<AbonoInteres> abonos, DateTime fecha, int saldo})?
+  _saldoGuardado;
+
   /// Lo que deja el préstamo en cero con un abono en la fecha elegida.
   int get _saldo {
     final p = _prestamo;
     if (p == null) return widget.saldoPendiente;
-    return InteresCalculator.montoParaLiquidar(
+    final fecha = normalizarFechaCivil(_fecha);
+    final g = _saldoGuardado;
+    if (g != null &&
+        identical(g.p, p) &&
+        identical(g.abonos, _abonos) &&
+        g.fecha == fecha) {
+      return g.saldo;
+    }
+    final saldo = InteresCalculator.montoParaLiquidar(
       montoPrestado: p.montoPrestado,
       tasaInteres: p.tasaInteres,
       tipoInteres: p.tipoInteres,
@@ -154,8 +167,10 @@ class _RegistrarAbonoDialogState extends State<RegistrarAbonoDialog>
       fechaPrestamo: p.fechaPrestamo,
       tipoAmortizacion: p.tipoAmortizacion,
       abonos: _abonos,
-      fecha: normalizarFechaCivil(_fecha),
+      fecha: fecha,
     );
+    _saldoGuardado = (p: p, abonos: _abonos, fecha: fecha, saldo: saldo);
+    return saldo;
   }
 
   @override

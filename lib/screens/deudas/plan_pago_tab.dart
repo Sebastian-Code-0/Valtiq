@@ -153,7 +153,7 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
       _extra = extra;
       _extraCtrl.text = extra > 0 ? formatCOPInput(extra) : '';
     });
-    await PreferenciasPlan.guardarExtra(_extra);
+    await PreferenciasPlan.guardarExtra(_extra, escritoPorUsuario: false);
   }
 
   /// Último plan calculado: buscar el extra para las fechas límite puede
@@ -163,6 +163,13 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
 
   /// Lo que daría cada botón de extra rápido con el plan guardado.
   final _vistasPrevias = <int, PlanPago>{};
+
+  /// Lo que daría seguir pagando cada cuota liberada, con el plan guardado.
+  final _previasLiberadas =
+      <
+        ({int deuda, int monto, int diferido, EstrategiaPago estrategia}),
+        PlanPago
+      >{};
 
   PlanElegido _elegir(DateTime hoy) {
     final llave = <Object?>[
@@ -186,6 +193,7 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
     }
     _llavePlan = llave;
     _vistasPrevias.clear();
+    _previasLiberadas.clear();
     return _planGuardado = PlanPago.elegir(
       deudas: widget.activas,
       elegida: _elegida,
@@ -499,16 +507,24 @@ class _PlanPagoTabState extends State<PlanPagoTab> {
   /// nada.
   Widget? _avisoLiberada(BuildContext context, PlanPago plan, DateTime hoy) {
     for (final c in _prefs.cuotasLiberadas(widget.terminadas, hoy)) {
-      // Solo con la estrategia en uso: es una vista previa.
-      final con = PlanPago.simular(
-        deudas: widget.activas,
-        estrategia: plan.estrategia,
-        extraMensual: _extra + c.monto,
-        extraDiferido: _prefs.extraDiferido(hoy) + c.diferidoEn(hoy),
-        terminadas: widget.terminadas,
-        hoy: hoy,
-        conSugerencias: false,
-      );
+      // Solo con la estrategia en uso: es una vista previa. Se guarda: la
+      // pantalla se redibuja sin que cambie nada de esto.
+      final diferido = _prefs.extraDiferido(hoy) + c.diferidoEn(hoy);
+      final con =
+          _previasLiberadas[(
+            deuda: c.deuda.id,
+            monto: c.monto,
+            diferido: diferido,
+            estrategia: plan.estrategia,
+          )] ??= PlanPago.simular(
+            deudas: widget.activas,
+            estrategia: plan.estrategia,
+            extraMensual: _extra + c.monto,
+            extraDiferido: diferido,
+            terminadas: widget.terminadas,
+            hoy: hoy,
+            conSugerencias: false,
+          );
       if (!con.alcanza) continue;
       if (plan.alcanza && con.meses! >= plan.meses!) continue;
       return _cajaAviso(

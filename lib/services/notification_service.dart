@@ -658,6 +658,13 @@ class NotificationService {
     );
   }
 
+  /// La hora del recordatorio diario solo si el usuario la eligió alguna
+  /// vez; `null` si sigue la de fábrica. Para el respaldo.
+  static Future<int?> horaRecordatorioDiarioElegida() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_kDiarioMinutos);
+  }
+
   static Future<void> setRecordatorioDiario(
     AppDatabase db, {
     required bool activo,

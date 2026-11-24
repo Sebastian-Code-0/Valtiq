@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valtiq/db/database.dart';
 import 'package:valtiq/services/backup_service.dart';
 import 'package:valtiq/services/deudas_calculos.dart';
+import 'package:valtiq/services/interes_calculator.dart';
 import 'package:valtiq/services/notification_service.dart';
 import 'package:valtiq/services/perfil_service.dart';
 import 'package:valtiq/services/plan_pago_preferencias.dart';
@@ -170,6 +171,104 @@ void main() {
         await service.importarDatos(backup);
         expect(PerfilService.perfil.value.nombre, 'Ana');
         expect((await NotificationService.recordatorioDiario()).minutos, 450);
+      },
+    );
+
+    test('la hora del recordatorio que nunca se eligió no viaja ni pisa la '
+        'del otro dispositivo', () async {
+      final backup = await service.exportarDatos();
+      expect(backup.containsKey('recordatorioDiarioMinutos'), isFalse);
+
+      SharedPreferences.setMockInitialValues({
+        'valtiq_recordatorio_diario_minutos': 7 * 60,
+      });
+      await service.importarDatos(backup);
+      expect((await NotificationService.recordatorioDiario()).minutos, 7 * 60);
+    });
+
+    test('una foto con extensión manipulada se guarda dentro de la carpeta '
+        'de la app, como jpg', () async {
+      final dir = Directory.systemTemp.createTempSync('valtiq_perfil_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            (call) async => dir.path,
+          );
+      final backup = await service.exportarDatos();
+      backup['perfil'] = {
+        'nombre': 'Ana',
+        'apellido': '',
+        'foto': 'AQIDBAU=',
+        'fotoExtension': r'\..\..\valtiq.db',
+      };
+      await service.importarDatos(backup);
+      final ruta = PerfilService.perfil.value.rutaFoto!;
+      expect(File(ruta).parent.path, dir.path);
+      expect(ruta, endsWith('.jpg'));
+      expect(File(ruta).readAsBytesSync(), [1, 2, 3, 4, 5]);
+      expect(PerfilService.extensionSegura('PNG'), 'png');
+      expect(PerfilService.extensionSegura('../x'), 'jpg');
+    });
+
+    test(
+      'respaldo de antes de schemaVersion 11: las fechas con hora pasan a '
+      'su día, y el pago del mismo día en que se marcó pagada cuenta',
+      () async {
+        final id = await db.deudasDao.insertDeuda(
+          DeudasCompanion.insert(
+            acreedorNombre: 'Amigo',
+            montoOriginal: 200000,
+            fechaPrestamo: DateTime.utc(2025, 1, 5),
+          ),
+        );
+        await db.pagosDeudaDao.insertPago(
+          PagosDeudaCompanion.insert(
+            deudaId: id,
+            montoAbonado: 200000,
+            fechaPago: DateTime.utc(2025, 3, 10),
+          ),
+        );
+        await db.deudasDao.marcarComoPagada(id, DateTime.utc(2025, 3, 10));
+        final backup = await service.exportarDatos();
+        // Como los guardaba una versión vieja: el instante, con su hora.
+        final datos = backup['datos'] as Map<String, dynamic>;
+        final deuda = (datos['deudas'] as List).single as Map<String, dynamic>;
+        final pago =
+            (datos['pagosDeuda'] as List).single as Map<String, dynamic>;
+        deuda['fechaPrestamo'] = DateTime(
+          2025,
+          1,
+          5,
+          9,
+          15,
+        ).millisecondsSinceEpoch;
+        deuda['fechaPagoReal'] = DateTime(
+          2025,
+          3,
+          10,
+          18,
+        ).millisecondsSinceEpoch;
+        pago['fechaPago'] = DateTime(
+          2025,
+          3,
+          10,
+          17,
+          30,
+        ).millisecondsSinceEpoch;
+        backup['schemaVersion'] = 10;
+
+        await service.importarDatos(backup);
+        final d = (await db.deudasDao.getDeudaById(id))!;
+        final pagos = await db.pagosDeudaDao.getPagosDeDeuda(id);
+        expect(d.fechaPagoReal!.toUtc(), DateTime.utc(2025, 3, 10));
+        expect(d.fechaPrestamo.toUtc(), DateTime.utc(2025, 1, 5));
+        expect(pagos.single.fechaPago.toUtc(), DateTime.utc(2025, 3, 10));
+        final r = ResumenDeuda.calcular(d, [
+          for (final p in pagos)
+            AbonoInteres(fecha: p.fechaPago, monto: p.montoAbonado),
+        ], hoy: DateTime(2026, 11, 24));
+        expect(r.saldo, 0);
       },
     );
 

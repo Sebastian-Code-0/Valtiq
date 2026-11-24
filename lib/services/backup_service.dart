@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../utils/currency_input.dart';
 import '../db/database.dart';
+import '../utils/fecha_civil.dart';
 import 'notification_service.dart';
 import 'perfil_service.dart';
 import 'plan_pago_preferencias.dart';
@@ -17,6 +19,8 @@ class BackupService {
 
   Future<Map<String, dynamic>> exportarDatos() async {
     final packageInfo = await PackageInfo.fromPlatform();
+    final horaDiaria =
+        await NotificationService.horaRecordatorioDiarioElegida();
     return {
       'version': formatoVersion,
       'schemaVersion': db.schemaVersion,
@@ -62,9 +66,9 @@ class BackupService {
       // traen.
       'perfil': await PerfilService.paraRespaldo(),
       // Solo la hora del recordatorio diario: si está encendido o no lo
-      // decide cada dispositivo.
-      'recordatorioDiarioMinutos':
-          (await NotificationService.recordatorioDiario()).minutos,
+      // decide cada dispositivo. Y solo si el usuario la eligió: la de
+      // fábrica (8 p. m.) no debe pisar la que sí eligió en el otro.
+      'recordatorioDiarioMinutos': ?horaDiaria,
       // ConfigSmtps se excluye a propósito — nunca debe salir en el backup.
       // Tampoco el PIN ni la biometría (viven fuera de la base de datos), ni
       // el tema, el menú u ocultar montos (son de cada dispositivo).
@@ -117,6 +121,31 @@ class BackupService {
     return copia;
   }
 
+  // Respaldos de antes de schemaVersion 11 guardan las fechas de negocio
+  // como el instante en que se registraron (con hora), no como medianoche
+  // UTC de su día. La migración de la base de datos (`from < 11`) las pasa a
+  // día civil, pero importar un respaldo así no pasa por ella. Se hace aquí
+  // lo mismo: el día que el instante tiene en el huso de este dispositivo,
+  // a medianoche UTC. Sin esto, un pago hecho el mismo día en que la deuda se
+  // marcó pagada queda "después" del corte y deja de contar.
+  Map<String, dynamic> _fechasCiviles(
+    Map<String, dynamic> row,
+    List<String> claves,
+  ) {
+    final copia = Map<String, dynamic>.from(row);
+    for (final clave in claves) {
+      final valor = copia[clave];
+      final DateTime? instante = valor is num
+          ? DateTime.fromMillisecondsSinceEpoch(valor.toInt())
+          : valor is String
+          ? DateTime.tryParse(valor)?.toLocal()
+          : null;
+      if (instante == null) continue;
+      copia[clave] = normalizarFechaCivil(instante).millisecondsSinceEpoch;
+    }
+    return copia;
+  }
+
   Future<void> importarDatos(Map<String, dynamic> json) async {
     // Mientras se cambian datos y preferencias, el Plan de pago no ajusta
     // nada con una mezcla de lo viejo y lo nuevo.
@@ -136,6 +165,12 @@ class BackupService {
       );
     }
     final datos = Map<String, dynamic>.from(json['datos'] as Map);
+    final esquema = json['schemaVersion'];
+    final fechasConHora = esquema is num && esquema < 11;
+    Map<String, dynamic> Function(Map<String, dynamic>) civiles(
+      List<String> claves,
+    ) =>
+        (r) => fechasConHora ? _fechasCiviles(r, claves) : r;
 
     final deudas = _lista(datos, 'deudas')
         .map(
@@ -148,10 +183,12 @@ class BackupService {
           }),
         )
         .map((r) => _enteroEnClaves(r, const ['montoOriginal', 'cuotaMensual']))
+        .map(civiles(const ['fechaPrestamo', 'fechaLimite', 'fechaPagoReal']))
         .map(Deuda.fromJson)
         .toList();
     final pagosDeuda = _lista(datos, 'pagosDeuda')
         .map((r) => _enteroEnClaves(r, const ['montoAbonado']))
+        .map(civiles(const ['fechaPago']))
         .map(PagosDeudaData.fromJson)
         .toList();
     final prestamos = _lista(datos, 'prestamos')
@@ -162,14 +199,17 @@ class BackupService {
           }),
         )
         .map((r) => _enteroEnClaves(r, const ['montoPrestado']))
+        .map(civiles(const ['fechaPrestamo', 'fechaPactadaPago']))
         .map(Prestamo.fromJson)
         .toList();
     final pagosRecibidos = _lista(datos, 'pagosRecibidos')
         .map((r) => _enteroEnClaves(r, const ['montoAbonado']))
+        .map(civiles(const ['fechaPago']))
         .map(PagosRecibido.fromJson)
         .toList();
     final ingresos = _lista(datos, 'ingresos')
         .map((r) => _enteroEnClaves(r, const ['monto']))
+        .map(civiles(const ['fecha']))
         .map(Ingreso.fromJson)
         .toList();
     final gastosFijos = _lista(datos, 'gastosFijos')
@@ -178,12 +218,13 @@ class BackupService {
         .toList();
     final gastosVariables = _lista(datos, 'gastosVariables')
         .map((r) => _enteroEnClaves(r, const ['monto']))
+        .map(civiles(const ['fecha']))
         .map(GastosVariable.fromJson)
         .toList();
     final recordatorios = _lista(
       datos,
       'recordatorios',
-    ).map(Recordatorio.fromJson).toList();
+    ).map(civiles(const ['fechaAlerta'])).map(Recordatorio.fromJson).toList();
     final presupuestosCategorias = _lista(datos, 'presupuestosCategorias')
         .map((r) => _enteroEnClaves(r, const ['limiteMensual']))
         .map(PresupuestosCategoria.fromJson)
@@ -240,9 +281,16 @@ class BackupService {
       await db.sembrarCategorias(deFabrica: categorias == null);
     });
     // Después de los datos: si algo falla arriba, no se tocan.
-    await PreferenciasPlan.restaurar(json['planPago']);
-    // El perfil y la hora del recordatorio son un extra: si fallan, los
-    // datos ya quedaron importados.
+    // Las preferencias del plan, el perfil y la hora del recordatorio son
+    // un extra: si fallan, los datos ya quedaron importados y la
+    // importación no debe verse como fallida.
+    try {
+      await PreferenciasPlan.restaurar(json['planPago']);
+    } catch (e) {
+      debugPrint('BackupService: no se pudo restaurar el plan de pago: $e');
+      // Que el Plan abierto se recalcule igual con los datos nuevos.
+      PreferenciasPlan.restauraciones.value++;
+    }
     try {
       await PerfilService.restaurar(json['perfil']);
     } catch (_) {}
