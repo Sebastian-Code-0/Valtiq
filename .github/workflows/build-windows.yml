@@ -2,12 +2,19 @@ name: Build Windows
 
 # Compila Valtiq para Windows en los servidores de GitHub: nadie tiene que
 # instalar Visual Studio ni Flutter.
-# - A mano (pestaña Actions → "Build Windows" → "Run workflow"): deja el zip
-#   como artefacto descargable de esa ejecución, para probarlo.
-# - Al subir un tag de versión (v1.9.1, ...): además lo adjunta a la Release
-#   de ese tag. Si la Release todavía no existe, la crea como borrador.
+# - Al subir un tag de versión (v1.9.1, ...): compila ese tag y adjunta el
+#   zip a su Release. Si la Release todavía no existe, la crea en borrador.
+# - A mano (pestaña Actions → "Build Windows" → "Run workflow"): con el campo
+#   "tag" vacío solo deja el zip como artefacto de la ejecución, para
+#   probarlo; con un tag (v1.9.1) compila esa versión y lo adjunta a su
+#   Release, por ejemplo si la compilación del tag falló.
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Versión a la que adjuntar el zip (ej. v1.9.1). Vacío = solo probar.'
+        required: false
+        default: ''
   push:
     tags: ['v*']
 
@@ -16,9 +23,15 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # windows-2022 trae Visual Studio 2022, el que reconoce Flutter 3.32.
+    # En windows-latest hay uno más nuevo y Flutter 3.32 busca el 2019.
+    runs-on: windows-2022
+    env:
+      TAG: ${{ inputs.tag || (github.ref_type == 'tag' && github.ref_name || '') }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: subosito/flutter-action@v2
         with:
@@ -38,7 +51,7 @@ jobs:
           foreach ($dll in "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll") {
             Copy-Item "$env:WINDIR\System32\$dll" $out
           }
-          $nombre = if ($env:GITHUB_REF_TYPE -eq "tag") { "valtiq-$env:GITHUB_REF_NAME-windows" } else { "valtiq-windows" }
+          $nombre = if ($env:TAG) { "valtiq-$env:TAG-windows" } else { "valtiq-windows" }
           New-Item -ItemType Directory -Force "dist/Valtiq" | Out-Null
           Copy-Item "$out/*" "dist/Valtiq" -Recurse
           Compress-Archive -Path "dist/Valtiq" -DestinationPath "dist/$nombre.zip"
@@ -50,11 +63,10 @@ jobs:
           path: ${{ env.ZIP }}
 
       - name: Adjuntar a la Release
-        if: github.ref_type == 'tag'
+        if: env.TAG != ''
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
         run: |
           gh release view "$TAG" > /dev/null 2>&1 || \
             gh release create "$TAG" --draft --title "Valtiq ${TAG#v}" --notes ""
