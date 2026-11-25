@@ -1,7 +1,8 @@
 # Valtiq
 
-Finanzas personales hechas en Colombia: anota tus gastos en segundos, sal
-de deudas con un plan claro y lleva la cuenta de la plata que prestas.
+Valtiq es una app de finanzas personales hecha en Colombia. Anota tus
+gastos en segundos, sal de deudas con un plan claro y no olvides la plata
+que le prestas a otros.
 Sin crear cuenta, sin nube y sin publicidad: tus datos se quedan en tu
 dispositivo.
 
@@ -40,8 +41,9 @@ Código abierto bajo la licencia GNU GPLv3.
   extra que te falta para cumplirlas.
 
 **Préstamos**
-- Lo que prestaste o te prestaron, con o sin interés, con cada abono y lo
-  que falta por cobrar.
+- La plata que le prestas a otros, para no olvidarla: con o sin interés,
+  con cada abono que te hacen y lo que falta por cobrarte. Lo que alguien
+  te presta a ti va en Deudas.
 
 **Y además**
 - Recordatorios de pago que en Android llegan a su hora aunque la app esté
