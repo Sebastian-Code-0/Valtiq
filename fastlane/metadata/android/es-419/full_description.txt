@@ -1,4 +1,4 @@
-Valtiq es una app de finanzas personales hecha en Colombia para llevar tus gastos, tus deudas y la plata que prestas, sin crear cuenta y sin que tus datos salgan de tu celular.
+Valtiq es una app de finanzas personales hecha en Colombia para llevar tus gastos, tus deudas y la plata que prestas, sin crear cuenta y sin que tus datos salgan de tu celular. Valtiq no presta dinero, no hace pagos y no se conecta a bancos: es tu cuaderno de cuentas, con las calculadoras incluidas.
 
 ANOTA UN GASTO EN SEGUNDOS
 Pon el widget "Anotar gasto" en la pantalla de inicio y escribe como le escribirías a un amigo: "café 5000", "almuerzo 12 mil", "mercado 85.500" o "comida cincuenta mil pesos". Valtiq separa el nombre del monto, pone la fecha de hoy y recuerda la categoría que usaste la última vez.
@@ -25,6 +25,6 @@ PRIVADA DE VERDAD
 - Copia de seguridad que tú exportas e importas cuando cambies de celular, y opción de borrar todo.
 
 A TU GUSTO
-Tema claro, oscuro o el del sistema. También funciona en computador (Linux).
+Tema claro, oscuro o el del sistema. También funciona en computador (Windows y Linux).
 
 Valtiq es de código abierto (licencia GPLv3). En Ajustes → Cómo funciona Valtiq está explicado, sin letra pequeña, cómo se calcula cada cosa.
