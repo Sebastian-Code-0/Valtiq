@@ -2,11 +2,13 @@ name: Build Windows
 
 # Compila Valtiq para Windows en los servidores de GitHub: nadie tiene que
 # instalar Visual Studio ni Flutter.
-# - Al subir un tag de versión (v1.9.1, ...): compila ese tag y adjunta el
-#   zip a su Release. Si la Release todavía no existe, la crea en borrador.
+# Deja dos archivos: el instalador (menú Inicio, escritorio, desinstalar
+# desde Configuración) y el zip portátil (descomprimir y abrir valtiq.exe).
+# - Al subir un tag de versión (v1.9.1, ...): compila ese tag y adjunta
+#   ambos a su Release. Si la Release todavía no existe, la crea en borrador.
 # - A mano (pestaña Actions → "Build Windows" → "Run workflow"): con el campo
-#   "tag" vacío solo deja el zip como artefacto de la ejecución, para
-#   probarlo; con un tag (v1.9.1) compila esa versión y lo adjunta a su
+#   "tag" vacío solo los deja como artefacto de la ejecución, para
+#   probarlo; con un tag (v1.9.1) compila esa versión y los adjunta a su
 #   Release, por ejemplo si la compilación del tag falló.
 on:
   workflow_dispatch:
@@ -33,6 +35,16 @@ jobs:
         with:
           ref: ${{ inputs.tag || github.ref }}
 
+      # El script del instalador se toma de la rama desde la que corre el
+      # workflow, no del tag: así una versión vieja (que no lo traía)
+      # también puede tener instalador.
+      - uses: actions/checkout@v4
+        with:
+          path: herramientas
+          sparse-checkout: |
+            windows/installer
+            windows/runner/resources
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.32.1'
@@ -57,10 +69,25 @@ jobs:
           Compress-Archive -Path "dist/Valtiq" -DestinationPath "dist/$nombre.zip"
           "ZIP=dist/$nombre.zip" | Out-File -Append $env:GITHUB_ENV
 
+      # Inno Setup 6 ya viene instalado en la imagen windows-2022.
+      - name: Armar el instalador
+        shell: pwsh
+        run: |
+          $linea = Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9.]+)'
+          $version = $linea.Matches[0].Groups[1].Value
+          $fuente = (Resolve-Path "build/windows/x64/runner/Release").Path
+          $salida = (Resolve-Path "dist").Path
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc "/DAppVersion=$version" "/DSourceDir=$fuente" "/DOutputDir=$salida" "herramientas\windows\installer\valtiq.iss"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "INSTALADOR=dist/valtiq-v$version-windows-instalador.exe" | Out-File -Append $env:GITHUB_ENV
+
       - uses: actions/upload-artifact@v4
         with:
           name: valtiq-windows
-          path: ${{ env.ZIP }}
+          path: |
+            ${{ env.ZIP }}
+            ${{ env.INSTALADOR }}
 
       - name: Adjuntar a la Release
         if: env.TAG != ''
@@ -70,4 +97,4 @@ jobs:
         run: |
           gh release view "$TAG" > /dev/null 2>&1 || \
             gh release create "$TAG" --draft --title "Valtiq ${TAG#v}" --notes ""
-          gh release upload "$TAG" "$ZIP" --clobber
+          gh release upload "$TAG" "$ZIP" "$INSTALADOR" --clobber
