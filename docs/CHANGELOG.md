@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.1 (2026-11-24)
+
+- **Android 16:** la app apunta a Android 16 (API 36), como pide Google Play.
+- **Pago mínimo de $0:** se guarda como "sin pago mínimo" en vez de un 0.
+- **Windows:** GitHub compila un zip listo para abrir y lo adjunta a cada
+  versión.
+- **Google Play:** gráfico destacado y capturas 9:16 con datos inventados.
+
 ## GitHub listo para abrirse (2026-11-24)
 
 - **README nuevo:** capturas con datos inventados (`docs/capturas/`), qué

@@ -157,6 +157,17 @@ void main() {
     await fin(t);
   });
 
+  testWidgets('un pago mínimo de \$0 se guarda como sin pago mínimo', (
+    t,
+  ) async {
+    final id = await deuda(monto: 500000, cuota: 100000);
+    await app(t, DeudaForm(db: db, deuda: await db.deudasDao.getDeudaById(id)));
+    await escribir(t, 'Pago mínimo al mes (opcional)', '0');
+    await guardar(t, 'Guardar cambios');
+    expect((await db.deudasDao.getDeudaById(id))!.cuotaMensual, isNull);
+    await fin(t);
+  });
+
   testWidgets('B2 y A5: borrar la tasa un momento no pierde lo elegido, y '
       'abrir y guardar no la cambia', (t) async {
     final id = await deuda(

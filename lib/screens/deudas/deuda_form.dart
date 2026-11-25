@@ -386,7 +386,9 @@ class _DeudaFormState extends State<DeudaForm>
     final modalidad = tasa > 0 ? _modalidadCalculo : 'simple';
     final amortizacion = tasa > 0 ? _tipoAmortizacion : 'saldo_original';
     final cuotaText = _cuotaCtrl.text.trim();
-    final cuota = cuotaText.isEmpty ? null : parseCOP(cuotaText);
+    // Un pago mínimo de $0 es lo mismo que no tener: se guarda vacío.
+    final leida = cuotaText.isEmpty ? null : parseCOP(cuotaText);
+    final cuota = leida == null || leida <= 0 ? null : leida;
     final notas = _notasCtrl.text.trim();
     final acreedor = _acreedorCtrl.text.trim();
     final descripcion = _descripcionCtrl.text.trim();

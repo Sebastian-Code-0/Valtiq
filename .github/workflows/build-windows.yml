@@ -1,11 +1,18 @@
-name: Build Windows exe
+name: Build Windows
 
-# Manual only — no need to install Visual Studio/Flutter locally on Windows
-# just to test a build. Trigger from the Actions tab ("Run workflow") or
-# with `gh workflow run build-windows.yml`, then download the "valtiq-windows"
-# artifact from the finished run and unzip it on any Windows 10/11 machine.
+# Compila Valtiq para Windows en los servidores de GitHub: nadie tiene que
+# instalar Visual Studio ni Flutter.
+# - A mano (pestaña Actions → "Build Windows" → "Run workflow"): deja el zip
+#   como artefacto descargable de esa ejecución, para probarlo.
+# - Al subir un tag de versión (v1.9.1, ...): además lo adjunta a la Release
+#   de ese tag. Si la Release todavía no existe, la crea como borrador.
 on:
   workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -22,7 +29,33 @@ jobs:
       - run: flutter pub get
       - run: flutter build windows --release
 
+      # Las librerías de Visual C++ van dentro del zip: así abre también en
+      # un Windows que nunca instaló el "Visual C++ Redistributable".
+      - name: Armar el zip
+        shell: pwsh
+        run: |
+          $out = "build/windows/x64/runner/Release"
+          foreach ($dll in "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll") {
+            Copy-Item "$env:WINDIR\System32\$dll" $out
+          }
+          $nombre = if ($env:GITHUB_REF_TYPE -eq "tag") { "valtiq-$env:GITHUB_REF_NAME-windows" } else { "valtiq-windows" }
+          New-Item -ItemType Directory -Force "dist/Valtiq" | Out-Null
+          Copy-Item "$out/*" "dist/Valtiq" -Recurse
+          Compress-Archive -Path "dist/Valtiq" -DestinationPath "dist/$nombre.zip"
+          "ZIP=dist/$nombre.zip" | Out-File -Append $env:GITHUB_ENV
+
       - uses: actions/upload-artifact@v4
         with:
           name: valtiq-windows
-          path: build/windows/x64/runner/Release/
+          path: ${{ env.ZIP }}
+
+      - name: Adjuntar a la Release
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" > /dev/null 2>&1 || \
+            gh release create "$TAG" --draft --title "Valtiq ${TAG#v}" --notes ""
+          gh release upload "$TAG" "$ZIP" --clobber

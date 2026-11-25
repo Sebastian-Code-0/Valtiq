@@ -1,0 +1,8 @@
+Valtiq 1.9.1: diseño nuevo de toda la app.
+- Widget "Anotar gasto": escribe "café 5000" y listo.
+- Widgets con el total de tus deudas y de lo que te deben.
+- Plan de pago: cuándo quedas libre de deudas, cuánto pagar este mes y en qué orden.
+- Categorías que puedes crear, renombrar y borrar.
+- Recordatorios que llegan aunque la app esté cerrada.
+- La copia de seguridad lleva tu nombre y tu foto.
+- Lista para Android 16.

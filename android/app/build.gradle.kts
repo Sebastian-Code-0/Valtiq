@@ -35,7 +35,9 @@ android {
         applicationId = "com.valtiq.valtiq"
         // flutter_secure_storage (Keystore-backed) requiere minSdk 23+.
         minSdk = maxOf(flutter.minSdkVersion, 23)
-        targetSdk = flutter.targetSdkVersion
+        // Android 16 (API 36): Google Play lo exige para apps nuevas desde
+        // agosto de 2026. El default de Flutter 3.32 todavía es 35.
+        targetSdk = maxOf(flutter.targetSdkVersion, 36)
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

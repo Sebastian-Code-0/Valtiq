@@ -67,7 +67,7 @@ release.
 |-----------|-------|
 | `minSdkVersion` | 23 (Android 6.0 Marshmallow) — forzado en `build.gradle.kts` (`maxOf(flutter.minSdkVersion, 23)`) |
 | `compileSdk` | 36 — forzado (`maxOf(flutter.compileSdkVersion, 36)`) |
-| `targetSdk` | `flutter.targetSdkVersion` (el default de Flutter 3.32) |
+| `targetSdk` | 36 (Android 16; Google Play lo exige desde agosto de 2026, el default de Flutter 3.32 es 35) |
 
 El `minSdk` subió de 21 (default de Flutter) a 23 porque
 `flutter_secure_storage` (usado para la clave AES en Keystore/Keychain,
