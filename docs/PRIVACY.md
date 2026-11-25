@@ -1,6 +1,6 @@
 # Política de Privacidad de Valtiq
 
-Última actualización: 24 de noviembre de 2026
+Última actualización: 25 de noviembre de 2026
 
 ## Resumen
 
@@ -156,6 +156,6 @@ repositorio.
 
 ## Contacto
 
-Para preguntas sobre esta política o el manejo de datos, puedes abrir un
-issue en el repositorio:
+Para preguntas sobre esta política o el manejo de datos, puedes escribir a
+v.sebastian.code0@proton.me o abrir un issue en el repositorio:
 https://github.com/Sebastian-Code-0/Valtiq/issues
