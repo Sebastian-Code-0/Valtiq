@@ -1,5 +1,1 @@
 blank_issues_enabled: false
-contact_links:
-  - name: Problema de seguridad
-    url: https://github.com/Sebastian-Code-0/Valtiq/security/advisories/new
-    about: Repórtalo en privado, no en un issue público.
