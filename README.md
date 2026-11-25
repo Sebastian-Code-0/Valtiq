@@ -64,7 +64,7 @@ Código abierto bajo la licencia GNU GPLv3.
 |------------|--------|
 | Android 6.0 o superior | Probada |
 | Linux | Probada |
-| Windows | Experimental: compila, pero no se ha probado a fondo |
+| Windows 10 u 11 | Probada (instalador o zip portátil) |
 
 ## Privacidad
 

@@ -4,8 +4,9 @@
 
 - **Android 16:** la app apunta a Android 16 (API 36), como pide Google Play.
 - **Pago mínimo de $0:** se guarda como "sin pago mínimo" en vez de un 0.
-- **Windows:** GitHub compila un zip listo para abrir y lo adjunta a cada
-  versión.
+- **Windows:** GitHub compila un instalador (menú Inicio, acceso directo
+  en el escritorio, desinstalar desde Configuración) y un zip portátil, y
+  los adjunta a cada versión. Probada en Windows: deja de ser experimental.
 - **Google Play:** gráfico destacado y capturas 9:16 con datos inventados.
 
 ## GitHub listo para abrirse (2026-11-24)
