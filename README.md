@@ -1,70 +1,119 @@
 # Valtiq
 
-Gestor de finanzas personales multiplataforma — Linux, Android y Windows.
+Finanzas personales hechas en Colombia: anota tus gastos en segundos, sal
+de deudas con un plan claro y lleva la cuenta de la plata que prestas.
+Sin crear cuenta, sin nube y sin publicidad: tus datos se quedan en tu
+dispositivo.
 
-Aplicación de código abierto (GNU GPLv3) para gestionar deudas, préstamos,
-ingresos y gastos. Todos los datos se almacenan localmente en SQLite —
-sin servidores, sin nube, sin cuentas de usuario.
+Código abierto bajo la licencia GNU GPLv3.
+
+<p align="center">
+  <img src="docs/capturas/pc_plan.png" alt="Plan de pago en computador: fecha en que quedas libre de deudas, cuánto pagar este mes a cada una y el orden de pago" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/capturas/cel_inicio.png" alt="Inicio en el celular, tema oscuro" width="30%">
+  &nbsp;
+  <img src="docs/capturas/cel_plan.png" alt="Plan de pago en el celular" width="30%">
+  &nbsp;
+  <img src="docs/capturas/cel_inicio_claro.png" alt="Inicio en el celular, tema claro" width="30%">
+</p>
+
+> Las capturas usan datos inventados.
 
 ## Qué hace
 
-- Registro de préstamos otorgados, con interés simple y compuesto
-  (convención bancaria colombiana para días 29-31) y abonos rápidos
-- Registro de deudas propias con seguimiento de abonos y plan de pago
-  (avalancha o bola de nieve) que estima cuándo se queda libre de deudas
-- Desglose auditable del interés ("¿Cómo se calculó?") y guía integrada
-  ("Cómo funciona Valtiq") que explica cada cálculo en lenguaje simple
-- Ingresos, gastos fijos y gastos del día a día por categoría (editables:
-  crear, renombrar, cambiar ícono y color), con presupuestos mensuales
-- Widgets de Android: anotar un gasto en una línea ("café 5mil") sin abrir
-  la app, y ver tus deudas y préstamos activos en la pantalla de inicio
-- Inicio con balance real: Ingresos − Gastos fijos − Gastos del día a día
-- Comparativo mensual de gastos del día a día por categoría
-- Recordatorios de pago con notificación del sistema (en Android llegan a su hora aunque la app esté cerrada) y/o correo SMTP
-- Bloqueo de la app con PIN o biometría (opcional, desactivado por defecto)
-- Tema claro/oscuro; en pantallas grandes, menú a la izquierda o arriba
-- Copia de seguridad en un archivo y opción de borrar todo
-- Credenciales SMTP cifradas localmente con AES-256
+**Gastos del día a día**
+- Widget de Android para anotar un gasto en una línea, como le escribirías
+  a un amigo: "café 5000", "almuerzo 12 mil".
+- Ingresos, gastos fijos y gastos del día a día por categoría. Las
+  categorías se pueden crear, renombrar y borrar.
+- Presupuestos mensuales por categoría y comparación entre meses.
 
-## Stack
+**Deudas y plan de pago**
+- Interés simple o compuesto, sobre lo prestado o sobre lo que falta por
+  pagar, con la convención bancaria colombiana para los días 29 a 31.
+- Cada cálculo se puede revisar paso a paso ("¿Cómo se calculó?").
+- El Plan de pago dice cuándo quedas libre de deudas y cuánto pagarle este
+  mes a cada una. Elige solo el orden que menos intereses cobra (o eliges
+  tú: avalancha o bola de nieve), prioriza las fechas límite y sugiere el
+  extra que te falta para cumplirlas.
 
-| Componente     | Tecnología                          |
-|----------------|--------------------------------------|
-| Framework      | Flutter 3.32.1 / Dart                |
-| Base de datos  | SQLite vía drift ORM (schemaVersion 15) |
-| Notificaciones | flutter_local_notifications          |
-| Correo         | mailer + encrypt (AES-256)           |
-| Seguridad      | local_auth (biometría) + PIN propio (SHA-256 con salt) |
-| Plataformas    | Linux, Android (API 23+), Windows    |
+**Préstamos**
+- Lo que prestaste o te prestaron, con o sin interés, con cada abono y lo
+  que falta por cobrar.
 
-## Estructura del proyecto
+**Y además**
+- Recordatorios de pago que en Android llegan a su hora aunque la app esté
+  cerrada, y aviso opcional por correo (SMTP propio).
+- Bloqueo con PIN, huella o rostro (opcional).
+- Tema claro y oscuro. En computador, menú a la izquierda o arriba.
+- Copia de seguridad en un archivo para pasar tus datos entre el celular y
+  el computador, y opción de borrar todo.
 
-```
-lib/
-  db/            # tablas drift, migraciones, DAOs
-  screens/       # inicio (dashboard), deudas, préstamos, finanzas, recordatorios, ajustes
-  services/      # NotificationService, SmtpService, InteresCalculator, CryptoService, AppLockService, BackupService, BorradoService
-  theme/         # AppColors, AppTheme, AppSpacing, AppTypography
-  utils/         # formateo COP, fechas, widgets de formulario
-docs/
-  ARCHITECTURE.md   # esquema de BD y flujo de datos
-  CHANGELOG.md      # historial de cambios por fase
-  ANDROID.md / WINDOWS.md
-  decisions/         # Architecture Decision Records (ADRs)
-```
+<p align="center">
+  <img src="docs/capturas/pc_inicio.png" alt="Inicio en computador" width="49%">
+  <img src="docs/capturas/pc_finanzas.png" alt="Gastos del día a día por categoría" width="49%">
+</p>
 
-## Compilar
+## Plataformas
 
-```bash
-flutter build apk --debug   # Android, pruebas en dispositivo
-flutter build linux          # Linux
-flutter build windows        # Windows (requiere Visual Studio)
-```
+| Plataforma | Estado |
+|------------|--------|
+| Android 6.0 o superior | Probada |
+| Linux | Probada |
+| Windows | Experimental: compila, pero no se ha probado a fondo |
 
 ## Privacidad
 
-Valtiq no recolecta ni transmite datos. Ver la
+Valtiq no recolecta ni envía datos: no tiene servidores, analítica ni
+publicidad. Solo se conecta a internet si activas los avisos por correo, y
+solo con el servidor de correo que tú configuras. Lee la
 [política de privacidad](docs/PRIVACY.md) completa.
+
+## Compilar
+
+Requiere Flutter 3.32.1.
+
+```bash
+flutter pub get
+flutter build apk --release   # Android
+flutter build linux           # Linux
+flutter build windows         # Windows (requiere Visual Studio)
+```
+
+Más detalles en [docs/ANDROID.md](docs/ANDROID.md) y
+[docs/WINDOWS.md](docs/WINDOWS.md).
+
+## Stack
+
+| Componente     | Tecnología |
+|----------------|------------|
+| Framework      | Flutter 3.32.1 / Dart |
+| Base de datos  | SQLite con drift (schemaVersion 15) |
+| Notificaciones | flutter_local_notifications |
+| Correo         | mailer, con la contraseña cifrada con AES-256 |
+| Seguridad      | local_auth (biometría) y PIN propio (SHA-256 con salt) |
+
+## Estructura
+
+```
+lib/
+  db/        # tablas drift, migraciones, DAOs
+  screens/   # inicio, deudas (y plan de pago), préstamos, finanzas, recordatorios, ajustes
+  services/  # cálculo de interés, plan de pago, notificaciones, respaldo, bloqueo
+  theme/     # colores, tipografía, espaciado
+  utils/     # formato de pesos, fechas, campos de formulario
+docs/
+  ARCHITECTURE.md   # base de datos, cálculos y decisiones de diseño
+  CHANGELOG.md      # historial de cambios
+  decisions/        # registros de decisiones de arquitectura (ADR)
+```
+
+## Reportar un error o proponer una idea
+
+Abre un [issue](../../issues/new/choose). Si encontraste un problema de
+seguridad, no lo publiques: sigue los pasos de [SECURITY.md](SECURITY.md).
 
 ## Licencia
 

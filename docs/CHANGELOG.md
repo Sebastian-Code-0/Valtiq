@@ -1,5 +1,14 @@
 # Changelog
 
+## GitHub listo para abrirse (2026-11-24)
+
+- **README nuevo:** capturas con datos inventados (`docs/capturas/`), qué
+  hace hoy el Plan de pago y Windows marcado como experimental.
+- **Reportes:** plantillas en español para errores e ideas, y `SECURITY.md`
+  para avisar problemas de seguridad en privado.
+- **Textos de tienda:** el Plan de pago descrito como funciona hoy.
+- **Finanzas:** un ingreso único ahora dice "Único" (antes "Unico").
+
 ## Revisión del Plan de pago (2026-11-24)
 
 - **Respaldo más seguro:** la foto de un respaldo solo se guarda con una

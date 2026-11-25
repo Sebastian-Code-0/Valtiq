@@ -1,0 +1,16 @@
+name: Proponer una idea
+description: Algo que te gustaría que Valtiq hiciera.
+labels: ["idea"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: ¿Qué te gustaría poder hacer?
+      description: Cuéntalo desde tu día a día, no hace falta pensar en cómo programarlo.
+    validations:
+      required: true
+  - type: textarea
+    id: hoy
+    attributes:
+      label: ¿Cómo lo haces hoy?
+      description: Opcional. Por ejemplo, "lo anoto en una hoja aparte".

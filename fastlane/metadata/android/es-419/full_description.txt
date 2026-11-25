@@ -5,7 +5,7 @@ Pon el widget "Anotar gasto" en la pantalla de inicio y escribe como le escribir
 
 DEUDAS CLARAS, CON EL INTERÉS REAL
 Registra tarjetas, créditos o lo que le debes a alguien. Valtiq calcula el interés del día (simple o compuesto, sobre lo prestado al inicio o sobre lo que falta por pagar) y te muestra paso a paso cómo llegó a cada número, para que nunca sea una caja negra.
-El Plan de pago te dice en qué orden pagar para salir antes de deudas: primero la más cara (Avalancha) o primero la más pequeña (Bola de nieve), y cuánto suma un extra al mes.
+El Plan de pago te dice cuándo quedas libre de deudas y cuánto pagarle este mes a cada una. Valtiq elige el orden que menos intereses te cobra (o eliges tú: primero la más cara o primero la más pequeña), cuida tus fechas límite y te dice cuánto extra al mes te falta para cumplirlas.
 
 PRÉSTAMOS: QUIÉN TE DEBE Y CUÁNTO
 Lleva lo que prestaste o lo que te prestaron, con o sin interés, registra cada abono y mira lo que falta por cobrar.

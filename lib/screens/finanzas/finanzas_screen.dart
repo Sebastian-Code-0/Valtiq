@@ -40,8 +40,13 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
   bool _todasLasCategorias = false;
   late Stream<Map<String, double>> _streamTotalPorCategoria;
 
-  String _capitalizar(String s) =>
-      s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+  // La frecuencia se guarda sin tilde ('unico'): se muestra como en el
+  // formulario.
+  String _capitalizar(String s) => s == 'unico'
+      ? 'Único'
+      : s.isEmpty
+      ? s
+      : '${s[0].toUpperCase()}${s.substring(1)}';
 
   // Un ingreso 'unico' (pago puntual, ej. un trabajo secundario) solo cuenta
   // en el mes de su propia fecha — misma convención que
